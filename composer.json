@@ -9,6 +9,7 @@
         "php": "^8.3",
         "laravel/framework": "^13.17",
         "laravel/tinker": "^3.0",
+        "livewire/livewire": "*",
         "spatie/laravel-settings": "^3.9"
     },
     "require-dev": {
