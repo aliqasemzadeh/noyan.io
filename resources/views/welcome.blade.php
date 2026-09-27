@@ -219,18 +219,5 @@
         @if (Route::has('login'))
             <div class="h-14.5 hidden lg:block"></div>
         @endif
-
-    @php
-
-        use Cloudstudio\Ollama\Facades\Ollama;
-
-        $response = Ollama::prompt('How do I create a route in Laravel 10?')
-            ->model('qwen3.5')
-            ->options(['temperature' => 0.8])
-            ->stream(false)
-            ->ask();
-
-        dd($response);
-    @endphp
     </body>
 </html>
