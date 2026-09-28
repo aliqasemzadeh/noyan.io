@@ -5,7 +5,7 @@ namespace App\Jobs\Notification\User;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 
-class SendUserOtpCommand implements ShouldQueue
+class SendUserOtpJob implements ShouldQueue
 {
     use Queueable;
 
