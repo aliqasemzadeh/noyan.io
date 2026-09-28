@@ -24,4 +24,13 @@ return [
     'save' => 'Save',
     'cancel' => 'Cancel',
     'search' => 'Search',
+    'users' => 'Users',
+    'panels' => 'Panels',
+    'system_management' => 'System management',
+    'accounting' => 'Accounting',
+    'sales' => 'Sales',
+    'no_business_yet' => 'You do not have an active business yet.',
+    'business_switched' => 'Business switched.',
+    'business_switch_denied' => 'You do not have access to this business.',
+    'users_page_placeholder' => 'User management will be available here soon.',
 ];
