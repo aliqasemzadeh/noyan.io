@@ -35,4 +35,10 @@ return [
         ],
     ],
 
+    'sms' => [
+        'endpoint' => env('SMS_ENDPOINT', 'https://srscrm.ir/api/sms/send'),
+        'token' => env('SMS_TOKEN'),
+        'gateway' => env('SMS_GATEWAY'),
+    ],
+
 ];
