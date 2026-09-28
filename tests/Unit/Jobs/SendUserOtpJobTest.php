@@ -22,7 +22,7 @@ class SendUserOtpJobTest extends TestCase
         $sms = Mockery::mock(SetareganSmsClient::class);
         $sms->shouldReceive('send')
             ->once()
-            ->with('09123456789', __('general.otp_sms_message', ['code' => '123456']))
+            ->with('09123456789', __('general.otp_sms_message', ['code' => '123456'], 'fa'))
             ->andReturn(['ok' => true, 'code' => 'queued']);
 
         (new SendUserOtpJob($user, '123456'))->handle($sms);
