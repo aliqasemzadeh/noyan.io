@@ -4,6 +4,8 @@ return [
     'login' => 'ورود',
     'logout' => 'خروج',
     'dashboard' => 'داشبورد',
+    'welcome_back' => 'خوش آمدید',
+    'login_panel_tagline' => 'با شماره موبایل وارد شوید و ادامه دهید.',
     'mobile' => 'شماره موبایل',
     'mobile_placeholder' => '09123456789',
     'send_otp' => 'ارسال کد تأیید',

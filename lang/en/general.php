@@ -4,6 +4,8 @@ return [
     'login' => 'Login',
     'logout' => 'Log out',
     'dashboard' => 'Dashboard',
+    'welcome_back' => 'Welcome back',
+    'login_panel_tagline' => 'Sign in with your mobile number to continue.',
     'mobile' => 'Mobile number',
     'mobile_placeholder' => '09123456789',
     'send_otp' => 'Send verification code',
