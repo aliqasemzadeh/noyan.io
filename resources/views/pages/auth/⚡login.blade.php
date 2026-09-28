@@ -3,12 +3,14 @@
 use App\Jobs\Notification\User\SendUserOtpJob;
 use App\Models\User;
 use Flux\Flux;
+use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 use Sadegh19b\LaravelPersianValidation\Rules\IranianMobile;
 use Spatie\OneTimePasswords\Enums\ConsumeOneTimePasswordResult;
 
 new
+#[Layout('layouts::auth')]
 #[Title('Login')]
 class extends Component
 {
@@ -123,92 +125,91 @@ class extends Component
 };
 ?>
 
-<div class="flex min-h-screen items-center justify-center bg-zinc-50 px-4 py-12 dark:bg-zinc-900">
-    <div class="w-full max-w-md">
-        <flux:card class="space-y-6">
+<div class="space-y-6">
+    <div class="space-y-2 text-center">
+        <div class="flex justify-center opacity-70">
+            <span class="text-xl font-semibold text-zinc-800 dark:text-white">{{ config('app.name') }}</span>
+        </div>
+
+        <flux:heading class="text-center" size="xl">{{ __('general.welcome_back') }}</flux:heading>
+    </div>
+
+    @if ($step === 'mobile')
+        <form wire:submit="sendCode" class="space-y-4">
+            <flux:field>
+                <flux:label>{{ __('general.mobile') }}</flux:label>
+                <flux:input
+                    wire:model="mobile"
+                    type="tel"
+                    inputmode="numeric"
+                    maxlength="11"
+                    placeholder="{{ __('general.mobile_placeholder') }}"
+                    clearable
+                    autocomplete="tel"
+                />
+                <flux:error name="mobile" />
+            </flux:field>
+
+            <flux:button type="submit" variant="primary" color="teal" class="w-full">
+                {{ __('general.send_otp') }}
+            </flux:button>
+        </form>
+    @else
+        <form wire:submit="verify" class="space-y-6" x-data="{
+            remaining: Math.max(0, ($wire.resendAvailableAt ?? 0) - Math.floor(Date.now() / 1000)),
+            timer: null,
+            init() {
+                this.tick()
+                this.timer = setInterval(() => this.tick(), 1000)
+            },
+            tick() {
+                const availableAt = $wire.resendAvailableAt ?? 0
+                this.remaining = Math.max(0, availableAt - Math.floor(Date.now() / 1000))
+                if (this.remaining === 0 && this.timer) {
+                    clearInterval(this.timer)
+                    this.timer = null
+                }
+            },
+            destroy() {
+                if (this.timer) clearInterval(this.timer)
+            }
+        }">
             <div class="space-y-2 text-center">
-                <flux:heading size="xl">{{ config('app.name') }}</flux:heading>
-                <flux:heading size="lg">{{ __('general.login') }}</flux:heading>
+                <flux:text>{{ __('general.otp_hint') }}</flux:text>
+                <flux:text class="font-medium">{{ $mobile }}</flux:text>
             </div>
 
-            @if ($step === 'mobile')
-                <form wire:submit="sendCode" class="space-y-4">
-                    <flux:field>
-                        <flux:label>{{ __('general.mobile') }}</flux:label>
-                        <flux:input
-                            wire:model="mobile"
-                            type="tel"
-                            inputmode="numeric"
-                            maxlength="11"
-                            placeholder="{{ __('general.mobile_placeholder') }}"
-                            clearable
-                            autocomplete="tel"
-                        />
-                        <flux:error name="mobile" />
-                    </flux:field>
+            <flux:otp
+                wire:model="code"
+                length="6"
+                label="{{ __('general.otp_code') }}"
+                label:sr-only
+                :error:icon="false"
+                error:class="text-center"
+                class="mx-auto"
+                submit="auto"
+            />
 
-                    <flux:button type="submit" variant="primary" color="teal" class="w-full">
-                        {{ __('general.send_otp') }}
-                    </flux:button>
-                </form>
-            @else
-                <form wire:submit="verify" class="space-y-6" x-data="{
-                    remaining: Math.max(0, ($wire.resendAvailableAt ?? 0) - Math.floor(Date.now() / 1000)),
-                    timer: null,
-                    init() {
-                        this.tick()
-                        this.timer = setInterval(() => this.tick(), 1000)
-                    },
-                    tick() {
-                        const availableAt = $wire.resendAvailableAt ?? 0
-                        this.remaining = Math.max(0, availableAt - Math.floor(Date.now() / 1000))
-                        if (this.remaining === 0 && this.timer) {
-                            clearInterval(this.timer)
-                            this.timer = null
-                        }
-                    },
-                    destroy() {
-                        if (this.timer) clearInterval(this.timer)
-                    }
-                }">
-                    <div class="space-y-2 text-center">
-                        <flux:text>{{ __('general.otp_hint') }}</flux:text>
-                        <flux:text class="font-medium">{{ $mobile }}</flux:text>
-                    </div>
+            <div class="space-y-3">
+                <flux:button type="submit" variant="primary" color="teal" class="w-full">
+                    {{ __('general.verify_otp') }}
+                </flux:button>
 
-                    <flux:otp
-                        wire:model="code"
-                        length="6"
-                        label="{{ __('general.otp_code') }}"
-                        label:sr-only
-                        :error:icon="false"
-                        error:class="text-center"
-                        class="mx-auto"
-                        submit="auto"
-                    />
+                <flux:button
+                    type="button"
+                    variant="ghost"
+                    class="w-full"
+                    wire:click="resendCode"
+                    x-bind:disabled="remaining > 0"
+                >
+                    <span x-show="remaining > 0" x-cloak x-text="remaining + 's'"></span>
+                    <span x-show="remaining <= 0">{{ __('general.otp_resend') }}</span>
+                </flux:button>
 
-                    <div class="space-y-3">
-                        <flux:button type="submit" variant="primary" color="teal" class="w-full">
-                            {{ __('general.verify_otp') }}
-                        </flux:button>
-
-                        <flux:button
-                            type="button"
-                            variant="ghost"
-                            class="w-full"
-                            wire:click="resendCode"
-                            x-bind:disabled="remaining > 0"
-                        >
-                            <span x-show="remaining > 0" x-cloak x-text="remaining + 's'"></span>
-                            <span x-show="remaining <= 0">{{ __('general.otp_resend') }}</span>
-                        </flux:button>
-
-                        <flux:button type="button" variant="ghost" class="w-full" wire:click="backToMobile">
-                            {{ __('general.change_mobile') }}
-                        </flux:button>
-                    </div>
-                </form>
-            @endif
-        </flux:card>
-    </div>
+                <flux:button type="button" variant="ghost" class="w-full" wire:click="backToMobile">
+                    {{ __('general.change_mobile') }}
+                </flux:button>
+            </div>
+        </form>
+    @endif
 </div>
