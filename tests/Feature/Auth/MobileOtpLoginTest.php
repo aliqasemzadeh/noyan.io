@@ -71,7 +71,7 @@ class MobileOtpLoginTest extends TestCase
         Queue::assertPushed(SendUserOtpJob::class, 1);
 
         $component->call('resendCode')
-            ->assertHasErrors(['mobile']);
+            ->assertHasErrors(['code']);
 
         Queue::assertPushed(SendUserOtpJob::class, 1);
         $this->assertDatabaseCount('one_time_passwords', 1);

@@ -87,7 +87,7 @@ class extends Component
             return null;
         }
 
-        request()->session()->regenerate();
+        session()->regenerate();
 
         Flux::toast(__('general.login_success'));
 
@@ -97,6 +97,7 @@ class extends Component
     public function resendCode(): void
     {
         if ($this->resendAvailableAt !== null && now()->getTimestamp() < $this->resendAvailableAt) {
+            $this->addError('code', __('general.otp_resend_wait'));
             Flux::toast(__('general.otp_resend_wait'), variant: 'warning');
 
             return;

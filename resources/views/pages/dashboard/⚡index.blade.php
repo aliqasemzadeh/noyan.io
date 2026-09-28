@@ -13,8 +13,8 @@ class extends Component
     {
         Auth::logout();
 
-        request()->session()->invalidate();
-        request()->session()->regenerateToken();
+        session()->invalidate();
+        session()->regenerateToken();
 
         Flux::toast(__('general.logout'));
 
