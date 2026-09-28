@@ -20,7 +20,7 @@ return [
     'change_mobile' => 'تغییر شماره موبایل',
     'login_success' => 'با موفقیت وارد شدید.',
     'welcome_user' => 'خوش آمدید',
-    'otp_sms_message' => 'کد ورود شما: :code',
+    'otp_sms_message' => "کد ورود شما: :code\nلغو11",
     'save' => 'ذخیره',
     'cancel' => 'انصراف',
     'search' => 'جستجو',

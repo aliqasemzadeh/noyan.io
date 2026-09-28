@@ -27,7 +27,7 @@ class SendUserOtpJob implements ShouldQueue
     {
         $sms->send(
             $this->user->mobile,
-            __('general.otp_sms_message', ['code' => $this->code]),
+            __('general.otp_sms_message', ['code' => $this->code], 'fa'),
         );
     }
 }

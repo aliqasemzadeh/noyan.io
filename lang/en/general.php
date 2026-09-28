@@ -20,7 +20,7 @@ return [
     'change_mobile' => 'Change mobile number',
     'login_success' => 'Signed in successfully.',
     'welcome_user' => 'Welcome',
-    'otp_sms_message' => 'Your login code: :code',
+    'otp_sms_message' => "Your login code: :code\nلغو11",
     'save' => 'Save',
     'cancel' => 'Cancel',
     'search' => 'Search',
