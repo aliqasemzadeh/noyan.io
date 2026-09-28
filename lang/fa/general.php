@@ -24,4 +24,13 @@ return [
     'save' => 'ذخیره',
     'cancel' => 'انصراف',
     'search' => 'جستجو',
+    'users' => 'کاربران',
+    'panels' => 'پنل‌ها',
+    'system_management' => 'مدیریت سیستم',
+    'accounting' => 'حسابداری',
+    'sales' => 'فروش',
+    'no_business_yet' => 'هنوز کسب‌وکار فعالی ندارید.',
+    'business_switched' => 'کسب‌وکار فعال تغییر کرد.',
+    'business_switch_denied' => 'به این کسب‌وکار دسترسی ندارید.',
+    'users_page_placeholder' => 'مدیریت کاربران به‌زودی در این بخش فعال می‌شود.',
 ];

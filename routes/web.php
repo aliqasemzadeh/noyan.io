@@ -12,4 +12,8 @@ Route::middleware('guest')->group(function () {
 
 Route::middleware('auth')->group(function () {
     Route::livewire('/dashboard', 'pages::dashboard.index')->name('dashboard');
+
+    Route::prefix('system')->name('system.')->group(function () {
+        Route::livewire('/users', 'pages::user.index')->name('users.index');
+    });
 });
