@@ -1,0 +1,25 @@
+<?php
+
+return [
+    'login' => 'Login',
+    'logout' => 'Log out',
+    'dashboard' => 'Dashboard',
+    'mobile' => 'Mobile number',
+    'mobile_placeholder' => '09123456789',
+    'send_otp' => 'Send verification code',
+    'verify_otp' => 'Verify and sign in',
+    'otp_code' => 'Verification code',
+    'otp_hint' => 'Enter the 6-digit code sent to your mobile number.',
+    'otp_sent' => 'Verification code sent.',
+    'otp_invalid' => 'The verification code is invalid.',
+    'otp_resend' => 'Resend code',
+    'otp_resend_wait' => 'You cannot request another code until the wait time ends.',
+    'otp_resend_in' => 'Resend available in :seconds seconds',
+    'change_mobile' => 'Change mobile number',
+    'login_success' => 'Signed in successfully.',
+    'welcome_user' => 'Welcome',
+    'otp_sms_message' => 'Your login code: :code',
+    'save' => 'Save',
+    'cancel' => 'Cancel',
+    'search' => 'Search',
+];
