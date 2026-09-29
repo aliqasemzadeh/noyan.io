@@ -23,6 +23,7 @@ return [
     'otp_sms_message' => "Your login code: :code\nلغو11",
     'save' => 'Save',
     'edit' => 'Edit',
+    'dev_otp_helper' => 'Development OTP code',
     'cancel' => 'Cancel',
     'search' => 'Search',
     'users' => 'Users',
