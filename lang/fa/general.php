@@ -22,6 +22,7 @@ return [
     'welcome_user' => 'خوش آمدید',
     'otp_sms_message' => "کد ورود شما: :code\nلغو11",
     'save' => 'ذخیره',
+    'edit' => 'ویرایش',
     'cancel' => 'انصراف',
     'search' => 'جستجو',
     'users' => 'کاربران',

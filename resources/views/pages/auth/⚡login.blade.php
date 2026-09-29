@@ -3,6 +3,7 @@
 use App\Jobs\Notification\User\SendUserOtpJob;
 use App\Models\User;
 use Flux\Flux;
+use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Component;
@@ -116,6 +117,16 @@ class extends Component
         $this->resetErrorBag();
     }
 
+    #[Computed]
+    public function maskedMobile(): string
+    {
+        if (strlen($this->mobile) < 7) {
+            return $this->mobile;
+        }
+
+        return substr($this->mobile, 0, 4).'***'.substr($this->mobile, -4);
+    }
+
     protected function hasActiveOneTimePassword(User $user): bool
     {
         return $user->oneTimePasswords()
@@ -176,7 +187,19 @@ class extends Component
         }">
             <div class="space-y-2 text-center">
                 <flux:text>{{ __('general.otp_hint') }}</flux:text>
-                <flux:text class="font-medium">{{ $mobile }}</flux:text>
+                <div class="flex items-center justify-center gap-2">
+                    <flux:text class="font-medium tracking-wider">{{ $this->maskedMobile }}</flux:text>
+                    <flux:tooltip content="{{ __('general.edit') }}">
+                        <flux:button
+                            type="button"
+                            size="xs"
+                            variant="ghost"
+                            icon="pencil"
+                            icon:variant="outline"
+                            wire:click="backToMobile"
+                        />
+                    </flux:tooltip>
+                </div>
             </div>
 
             <flux:otp
@@ -204,10 +227,6 @@ class extends Component
                 >
                     <span x-show="remaining > 0" x-cloak x-text="remaining + 's'"></span>
                     <span x-show="remaining <= 0">{{ __('general.otp_resend') }}</span>
-                </flux:button>
-
-                <flux:button type="button" variant="ghost" class="w-full" wire:click="backToMobile">
-                    {{ __('general.change_mobile') }}
                 </flux:button>
             </div>
         </form>

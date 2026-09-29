@@ -22,6 +22,7 @@ return [
     'welcome_user' => 'Welcome',
     'otp_sms_message' => "Your login code: :code\nلغو11",
     'save' => 'Save',
+    'edit' => 'Edit',
     'cancel' => 'Cancel',
     'search' => 'Search',
     'users' => 'Users',
