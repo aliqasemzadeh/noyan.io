@@ -23,6 +23,8 @@ class extends Component
 
     public ?int $resendAvailableAt = null;
 
+    public ?string $debugOtpCode = null;
+
     public function sendCode(): void
     {
         $this->validate([
@@ -53,6 +55,10 @@ class extends Component
         $this->resendAvailableAt = now()
             ->addSeconds((int) config('otp.resend_cooldown_seconds'))
             ->getTimestamp();
+
+        if (app()->isLocal() || config('app.debug')) {
+            $this->debugOtpCode = $oneTimePassword->password;
+        }
 
         Flux::toast(__('general.otp_sent'));
     }
@@ -113,6 +119,7 @@ class extends Component
     {
         $this->step = 'mobile';
         $this->code = '';
+        $this->debugOtpCode = null;
         $this->resendAvailableAt = null;
         $this->resetErrorBag();
     }
