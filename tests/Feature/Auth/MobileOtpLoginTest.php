@@ -120,4 +120,48 @@ class MobileOtpLoginTest extends TestCase
             ->assertOk()
             ->assertSeeLivewire('pages::dashboard.index');
     }
+
+    public function test_otp_step_displays_masked_mobile_number(): void
+    {
+        Queue::fake();
+
+        Livewire::test('pages::auth.login')
+            ->set('mobile', '09177886099')
+            ->call('sendCode')
+            ->assertSet('step', 'otp')
+            ->assertSee('0917***6099')
+            ->assertDontSee('09177886099');
+    }
+
+    public function test_back_to_mobile_resets_otp_state(): void
+    {
+        Queue::fake();
+
+        Livewire::test('pages::auth.login')
+            ->set('mobile', '09123456789')
+            ->call('sendCode')
+            ->assertSet('step', 'otp')
+            ->set('code', '123456')
+            ->call('backToMobile')
+            ->assertSet('step', 'mobile')
+            ->assertSet('code', '')
+            ->assertSet('resendAvailableAt', null)
+            ->assertSet('debugOtpCode', null);
+    }
+
+    public function test_dev_otp_helper_populates_debug_code_in_local_environment(): void
+    {
+        Queue::fake();
+
+        $component = Livewire::test('pages::auth.login')
+            ->set('mobile', '09123456789')
+            ->call('sendCode');
+
+        $user = User::query()->where('mobile', '09123456789')->firstOrFail();
+        $code = $user->oneTimePasswords()->firstOrFail()->password;
+
+        $component
+            ->assertSet('debugOtpCode', $code)
+            ->assertSee($code);
+    }
 }

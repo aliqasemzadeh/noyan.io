@@ -176,9 +176,11 @@ class extends Component
         <form wire:submit="verify" class="space-y-6" x-data="{
             remaining: Math.max(0, ($wire.resendAvailableAt ?? 0) - Math.floor(Date.now() / 1000)),
             timer: null,
+            abortController: null,
             init() {
                 this.tick()
                 this.timer = setInterval(() => this.tick(), 1000)
+                this.listenForWebOtp()
             },
             tick() {
                 const availableAt = $wire.resendAvailableAt ?? 0
@@ -188,10 +190,40 @@ class extends Component
                     this.timer = null
                 }
             },
+            listenForWebOtp() {
+                if ('OTPCredential' in window && navigator.credentials) {
+                    this.abortController = new AbortController()
+                    navigator.credentials.get({
+                        otp: { transport: ['sms'] },
+                        signal: this.abortController.signal
+                    }).then(content => {
+                        if (content && content.code) {
+                            $wire.set('code', content.code)
+                            $wire.verify()
+                        }
+                    }).catch(() => {})
+                }
+            },
             destroy() {
                 if (this.timer) clearInterval(this.timer)
+                if (this.abortController) this.abortController.abort()
             }
         }">
+            @if ($debugOtpCode && (app()->isLocal() || config('app.debug')))
+                <div class="rounded-lg border border-dashed border-teal-500/50 bg-teal-50/50 p-3 text-center dark:bg-teal-950/20">
+                    <flux:text size="sm" class="text-zinc-600 dark:text-zinc-400">
+                        {{ __('general.dev_otp_helper') }}:
+                        <button
+                            type="button"
+                            class="font-mono font-bold text-teal-600 underline hover:text-teal-700 dark:text-teal-400"
+                            x-on:click="$wire.set('code', '{{ $debugOtpCode }}'); $wire.verify()"
+                        >
+                            {{ $debugOtpCode }}
+                        </button>
+                    </flux:text>
+                </div>
+            @endif
+
             <div class="space-y-2 text-center">
                 <flux:text>{{ __('general.otp_hint') }}</flux:text>
                 <div class="flex items-center justify-center gap-2">
