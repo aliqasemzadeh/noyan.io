@@ -1,13 +1,112 @@
 <?php
 
+use App\Models\User;
+use Flux\Flux;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\ValidationException;
+use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
 use Livewire\Component;
+use Livewire\WithPagination;
+use Morilog\Jalali\Jalalian;
+use Prism\Prism\Enums\Provider;
+use Prism\Prism\Exceptions\PrismException;
+use Prism\Prism\Facades\Prism;
+use Prism\Prism\Facades\Tool;
+use Sadegh19b\LaravelPersianValidation\Rules\IranianMobile;
 
 new
 #[Title('Users')]
 class extends Component
 {
-    //
+    use WithPagination;
+
+    public string $prompt = '';
+
+    public string $assistantReply = '';
+
+    public string $search = '';
+
+    public function updatedSearch(): void
+    {
+        $this->resetPage();
+    }
+
+    public function sendPrompt(): void
+    {
+        $this->validate([
+            'prompt' => ['required', 'string', 'max:500'],
+        ], attributes: [
+            'prompt' => __('general.ai_prompt'),
+        ]);
+
+        $tool = Tool::as('create_user')
+            ->for('اضافه کردن یک کاربر جدید به سیستم با شماره موبایل')
+            ->withStringParameter('mobile', 'شماره موبایل کاربر، مثل 09171234567')
+            ->using(function (string $mobile): string {
+                try {
+                    $validated = Validator::make(
+                        ['mobile' => $mobile],
+                        ['mobile' => ['required', 'string', new IranianMobile(format: 'zero')]],
+                        attributes: ['mobile' => __('general.mobile')],
+                    )->validate();
+                } catch (ValidationException $exception) {
+                    return $exception->validator->errors()->first('mobile')
+                        ?: __('general.ai_invalid_mobile');
+                }
+
+                $user = User::query()->firstOrCreate([
+                    'mobile' => $validated['mobile'],
+                ]);
+
+                if (! $user->wasRecentlyCreated) {
+                    return __('general.user_already_exists', ['mobile' => $user->mobile]);
+                }
+
+                return __('general.user_created', ['mobile' => $user->mobile]);
+            });
+
+        try {
+            $response = Prism::text()
+                ->using(Provider::Ollama, 'qwen2.5')
+                ->withSystemMessage('تو یک دستیار هوشمند هستی. دستورات را تحلیل کن و از ابزارها استفاده کن.')
+                ->withPrompt($this->prompt)
+                ->withTools([$tool])
+                ->withMaxSteps(2)
+                ->asText();
+        } catch (PrismException|\Throwable $exception) {
+            report($exception);
+
+            $this->assistantReply = '';
+            Flux::toast(__('general.ai_error'), variant: 'danger');
+
+            return;
+        }
+
+        $this->assistantReply = $response->text ?: __('general.ai_reply_empty');
+        $this->prompt = '';
+        unset($this->users);
+        $this->resetPage();
+
+        Flux::toast(__('general.ai_prompt_sent'));
+    }
+
+    #[Computed]
+    public function users(): LengthAwarePaginator
+    {
+        return User::query()
+            ->when($this->search !== '', function ($query): void {
+                $query->where('mobile', 'like', '%'.$this->search.'%');
+            })
+            ->latest()
+            ->paginate(15);
+    }
+
+    public function formatCreatedAt(User $user): string
+    {
+        return Jalalian::fromDateTime($user->created_at)->format('Y/m/d H:i');
+    }
 };
 ?>
 
@@ -30,15 +129,74 @@ class extends Component
         </flux:heading>
 
         <flux:text class="mt-2">
-            {{ __('general.users_page_placeholder') }}
+            {{ __('general.users_ai_hint') }}
         </flux:text>
     </div>
 
     <flux:separator variant="subtle" />
 
     <flux:card>
-        <flux:callout icon="users" variant="secondary" inline>
-            {{ __('general.users_page_placeholder') }}
-        </flux:callout>
+        <form wire:submit="sendPrompt" class="space-y-4">
+            <flux:field>
+                <flux:label>{{ __('general.ai_prompt') }}</flux:label>
+                <flux:textarea
+                    wire:model="prompt"
+                    rows="3"
+                    placeholder="{{ __('general.ai_prompt_placeholder') }}"
+                />
+                <flux:error name="prompt" />
+            </flux:field>
+
+            <flux:button
+                type="submit"
+                variant="primary"
+                color="teal"
+                class="w-full"
+                icon="paper-airplane"
+                wire:loading.attr="disabled"
+            >
+                <span wire:loading.remove wire:target="sendPrompt">{{ __('general.send') }}</span>
+                <span wire:loading wire:target="sendPrompt">{{ __('general.ai_thinking') }}</span>
+            </flux:button>
+        </form>
+
+        @if ($assistantReply !== '')
+            <flux:callout icon="sparkles" variant="secondary" class="mt-4" inline>
+                {{ $assistantReply }}
+            </flux:callout>
+        @endif
+    </flux:card>
+
+    <flux:card>
+        <div class="mb-4">
+            <flux:input
+                wire:model.live.debounce.300ms="search"
+                icon="magnifying-glass"
+                placeholder="{{ __('general.search') }}..."
+                clearable
+            />
+        </div>
+
+        <flux:table :paginate="$this->users">
+            <flux:table.columns>
+                <flux:table.column>{{ __('general.mobile') }}</flux:table.column>
+                <flux:table.column>{{ __('general.created_at') }}</flux:table.column>
+            </flux:table.columns>
+
+            <flux:table.rows>
+                @forelse ($this->users as $user)
+                    <flux:table.row :key="$user->id">
+                        <flux:table.cell>{{ $user->mobile }}</flux:table.cell>
+                        <flux:table.cell>{{ $this->formatCreatedAt($user) }}</flux:table.cell>
+                    </flux:table.row>
+                @empty
+                    <flux:table.row>
+                        <flux:table.cell colspan="2">
+                            {{ __('general.no_users') }}
+                        </flux:table.cell>
+                    </flux:table.row>
+                @endforelse
+            </flux:table.rows>
+        </flux:table>
     </flux:card>
 </div>
