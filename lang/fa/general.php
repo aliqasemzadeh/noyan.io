@@ -23,6 +23,7 @@ return [
     'otp_sms_message' => "کد ورود شما: :code\nلغو11",
     'save' => 'ذخیره',
     'edit' => 'ویرایش',
+    'dev_otp_helper' => 'کد تست محیط توسعه',
     'cancel' => 'انصراف',
     'search' => 'جستجو',
     'users' => 'کاربران',
