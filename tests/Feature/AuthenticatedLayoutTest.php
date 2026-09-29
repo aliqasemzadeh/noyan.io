@@ -45,7 +45,7 @@ class AuthenticatedLayoutTest extends TestCase
             ->get(route('system.users.index'))
             ->assertOk()
             ->assertSee(__('general.users'))
-            ->assertSee(__('general.users_page_placeholder'));
+            ->assertSee(__('general.ai_prompt'));
     }
 
     public function test_dashboard_shows_current_business_name(): void
