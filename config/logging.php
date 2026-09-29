@@ -65,6 +65,14 @@ return [
             'replace_placeholders' => true,
         ],
 
+        'otp' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/otp.log'),
+            'level' => env('LOG_LEVEL', 'debug'),
+            'max_files' => env('LOG_DAILY_DAYS', 14),
+            'replace_placeholders' => true,
+        ],
+
         'daily' => [
             'driver' => 'daily',
             'path' => storage_path('logs/laravel.log'),
