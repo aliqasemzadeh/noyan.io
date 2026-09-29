@@ -39,6 +39,7 @@ return [
         'endpoint' => env('SMS_ENDPOINT', 'https://srscrm.ir/api/sms/send'),
         'token' => env('SMS_TOKEN'),
         'gateway' => env('SMS_GATEWAY'),
+        'log_channel' => env('SMS_LOG_CHANNEL', 'otp'),
     ],
 
 ];
