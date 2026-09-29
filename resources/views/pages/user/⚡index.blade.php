@@ -11,7 +11,6 @@ use Livewire\Component;
 use Livewire\WithPagination;
 use Morilog\Jalali\Jalalian;
 use Prism\Prism\Enums\Provider;
-use Prism\Prism\Exceptions\PrismException;
 use Prism\Prism\Facades\Prism;
 use Prism\Prism\Facades\Tool;
 use Sadegh19b\LaravelPersianValidation\Rules\IranianMobile;
@@ -75,7 +74,7 @@ class extends Component
                 ->withTools([$tool])
                 ->withMaxSteps(2)
                 ->asText();
-        } catch (PrismException|\Throwable $exception) {
+        } catch (\Throwable $exception) {
             report($exception);
 
             $this->assistantReply = '';
