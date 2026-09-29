@@ -16,7 +16,7 @@ use Laravel\Ai\Providers\Tools\ProviderTool;
 use Stringable;
 
 #[Provider(Lab::Ollama)]
-#[Model('qwen2.5')]
+#[Model('qwen2.5:1.5b')]
 #[MaxSteps(2)]
 #[Timeout(120)]
 class UserAssistant implements Agent, HasTools
