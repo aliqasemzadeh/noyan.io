@@ -1,19 +1,14 @@
 <?php
 
+use App\Ai\Agents\UserAssistant;
 use App\Models\User;
 use Flux\Flux;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
-use Illuminate\Support\Facades\Validator;
-use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 use Livewire\WithPagination;
 use Morilog\Jalali\Jalalian;
-use Prism\Prism\Enums\Provider;
-use Prism\Prism\Facades\Prism;
-use Prism\Prism\Facades\Tool;
-use Sadegh19b\LaravelPersianValidation\Rules\IranianMobile;
 
 new
 #[Title('Users')]
@@ -40,40 +35,8 @@ class extends Component
             'prompt' => __('general.ai_prompt'),
         ]);
 
-        $tool = Tool::as('create_user')
-            ->for('اضافه کردن یک کاربر جدید به سیستم با شماره موبایل')
-            ->withStringParameter('mobile', 'شماره موبایل کاربر، مثل 09171234567')
-            ->using(function (string $mobile): string {
-                try {
-                    $validated = Validator::make(
-                        ['mobile' => $mobile],
-                        ['mobile' => ['required', 'string', new IranianMobile(format: 'zero')]],
-                        attributes: ['mobile' => __('general.mobile')],
-                    )->validate();
-                } catch (ValidationException $exception) {
-                    return $exception->validator->errors()->first('mobile')
-                        ?: __('general.ai_invalid_mobile');
-                }
-
-                $user = User::query()->firstOrCreate([
-                    'mobile' => $validated['mobile'],
-                ]);
-
-                if (! $user->wasRecentlyCreated) {
-                    return __('general.user_already_exists', ['mobile' => $user->mobile]);
-                }
-
-                return __('general.user_created', ['mobile' => $user->mobile]);
-            });
-
         try {
-            $response = Prism::text()
-                ->using(Provider::Ollama, 'qwen2.5')
-                ->withSystemMessage('تو یک دستیار هوشمند هستی. دستورات را تحلیل کن و از ابزارها استفاده کن.')
-                ->withPrompt($this->prompt)
-                ->withTools([$tool])
-                ->withMaxSteps(2)
-                ->asText();
+            $response = (new UserAssistant)->prompt($this->prompt);
         } catch (\Throwable $exception) {
             report($exception);
 
