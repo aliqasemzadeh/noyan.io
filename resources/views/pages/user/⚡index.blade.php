@@ -4,9 +4,14 @@ use App\Ai\Agents\UserAssistant;
 use App\Models\User;
 use Flux\Flux;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Http\UploadedFile;
+use Laravel\Ai\Enums\Lab;
+use Laravel\Ai\Files\Base64Audio;
+use Laravel\Ai\Transcription;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
 use Livewire\Component;
+use Livewire\WithFileUploads;
 use Livewire\WithPagination;
 use Morilog\Jalali\Jalalian;
 
@@ -14,6 +19,7 @@ new
 #[Title('Users')]
 class extends Component
 {
+    use WithFileUploads;
     use WithPagination;
 
     public string $prompt = '';
@@ -22,21 +28,68 @@ class extends Component
 
     public string $search = '';
 
+    /** @var TemporaryUploadedFile|null */
+    public $audio = null;
+
     public function updatedSearch(): void
     {
         $this->resetPage();
     }
 
+    public function removeAudio(): void
+    {
+        $this->reset('audio');
+    }
+
     public function sendPrompt(): void
     {
         $this->validate([
-            'prompt' => ['required', 'string', 'max:500'],
+            'prompt' => ['nullable', 'string', 'max:500', 'required_without:audio'],
+            'audio' => [
+                'nullable',
+                'file',
+                'max:10240',
+                'required_without:prompt',
+                'mimetypes:audio/mpeg,audio/mp3,audio/wav,audio/x-wav,audio/webm,audio/ogg,audio/mp4,audio/x-m4a,audio/aac,video/webm,application/octet-stream',
+            ],
         ], attributes: [
             'prompt' => __('general.ai_prompt'),
+            'audio' => __('general.ai_voice'),
         ]);
 
+        $promptText = trim($this->prompt);
+
+        if ($this->audio !== null) {
+            try {
+                $transcript = trim((string) Transcription::of(
+                    Base64Audio::fromUpload($this->audio, $this->resolveAudioMimeType($this->audio)),
+                )
+                    ->language('fa')
+                    ->timeout(120)
+                    ->generate(Lab::Gemini, 'gemini-3.1-flash-lite'));
+            } catch (\Throwable $exception) {
+                report($exception);
+
+                Flux::toast(__('general.ai_voice_error'), variant: 'danger');
+
+                return;
+            }
+
+            if ($transcript === '') {
+                Flux::toast(__('general.ai_voice_empty'), variant: 'warning');
+
+                return;
+            }
+
+            $promptText = $promptText !== ''
+                ? $promptText."\n".$transcript
+                : $transcript;
+
+            $this->prompt = $promptText;
+        }
+
         try {
-            $response = (new UserAssistant)->prompt($this->prompt);
+            $response = (new UserAssistant)->prompt($promptText);
         } catch (\Throwable $exception) {
             report($exception);
 
@@ -47,7 +100,7 @@ class extends Component
         }
 
         $this->assistantReply = $response->text ?: __('general.ai_reply_empty');
-        $this->prompt = '';
+        $this->reset(['prompt', 'audio']);
         unset($this->users);
         $this->resetPage();
 
@@ -68,6 +121,33 @@ class extends Component
     public function formatCreatedAt(User $user): string
     {
         return Jalalian::fromDateTime($user->created_at)->format('Y/m/d H:i');
+    }
+
+    protected function resolveAudioMimeType(UploadedFile $file): string
+    {
+        $clientMime = strtolower((string) $file->getClientMimeType());
+
+        if ($clientMime === 'video/webm') {
+            return 'audio/webm';
+        }
+
+        if (
+            $clientMime !== ''
+            && $clientMime !== 'application/octet-stream'
+            && str_starts_with($clientMime, 'audio/')
+        ) {
+            return $clientMime;
+        }
+
+        return match (strtolower($file->getClientOriginalExtension())) {
+            'mp3', 'mpeg' => 'audio/mpeg',
+            'wav' => 'audio/wav',
+            'webm' => 'audio/webm',
+            'ogg', 'oga' => 'audio/ogg',
+            'm4a', 'mp4' => 'audio/mp4',
+            'aac' => 'audio/aac',
+            default => 'audio/webm',
+        };
     }
 };
 ?>
@@ -109,6 +189,107 @@ class extends Component
                 <flux:error name="prompt" />
             </flux:field>
 
+            <div
+                class="space-y-3"
+                x-data="{
+                    recording: false,
+                    recorder: null,
+                    chunks: [],
+                    mimeType: 'audio/webm',
+                    extension: 'webm',
+                    pickMime() {
+                        const options = [
+                            { mime: 'audio/mp4', ext: 'm4a' },
+                            { mime: 'audio/ogg', ext: 'ogg' },
+                            { mime: 'audio/webm;codecs=opus', ext: 'webm' },
+                            { mime: 'audio/webm', ext: 'webm' },
+                        ]
+
+                        for (const option of options) {
+                            if (window.MediaRecorder && MediaRecorder.isTypeSupported(option.mime)) {
+                                this.mimeType = option.mime
+                                this.extension = option.ext
+                                return
+                            }
+                        }
+                    },
+                    async toggle() {
+                        if (this.recording) {
+                            this.recorder?.stop()
+                            this.recording = false
+                            return
+                        }
+
+                        try {
+                            this.pickMime()
+                            const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+                            this.chunks = []
+                            this.recorder = new MediaRecorder(stream, { mimeType: this.mimeType })
+
+                            this.recorder.ondataavailable = (event) => {
+                                if (event.data.size > 0) {
+                                    this.chunks.push(event.data)
+                                }
+                            }
+
+                            this.recorder.onstop = () => {
+                                stream.getTracks().forEach((track) => track.stop())
+                                const type = this.mimeType.split(';')[0]
+                                const blob = new Blob(this.chunks, { type })
+                                const file = new File([blob], `voice.${this.extension}`, { type })
+                                $wire.upload('audio', file)
+                            }
+
+                            this.recorder.start()
+                            this.recording = true
+                        } catch (error) {
+                            console.error(error)
+                        }
+                    }
+                }"
+            >
+                <flux:field>
+                    <flux:label>{{ __('general.ai_voice') }}</flux:label>
+                    <flux:input
+                        type="file"
+                        wire:model="audio"
+                        accept="audio/*,.mp3,.wav,.webm,.ogg,.m4a"
+                    />
+                    <flux:description>{{ __('general.ai_voice_hint') }}</flux:description>
+                    <flux:error name="audio" />
+                </flux:field>
+
+                <div class="flex flex-wrap items-center gap-2">
+                    <flux:button
+                        type="button"
+                        variant="primary"
+                        color="rose"
+                        icon="mic"
+                        x-on:click="toggle"
+                        x-bind:aria-pressed="recording.toString()"
+                    >
+                        <span x-show="! recording">{{ __('general.ai_voice_record') }}</span>
+                        <span x-show="recording" x-cloak>{{ __('general.ai_voice_stop') }}</span>
+                    </flux:button>
+
+                    @if ($audio)
+                        <flux:badge color="teal" size="sm">{{ $audio->getClientOriginalName() }}</flux:badge>
+                        <flux:button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            wire:click="removeAudio"
+                        >
+                            {{ __('general.ai_voice_remove') }}
+                        </flux:button>
+                    @endif
+
+                    <div wire:loading wire:target="audio">
+                        <flux:text class="text-sm">{{ __('general.ai_voice_uploading') }}</flux:text>
+                    </div>
+                </div>
+            </div>
+
             <flux:button
                 type="submit"
                 variant="primary"
@@ -116,6 +297,7 @@ class extends Component
                 class="w-full"
                 icon="paper-airplane"
                 wire:loading.attr="disabled"
+                wire:target="sendPrompt"
             >
                 <span wire:loading.remove wire:target="sendPrompt">{{ __('general.send') }}</span>
                 <span wire:loading wire:target="sendPrompt">{{ __('general.ai_thinking') }}</span>

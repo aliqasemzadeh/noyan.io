@@ -6,7 +6,9 @@ use App\Ai\Agents\UserAssistant;
 use App\Ai\Tools\CreateUser;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Laravel\Ai\Tools\Request;
+use Laravel\Ai\Transcription;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -81,6 +83,39 @@ class UsersIndexTest extends TestCase
             ->assertSet('prompt', '');
 
         UserAssistant::assertPrompted('یک کاربر با شماره موبایل 09171234567 اضافه کن');
+    }
+
+    public function test_send_prompt_with_audio_transcribes_then_prompts_agent(): void
+    {
+        Transcription::fake([
+            'یک کاربر با شماره موبایل 09171234567 اضافه کن',
+        ]);
+
+        UserAssistant::fake([
+            __('general.user_created', ['mobile' => '09171234567']),
+        ]);
+
+        $viewer = User::factory()->create([
+            'mobile' => '09121111111',
+        ]);
+
+        $audio = UploadedFile::fake()->createWithContent(
+            'voice.webm',
+            str_repeat('audio', 256),
+            'application/octet-stream',
+        );
+
+        Livewire::actingAs($viewer)
+            ->test('pages::user.index')
+            ->set('audio', $audio)
+            ->call('sendPrompt')
+            ->assertHasNoErrors()
+            ->assertSet('assistantReply', __('general.user_created', ['mobile' => '09171234567']))
+            ->assertSet('prompt', '')
+            ->assertSet('audio', null);
+
+        UserAssistant::assertPrompted('یک کاربر با شماره موبایل 09171234567 اضافه کن');
+        Transcription::assertGenerated(fn () => true);
     }
 
     public function test_create_user_tool_creates_user_by_mobile(): void
