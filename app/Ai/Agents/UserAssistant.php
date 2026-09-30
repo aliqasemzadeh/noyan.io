@@ -4,7 +4,6 @@ namespace App\Ai\Agents;
 
 use App\Ai\Tools\CreateUser;
 use Laravel\Ai\Attributes\MaxSteps;
-use Laravel\Ai\Attributes\Model;
 use Laravel\Ai\Attributes\Provider;
 use Laravel\Ai\Attributes\Timeout;
 use Laravel\Ai\Contracts\Agent;
@@ -15,8 +14,10 @@ use Laravel\Ai\Promptable;
 use Laravel\Ai\Providers\Tools\ProviderTool;
 use Stringable;
 
-#[Provider(Lab::Ollama)]
-#[Model('qwen2.5:1.5b')]
+#[Provider([
+    Lab::Gemini->value => 'gemini-3.1-flash-lite',
+    Lab::Ollama->value => 'qwen2.5:1.5b',
+])]
 #[MaxSteps(2)]
 #[Timeout(120)]
 class UserAssistant implements Agent, HasTools
