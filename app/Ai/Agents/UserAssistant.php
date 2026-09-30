@@ -15,7 +15,6 @@ use Laravel\Ai\Providers\Tools\ProviderTool;
 use Stringable;
 
 #[Provider([
-    Lab::Gemini->value => 'gemini-3.1-flash-lite',
     Lab::Ollama->value => 'qwen2.5:1.5b',
 ])]
 #[MaxSteps(2)]
