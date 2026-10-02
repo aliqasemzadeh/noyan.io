@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\AccountSubType;
 use App\Livewire\Forms\AccountForm;
 use App\Models\Accounting\Account;
 use App\Models\Currency;
@@ -61,6 +62,7 @@ new class extends Component
         unset($this->currencies);
 
         $this->dispatch('panels.accounting.account.index.table');
+        $this->dispatch('panels.accounting.account.view.refresh');
 
         Flux::modals()->close();
 
@@ -91,6 +93,18 @@ new class extends Component
         </flux:field>
 
         <flux:field>
+            <flux:label>{{ __('general.account_sub_type') }}</flux:label>
+            <flux:select wire:model="form.sub_type" searchable variant="listbox" placeholder="{{ __('general.select_account_sub_type') }}">
+                @foreach (AccountSubType::cases() as $subType)
+                    <flux:select.option value="{{ $subType->value }}" wire:key="edit-sub-type-{{ $subType->value }}">
+                        {{ $subType->label() }}
+                    </flux:select.option>
+                @endforeach
+            </flux:select>
+            <flux:error name="form.sub_type" />
+        </flux:field>
+
+        <flux:field>
             <flux:label>{{ __('general.currency') }}</flux:label>
             <flux:select wire:model="form.currency_id" searchable variant="listbox" placeholder="{{ __('general.select_currency') }}">
                 @foreach ($this->currencies as $currency)
@@ -103,6 +117,16 @@ new class extends Component
         </flux:field>
 
         <flux:field>
+            <flux:label>{{ __('general.bank_name') }}</flux:label>
+            <flux:input
+                wire:model="form.bank_name"
+                placeholder="{{ __('general.bank_name_placeholder') }}"
+                clearable
+            />
+            <flux:error name="form.bank_name" />
+        </flux:field>
+
+        <flux:field>
             <flux:label>{{ __('general.account_number') }}</flux:label>
             <flux:input
                 wire:model="form.account_number"
@@ -111,6 +135,28 @@ new class extends Component
                 clearable
             />
             <flux:error name="form.account_number" />
+        </flux:field>
+
+        <flux:field>
+            <flux:label>{{ __('general.card_number') }}</flux:label>
+            <flux:input
+                wire:model="form.card_number"
+                placeholder="{{ __('general.card_number_placeholder') }}"
+                dir="ltr"
+                clearable
+            />
+            <flux:error name="form.card_number" />
+        </flux:field>
+
+        <flux:field>
+            <flux:label>{{ __('general.iban') }}</flux:label>
+            <flux:input
+                wire:model="form.iban"
+                placeholder="{{ __('general.iban_placeholder') }}"
+                dir="ltr"
+                clearable
+            />
+            <flux:error name="form.iban" />
         </flux:field>
 
         <flux:field>
