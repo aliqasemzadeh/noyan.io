@@ -24,12 +24,6 @@ new class extends Component
             return;
         }
 
-        if ($this->currency->isInUse()) {
-            Flux::toast(__('general.currency_in_use'), variant: 'danger');
-
-            return;
-        }
-
         $this->currency->delete();
 
         Currency::forgetActiveCache();

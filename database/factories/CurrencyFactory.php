@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\CurrencyType;
 use App\Models\Currency;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -21,6 +22,9 @@ class CurrencyFactory extends Factory
             'code' => $code,
             'name' => fake()->words(2, true).' Currency',
             'symbol' => $code[0],
+            'type' => CurrencyType::Fiat,
+            'is_system' => true,
+            'business_id' => null,
             'decimal_places' => fake()->numberBetween(0, 8),
             'is_active' => true,
         ];
@@ -30,6 +34,15 @@ class CurrencyFactory extends Factory
     {
         return $this->state(fn (): array => [
             'is_active' => false,
+        ]);
+    }
+
+    public function custom(int $businessId): static
+    {
+        return $this->state(fn (): array => [
+            'type' => CurrencyType::Custom,
+            'is_system' => false,
+            'business_id' => $businessId,
         ]);
     }
 }

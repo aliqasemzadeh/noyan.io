@@ -23,11 +23,14 @@ class AccountManagementTest extends TestCase
             'code' => 'BTC',
             'decimal_places' => 8,
         ]);
+        $business->activateCurrency($currency, '1');
 
         Livewire::actingAs($user)
             ->test('accounting.account.create')
             ->set('form.name', 'Cold Wallet')
             ->set('form.currency_id', $currency->id)
+            ->set('form.account_number', 'bc1qexample')
+            ->set('form.note', 'Cold storage')
             ->set('form.opening_balance', '0.12345678')
             ->set('form.is_active', true)
             ->call('save')
@@ -37,6 +40,8 @@ class AccountManagementTest extends TestCase
             'business_id' => $business->id,
             'currency_id' => $currency->id,
             'name' => 'Cold Wallet',
+            'account_number' => 'bc1qexample',
+            'note' => 'Cold storage',
         ]);
 
         $account = Account::query()->where('name', 'Cold Wallet')->first();
@@ -53,6 +58,7 @@ class AccountManagementTest extends TestCase
             'code' => 'IRR',
             'decimal_places' => 0,
         ]);
+        $business->activateCurrency($currency, '1');
 
         Livewire::actingAs($user)
             ->test('accounting.account.create')
@@ -63,6 +69,22 @@ class AccountManagementTest extends TestCase
             ->assertHasErrors(['form.opening_balance']);
     }
 
+    public function test_account_rejects_non_activated_currency(): void
+    {
+        $user = User::factory()->create();
+        $business = Business::factory()->for($user, 'owner')->create();
+        $user->forceFill(['current_business_id' => $business->id])->save();
+        $currency = Currency::factory()->create(['code' => 'EUR']);
+
+        Livewire::actingAs($user)
+            ->test('accounting.account.create')
+            ->set('form.name', 'Euro Account')
+            ->set('form.currency_id', $currency->id)
+            ->set('form.opening_balance', '100')
+            ->call('save')
+            ->assertHasErrors(['form.currency_id']);
+    }
+
     public function test_accounts_are_scoped_to_current_business(): void
     {
         $user = User::factory()->create();
@@ -71,6 +93,7 @@ class AccountManagementTest extends TestCase
         $user->forceFill(['current_business_id' => $current->id])->save();
 
         $currency = Currency::factory()->create();
+        $current->activateCurrency($currency, '1');
 
         Account::factory()->create([
             'business_id' => $current->id,
@@ -96,6 +119,7 @@ class AccountManagementTest extends TestCase
         $business = Business::factory()->for($user, 'owner')->create();
         $user->forceFill(['current_business_id' => $business->id])->save();
         $currency = Currency::factory()->create(['decimal_places' => 2]);
+        $business->activateCurrency($currency, '1');
 
         $account = Account::factory()->create([
             'business_id' => $business->id,
@@ -108,6 +132,8 @@ class AccountManagementTest extends TestCase
             ->test('accounting.account.edit')
             ->call('assignData', $account)
             ->set('form.name', 'Main Bank')
+            ->set('form.account_number', 'IR1234567890')
+            ->set('form.note', 'Payroll account')
             ->set('form.opening_balance', '25.50')
             ->call('save')
             ->assertHasNoErrors();
@@ -115,6 +141,8 @@ class AccountManagementTest extends TestCase
         $this->assertDatabaseHas('accounting_accounts', [
             'id' => $account->id,
             'name' => 'Main Bank',
+            'account_number' => 'IR1234567890',
+            'note' => 'Payroll account',
         ]);
 
         Livewire::actingAs($user)

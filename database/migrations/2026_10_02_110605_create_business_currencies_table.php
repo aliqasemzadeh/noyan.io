@@ -11,18 +11,16 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('accounting_accounts', function (Blueprint $table) {
+        Schema::create('business_currencies', function (Blueprint $table) {
             $table->id();
             $table->foreignId('business_id')->constrained('businesses')->cascadeOnDelete();
             $table->foreignId('currency_id')->constrained('currencies')->restrictOnDelete();
-            $table->string('name');
-            $table->string('account_number')->nullable();
-            $table->text('note')->nullable();
-            $table->decimal('opening_balance', 36, 18)->default(0);
-            $table->boolean('is_active')->default(true);
+            $table->boolean('is_base')->default(false);
+            $table->decimal('exchange_rate_to_base', 36, 18)->default(1);
             $table->timestamps();
 
-            $table->index(['business_id', 'name']);
+            $table->unique(['business_id', 'currency_id']);
+            $table->index(['business_id', 'is_base']);
         });
     }
 
@@ -31,6 +29,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('accounting_accounts');
+        Schema::dropIfExists('business_currencies');
     }
 };

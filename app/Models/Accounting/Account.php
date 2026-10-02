@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['business_id', 'currency_id', 'name', 'opening_balance', 'is_active'])]
+#[Fillable(['business_id', 'currency_id', 'name', 'account_number', 'note', 'opening_balance', 'is_active'])]
 class Account extends Model
 {
     /** @use HasFactory<AccountFactory> */

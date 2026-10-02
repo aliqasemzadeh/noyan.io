@@ -22,7 +22,13 @@ new class extends Component
     #[Computed]
     public function currencies(): Collection
     {
-        $currencies = Currency::cachedActive();
+        $businessId = Auth::user()?->current_business_id;
+
+        if ($businessId === null) {
+            return Currency::query()->whereRaw('1 = 0')->get();
+        }
+
+        $currencies = Currency::cachedForBusiness($businessId);
 
         if ($this->account?->currency && $currencies->where('id', $this->account->currency_id)->isEmpty()) {
             $currencies = $currencies->prepend($this->account->currency);
@@ -97,6 +103,17 @@ new class extends Component
         </flux:field>
 
         <flux:field>
+            <flux:label>{{ __('general.account_number') }}</flux:label>
+            <flux:input
+                wire:model="form.account_number"
+                placeholder="{{ __('general.account_number_placeholder') }}"
+                dir="ltr"
+                clearable
+            />
+            <flux:error name="form.account_number" />
+        </flux:field>
+
+        <flux:field>
             <flux:label>{{ __('general.opening_balance') }}</flux:label>
             <flux:input
                 wire:model="form.opening_balance"
@@ -104,6 +121,16 @@ new class extends Component
                 dir="ltr"
             />
             <flux:error name="form.opening_balance" />
+        </flux:field>
+
+        <flux:field>
+            <flux:label>{{ __('general.note') }}</flux:label>
+            <flux:textarea
+                wire:model="form.note"
+                placeholder="{{ __('general.account_note_placeholder') }}"
+                rows="3"
+            />
+            <flux:error name="form.note" />
         </flux:field>
 
         <flux:field variant="inline">

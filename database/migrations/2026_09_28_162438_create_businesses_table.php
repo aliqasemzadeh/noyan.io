@@ -16,7 +16,6 @@ return new class extends Migration
             $table->foreignId('owner_id')->constrained('users')->cascadeOnDelete();
             $table->string('name');
             $table->string('slug')->unique();
-            $table->string('default_currency', 3)->default('IRR');
             $table->boolean('is_active')->default(true);
             $table->timestamps();
             $table->softDeletes();

@@ -49,6 +49,8 @@ class extends Component
 
                 $query->where(function ($query) use ($search): void {
                     $query->where('name', 'like', $search)
+                        ->orWhere('account_number', 'like', $search)
+                        ->orWhere('note', 'like', $search)
                         ->orWhereHas('currency', function ($query) use ($search): void {
                             $query->where('code', 'like', $search)
                                 ->orWhere('name', 'like', $search);
@@ -124,6 +126,7 @@ class extends Component
         <flux:table :paginate="$this->accounts">
             <flux:table.columns>
                 <flux:table.column>{{ __('general.name') }}</flux:table.column>
+                <flux:table.column>{{ __('general.account_number') }}</flux:table.column>
                 <flux:table.column>{{ __('general.currency') }}</flux:table.column>
                 <flux:table.column>{{ __('general.opening_balance') }}</flux:table.column>
                 <flux:table.column>{{ __('general.is_active') }}</flux:table.column>
@@ -135,6 +138,9 @@ class extends Component
                 @forelse ($this->accounts as $account)
                     <flux:table.row :key="$account->id">
                         <flux:table.cell>{{ $account->name }}</flux:table.cell>
+                        <flux:table.cell>
+                            <span dir="ltr">{{ $account->account_number ?: '—' }}</span>
+                        </flux:table.cell>
                         <flux:table.cell>
                             <span dir="ltr">{{ $account->currency?->code }}</span>
                         </flux:table.cell>
@@ -174,7 +180,7 @@ class extends Component
                     </flux:table.row>
                 @empty
                     <flux:table.row>
-                        <flux:table.cell colspan="6">
+                        <flux:table.cell colspan="7">
                             {{ __('general.no_accounts') }}
                         </flux:table.cell>
                     </flux:table.row>
