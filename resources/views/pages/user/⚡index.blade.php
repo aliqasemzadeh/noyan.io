@@ -9,6 +9,7 @@ use Laravel\Ai\Enums\Lab;
 use Laravel\Ai\Files\Base64Audio;
 use Laravel\Ai\Transcription;
 use Livewire\Attributes\Computed;
+use Livewire\Attributes\On;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 use Livewire\WithFileUploads;
@@ -107,6 +108,12 @@ class extends Component
         Flux::toast(__('general.ai_prompt_sent'));
     }
 
+    #[On('panels.administrator.user.index.table')]
+    public function refreshTable(): void
+    {
+        unset($this->users);
+    }
+
     #[Computed]
     public function users(): LengthAwarePaginator
     {
@@ -166,9 +173,17 @@ class extends Component
             </flux:breadcrumbs.item>
         </flux:breadcrumbs>
 
-        <flux:heading size="xl" level="1" class="mt-4">
-            {{ __('general.users') }}
-        </flux:heading>
+        <div class="mt-4 flex items-center justify-between">
+            <flux:heading size="xl" level="1">
+                {{ __('general.users') }}
+            </flux:heading>
+
+            <flux:modal.trigger name="user.create">
+                <flux:button variant="primary" color="teal" icon="plus">
+                    {{ __('general.create_user') }}
+                </flux:button>
+            </flux:modal.trigger>
+        </div>
 
         <flux:text class="mt-2">
             {{ __('general.users_ai_hint') }}
@@ -315,7 +330,7 @@ class extends Component
         <div class="mb-4">
             <flux:input
                 wire:model.live.debounce.300ms="search"
-                icon="magnifying-glass"
+                icon="search"
                 placeholder="{{ __('general.search') }}..."
                 clearable
             />
@@ -325,6 +340,7 @@ class extends Component
             <flux:table.columns>
                 <flux:table.column>{{ __('general.mobile') }}</flux:table.column>
                 <flux:table.column>{{ __('general.created_at') }}</flux:table.column>
+                <flux:table.column align="end">{{ __('general.actions') }}</flux:table.column>
             </flux:table.columns>
 
             <flux:table.rows>
@@ -332,10 +348,20 @@ class extends Component
                     <flux:table.row :key="$user->id">
                         <flux:table.cell>{{ $user->mobile }}</flux:table.cell>
                         <flux:table.cell>{{ $this->formatCreatedAt($user) }}</flux:table.cell>
+                        <flux:table.cell align="end">
+                            <div class="flex justify-end gap-2">
+                                <flux:tooltip content="{{ __('general.edit') }}">
+                                    <flux:button size="xs" variant="primary" color="blue" icon="pencil" icon:variant="outline" wire:click="$dispatch('panels.administrator.user.edit.assign-data', { user: {{ $user->id }} })" />
+                                </flux:tooltip>
+                                <flux:tooltip content="{{ __('general.delete') }}">
+                                    <flux:button size="xs" variant="danger" icon="trash" icon:variant="outline" wire:click="$dispatch('panels.administrator.user.delete.assign-data', { user: {{ $user->id }} })" />
+                                </flux:tooltip>
+                            </div>
+                        </flux:table.cell>
                     </flux:table.row>
                 @empty
                     <flux:table.row>
-                        <flux:table.cell colspan="2">
+                        <flux:table.cell colspan="3">
                             {{ __('general.no_users') }}
                         </flux:table.cell>
                     </flux:table.row>
@@ -343,4 +369,8 @@ class extends Component
             </flux:table.rows>
         </flux:table>
     </flux:card>
+
+    <livewire:user.create :key="'user-create'" />
+    <livewire:user.edit :key="'user-edit'" />
+    <livewire:user.delete :key="'user-delete'" />
 </div>
