@@ -91,6 +91,7 @@ new class extends Component
 };
 ?>
 
+<div>
 <flux:modal name="business.create" flyout position="right" class="space-y-6">
     <div>
         <flux:heading size="lg">{{ __('general.create_business') }}</flux:heading>
@@ -112,35 +113,32 @@ new class extends Component
 
         <flux:field>
             <flux:label>{{ __('general.owner') }}</flux:label>
-            <flux:select
-                wire:model="form.owner_id"
-                variant="combobox"
-                :filter="false"
-                placeholder="{{ __('general.select_owner') }}"
-            >
-                <x-slot name="input">
-                    <flux:select.input
-                        wire:model.live.debounce.300ms="ownerSearch"
-                        placeholder="{{ __('general.search_owner_placeholder') }}"
-                    />
-                </x-slot>
-
-                @foreach ($this->ownerOptions as $user)
-                    <flux:select.option :value="$user->id" wire:key="owner-option-{{ $user->id }}">
-                        {{ $user->mobile }}
-                    </flux:select.option>
-                @endforeach
-
-                <flux:select.option.create modal="business.owner.create" min-length="2">
-                    {{ __('general.create_owner') }}
-                </flux:select.option.create>
-            </flux:select>
+            <div class="space-y-2">
+                <flux:input
+                    wire:model.live.debounce.300ms="ownerSearch"
+                    icon="search"
+                    placeholder="{{ __('general.search_owner_placeholder') }}"
+                    clearable
+                />
+                <flux:select wire:model="form.owner_id" placeholder="{{ __('general.select_owner') }}">
+                    @foreach ($this->ownerOptions as $user)
+                        <flux:select.option :value="$user->id" wire:key="owner-option-{{ $user->id }}">
+                            {{ $user->mobile }}
+                        </flux:select.option>
+                    @endforeach
+                </flux:select>
+                <flux:modal.trigger name="business.owner.create">
+                    <flux:button type="button" variant="ghost" size="sm" icon="plus" class="w-full">
+                        {{ __('general.create_owner') }}
+                    </flux:button>
+                </flux:modal.trigger>
+            </div>
             <flux:error name="form.owner_id" />
         </flux:field>
 
         <flux:field>
             <flux:label>{{ __('general.default_currency') }}</flux:label>
-            <flux:select wire:model="form.default_currency" variant="listbox" searchable>
+            <flux:select wire:model="form.default_currency">
                 @foreach ($this->currencies as $currency)
                     <flux:select.option :value="$currency['value']">{{ $currency['label'] }}</flux:select.option>
                 @endforeach
@@ -185,3 +183,4 @@ new class extends Component
         </div>
     </form>
 </flux:modal>
+</div>
