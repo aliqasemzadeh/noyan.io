@@ -2,6 +2,8 @@
 
 namespace App\Models\Accounting;
 
+use App\Enums\AccountSubType;
+use App\Enums\AccountType;
 use App\Models\Business;
 use App\Models\Currency;
 use Database\Factories\AccountFactory;
@@ -10,7 +12,20 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['business_id', 'currency_id', 'name', 'account_number', 'note', 'opening_balance', 'is_active'])]
+#[Fillable([
+    'business_id',
+    'currency_id',
+    'name',
+    'type',
+    'sub_type',
+    'bank_name',
+    'account_number',
+    'card_number',
+    'iban',
+    'note',
+    'opening_balance',
+    'is_active',
+])]
 class Account extends Model
 {
     /** @use HasFactory<AccountFactory> */
@@ -24,6 +39,8 @@ class Account extends Model
     protected function casts(): array
     {
         return [
+            'type' => AccountType::class,
+            'sub_type' => AccountSubType::class,
             'opening_balance' => 'decimal:18',
             'is_active' => 'boolean',
         ];
@@ -42,5 +59,12 @@ class Account extends Model
     public function currency(): BelongsTo
     {
         return $this->belongsTo(Currency::class);
+    }
+
+    public function primaryIdentifier(): ?string
+    {
+        return $this->iban
+            ?: $this->account_number
+            ?: $this->card_number;
     }
 }

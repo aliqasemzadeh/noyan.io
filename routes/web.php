@@ -28,6 +28,7 @@ Route::middleware('auth')->group(function () {
     Route::prefix('accounting')->name('accounting.')->group(function () {
         Route::livewire('/', 'pages::panel.accounting.dashboard.index')->name('dashboard');
         Route::livewire('/accounts', 'pages::panel.accounting.account.index')->name('accounts.index');
+        Route::livewire('/accounts/{account}', 'pages::panel.accounting.account.view')->name('accounts.view');
         Route::livewire('/currencies', 'pages::panel.accounting.currency.index')->name('currencies.index');
     });
 });

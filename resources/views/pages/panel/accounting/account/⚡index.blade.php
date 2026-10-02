@@ -49,7 +49,11 @@ class extends Component
 
                 $query->where(function ($query) use ($search): void {
                     $query->where('name', 'like', $search)
+                        ->orWhere('bank_name', 'like', $search)
                         ->orWhere('account_number', 'like', $search)
+                        ->orWhere('card_number', 'like', $search)
+                        ->orWhere('iban', 'like', $search)
+                        ->orWhere('sub_type', 'like', $search)
                         ->orWhere('note', 'like', $search)
                         ->orWhereHas('currency', function ($query) use ($search): void {
                             $query->where('code', 'like', $search)
@@ -81,6 +85,8 @@ class extends Component
 ?>
 
 <div class="space-y-6">
+    <x-slot name="title">{{ __('general.cash_and_bank_accounts') }} - {{ config('app.name') }}</x-slot>
+
     <div>
         <flux:breadcrumbs>
             <flux:breadcrumbs.item :href="route('accounting.dashboard')" wire:navigate>
@@ -90,13 +96,13 @@ class extends Component
                 {{ __('general.accounting') }}
             </flux:breadcrumbs.item>
             <flux:breadcrumbs.item>
-                {{ __('general.accounts') }}
+                {{ __('general.cash_and_bank_accounts') }}
             </flux:breadcrumbs.item>
         </flux:breadcrumbs>
 
         <div class="mt-4 flex items-center justify-between">
             <flux:heading size="xl" level="1">
-                {{ __('general.accounts') }}
+                {{ __('general.cash_and_bank_accounts') }}
             </flux:heading>
 
             <flux:modal.trigger name="account.create">
@@ -126,6 +132,7 @@ class extends Component
         <flux:table :paginate="$this->accounts">
             <flux:table.columns>
                 <flux:table.column>{{ __('general.name') }}</flux:table.column>
+                <flux:table.column>{{ __('general.account_sub_type') }}</flux:table.column>
                 <flux:table.column>{{ __('general.account_number') }}</flux:table.column>
                 <flux:table.column>{{ __('general.currency') }}</flux:table.column>
                 <flux:table.column>{{ __('general.opening_balance') }}</flux:table.column>
@@ -137,9 +144,22 @@ class extends Component
             <flux:table.rows>
                 @forelse ($this->accounts as $account)
                     <flux:table.row :key="$account->id">
-                        <flux:table.cell>{{ $account->name }}</flux:table.cell>
                         <flux:table.cell>
-                            <span dir="ltr">{{ $account->account_number ?: '—' }}</span>
+                            <a
+                                href="{{ route('accounting.accounts.view', $account) }}"
+                                wire:navigate
+                                class="font-medium text-teal-700 hover:underline dark:text-teal-400"
+                            >
+                                {{ $account->name }}
+                            </a>
+                        </flux:table.cell>
+                        <flux:table.cell>
+                            <flux:badge size="sm" :color="$account->sub_type->badgeColor()">
+                                {{ $account->sub_type->label() }}
+                            </flux:badge>
+                        </flux:table.cell>
+                        <flux:table.cell>
+                            <span dir="ltr">{{ $account->primaryIdentifier() ?: '—' }}</span>
                         </flux:table.cell>
                         <flux:table.cell>
                             <span dir="ltr">{{ $account->currency?->code }}</span>
@@ -154,33 +174,37 @@ class extends Component
                         </flux:table.cell>
                         <flux:table.cell>{{ $this->formatCreatedAt($account) }}</flux:table.cell>
                         <flux:table.cell align="end">
-                            <div class="flex justify-end gap-2">
-                                <flux:tooltip content="{{ __('general.edit') }}">
-                                    <flux:button
-                                        size="xs"
-                                        variant="primary"
-                                        color="blue"
+                            <flux:dropdown>
+                                <flux:button size="xs" variant="ghost" icon="ellipsis-vertical" icon:variant="outline" />
+                                <flux:menu>
+                                    <flux:menu.item
+                                        icon="eye"
+                                        :href="route('accounting.accounts.view', $account)"
+                                        wire:navigate
+                                    >
+                                        {{ __('general.view_account') }}
+                                    </flux:menu.item>
+                                    <flux:menu.item
                                         icon="pencil"
-                                        icon:variant="outline"
                                         wire:click="$dispatch('panels.accounting.account.edit.assign-data', { account: {{ $account->id }} })"
-                                    />
-                                </flux:tooltip>
-
-                                <flux:tooltip content="{{ __('general.delete') }}">
-                                    <flux:button
-                                        size="xs"
+                                    >
+                                        {{ __('general.edit') }}
+                                    </flux:menu.item>
+                                    <flux:menu.separator />
+                                    <flux:menu.item
                                         variant="danger"
                                         icon="trash"
-                                        icon:variant="outline"
                                         wire:click="$dispatch('panels.accounting.account.delete.assign-data', { account: {{ $account->id }} })"
-                                    />
-                                </flux:tooltip>
-                            </div>
+                                    >
+                                        {{ __('general.delete') }}
+                                    </flux:menu.item>
+                                </flux:menu>
+                            </flux:dropdown>
                         </flux:table.cell>
                     </flux:table.row>
                 @empty
                     <flux:table.row>
-                        <flux:table.cell colspan="7">
+                        <flux:table.cell colspan="8">
                             {{ __('general.no_accounts') }}
                         </flux:table.cell>
                     </flux:table.row>
