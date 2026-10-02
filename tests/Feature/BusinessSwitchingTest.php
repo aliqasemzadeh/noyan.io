@@ -96,6 +96,23 @@ class BusinessSwitchingTest extends TestCase
         $this->assertNotSame($foreign->id, $user->fresh()->current_business_id);
     }
 
+    public function test_business_and_membership_support_soft_deletes(): void
+    {
+        $user = User::factory()->create();
+        $business = Business::factory()->for($user, 'owner')->create();
+        $membership = BusinessUser::query()
+            ->where('business_id', $business->id)
+            ->where('user_id', $user->id)
+            ->firstOrFail();
+
+        $membership->delete();
+        $business->delete();
+
+        $this->assertSoftDeleted($membership);
+        $this->assertSoftDeleted($business);
+        $this->assertFalse($user->fresh()->belongsToBusiness($business));
+    }
+
     public function test_app_shell_uses_cached_businesses(): void
     {
         $user = User::factory()->create();

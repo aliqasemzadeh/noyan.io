@@ -28,7 +28,7 @@ class AuthenticatedLayoutTest extends TestCase
         $user = User::factory()->create();
 
         $this->actingAs($user)
-            ->get(route('dashboard'))
+            ->get(route('system.dashboard'))
             ->assertOk()
             ->assertSee(__('general.dashboard'))
             ->assertSee(__('general.system_management'))
@@ -57,7 +57,7 @@ class AuthenticatedLayoutTest extends TestCase
         $user->forceFill(['current_business_id' => $business->id])->save();
 
         $this->actingAs($user->fresh())
-            ->get(route('dashboard'))
+            ->get(route('system.dashboard'))
             ->assertOk()
             ->assertSee('Noyan Shop');
     }
