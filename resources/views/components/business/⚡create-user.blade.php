@@ -18,7 +18,7 @@ new class extends Component
 
     public string $userSearch = '';
 
-    #[On('panels.administrator.business.add-user.assign-data')]
+    #[On('panels.administrator.business.create-user.assign-data')]
     public function assignData(Business $business): void
     {
         $this->business = $business;
@@ -27,7 +27,7 @@ new class extends Component
         $this->resetValidation();
         unset($this->users);
 
-        Flux::modal('business.add-user')->show();
+        Flux::modal('business.create-user')->show();
     }
 
     #[Computed]
@@ -92,9 +92,9 @@ new class extends Component
 };
 ?>
 
-<flux:modal name="business.add-user" flyout position="right" class="space-y-6">
+<flux:modal name="business.create-user" flyout position="right" class="space-y-6">
     <div>
-        <flux:heading size="lg">{{ __('general.add_business_user') }}</flux:heading>
+        <flux:heading size="lg">{{ __('general.create_business_user') }}</flux:heading>
     </div>
 
     @if ($business)

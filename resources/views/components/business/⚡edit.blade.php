@@ -6,9 +6,11 @@ use App\Models\Business;
 use App\Models\User;
 use Flux\Flux;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Validation\Rule;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
 use Livewire\Component;
+use Sadegh19b\LaravelPersianValidation\Rules\IranianMobile;
 
 new class extends Component
 {
@@ -18,12 +20,15 @@ new class extends Component
 
     public string $ownerSearch = '';
 
+    public string $newOwnerMobile = '';
+
     #[On('panels.administrator.business.edit.assign-data')]
     public function assignData(Business $business): void
     {
         $this->business = $business;
         $this->form->setModel($business);
         $this->ownerSearch = $business->owner?->mobile ?? '';
+        $this->newOwnerMobile = '';
         $this->resetValidation();
         unset($this->owners);
 
@@ -53,11 +58,39 @@ new class extends Component
             ->get();
     }
 
+    public function createOwner(): void
+    {
+        $validated = $this->validate([
+            'newOwnerMobile' => [
+                'required',
+                'string',
+                new IranianMobile(format: 'zero'),
+                Rule::unique('users', 'mobile'),
+            ],
+        ], attributes: [
+            'newOwnerMobile' => __('general.mobile'),
+        ]);
+
+        $user = User::create([
+            'mobile' => $validated['newOwnerMobile'],
+        ]);
+
+        $this->form->owner_id = $user->id;
+        $this->ownerSearch = $user->mobile;
+        $this->reset('newOwnerMobile');
+        $this->resetValidation('newOwnerMobile');
+        unset($this->owners);
+
+        Flux::modal('business.edit.owner')->close();
+
+        Flux::toast(__('general.user_created', ['mobile' => $user->mobile]));
+    }
+
     public function save(): void
     {
         $this->form->update();
 
-        $this->reset('ownerSearch', 'business');
+        $this->reset('ownerSearch', 'newOwnerMobile', 'business');
         unset($this->owners);
 
         $this->dispatch('panels.administrator.business.index.table');
@@ -122,6 +155,10 @@ new class extends Component
                         {{ $user->mobile }}
                     </flux:select.option>
                 @endforeach
+
+                <flux:select.option.create modal="business.edit.owner">
+                    {{ __('general.create_owner') }}
+                </flux:select.option.create>
             </flux:select>
             <flux:error name="form.owner_id" />
         </flux:field>
@@ -148,4 +185,30 @@ new class extends Component
             {{ __('general.save') }}
         </flux:button>
     </form>
+
+    <flux:modal name="business.edit.owner" class="md:w-96">
+        <form wire:submit="createOwner" class="space-y-6">
+            <div>
+                <flux:heading size="lg">{{ __('general.create_owner') }}</flux:heading>
+                <flux:text class="mt-2">{{ __('general.create_owner_hint') }}</flux:text>
+            </div>
+
+            <flux:field>
+                <flux:label>{{ __('general.mobile') }}</flux:label>
+                <flux:input
+                    wire:model="newOwnerMobile"
+                    placeholder="{{ __('general.mobile_placeholder') }}"
+                    dir="ltr"
+                />
+                <flux:error name="newOwnerMobile" />
+            </flux:field>
+
+            <div class="flex">
+                <flux:spacer />
+                <flux:button type="submit" variant="primary" color="teal">
+                    {{ __('general.save') }}
+                </flux:button>
+            </div>
+        </form>
+    </flux:modal>
 </flux:modal>
