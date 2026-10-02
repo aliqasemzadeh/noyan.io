@@ -161,30 +161,30 @@ new class extends Component
             {{ __('general.save') }}
         </flux:button>
     </form>
-</flux:modal>
 
-<flux:modal name="business.create.owner" class="md:w-96">
-    <form wire:submit="createOwner" class="space-y-6">
-        <div>
-            <flux:heading size="lg">{{ __('general.create_owner') }}</flux:heading>
-            <flux:text class="mt-2">{{ __('general.create_owner_hint') }}</flux:text>
-        </div>
+    <flux:modal name="business.create.owner" class="md:w-96">
+        <form wire:submit="createOwner" class="space-y-6">
+            <div>
+                <flux:heading size="lg">{{ __('general.create_owner') }}</flux:heading>
+                <flux:text class="mt-2">{{ __('general.create_owner_hint') }}</flux:text>
+            </div>
 
-        <flux:field>
-            <flux:label>{{ __('general.mobile') }}</flux:label>
-            <flux:input
-                wire:model="newOwnerMobile"
-                placeholder="{{ __('general.mobile_placeholder') }}"
-                dir="ltr"
-            />
-            <flux:error name="newOwnerMobile" />
-        </flux:field>
+            <flux:field>
+                <flux:label>{{ __('general.mobile') }}</flux:label>
+                <flux:input
+                    wire:model="newOwnerMobile"
+                    placeholder="{{ __('general.mobile_placeholder') }}"
+                    dir="ltr"
+                />
+                <flux:error name="newOwnerMobile" />
+            </flux:field>
 
-        <div class="flex">
-            <flux:spacer />
-            <flux:button type="submit" variant="primary" color="teal">
-                {{ __('general.save') }}
-            </flux:button>
-        </div>
-    </form>
+            <div class="flex">
+                <flux:spacer />
+                <flux:button type="submit" variant="primary" color="teal">
+                    {{ __('general.save') }}
+                </flux:button>
+            </div>
+        </form>
+    </flux:modal>
 </flux:modal>
