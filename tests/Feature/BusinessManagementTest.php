@@ -88,7 +88,7 @@ class BusinessManagementTest extends TestCase
         $business = Business::factory()->for($owner, 'owner')->create();
 
         Livewire::actingAs($admin)
-            ->test('business.add-user')
+            ->test('business.create-user')
             ->call('assignData', $business)
             ->set('form.user_id', $member->id)
             ->set('form.role', BusinessRole::Accountant->value)
@@ -162,5 +162,54 @@ class BusinessManagementTest extends TestCase
         $this->assertDatabaseHas('users', [
             'mobile' => '09129876543',
         ]);
+    }
+
+    public function test_admin_can_create_owner_from_edit_modal(): void
+    {
+        $admin = User::factory()->create();
+        $owner = User::factory()->create();
+        $business = Business::factory()->for($owner, 'owner')->create();
+
+        Livewire::actingAs($admin)
+            ->test('business.edit')
+            ->call('assignData', $business)
+            ->set('newOwnerMobile', '09121112233')
+            ->call('createOwner')
+            ->assertHasNoErrors()
+            ->assertSet('form.owner_id', User::query()->where('mobile', '09121112233')->value('id'));
+
+        $this->assertDatabaseHas('users', [
+            'mobile' => '09121112233',
+        ]);
+    }
+
+    public function test_delete_business_requires_matching_name_confirmation(): void
+    {
+        $admin = User::factory()->create();
+        $owner = User::factory()->create();
+        $business = Business::factory()->for($owner, 'owner')->create([
+            'name' => 'Target Business',
+        ]);
+
+        Livewire::actingAs($admin)
+            ->test('business.delete')
+            ->call('assignData', $business)
+            ->set('confirmationName', 'Wrong Name')
+            ->call('delete')
+            ->assertHasErrors(['confirmationName']);
+
+        $this->assertDatabaseHas('businesses', [
+            'id' => $business->id,
+            'deleted_at' => null,
+        ]);
+
+        Livewire::actingAs($admin)
+            ->test('business.delete')
+            ->call('assignData', $business)
+            ->set('confirmationName', 'Target Business')
+            ->call('delete')
+            ->assertHasNoErrors();
+
+        $this->assertSoftDeleted($business);
     }
 }

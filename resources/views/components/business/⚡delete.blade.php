@@ -2,6 +2,7 @@
 
 use App\Models\Business;
 use Flux\Flux;
+use Illuminate\Validation\Rule;
 use Livewire\Attributes\On;
 use Livewire\Component;
 
@@ -9,21 +10,40 @@ new class extends Component
 {
     public ?Business $business = null;
 
+    public string $confirmationName = '';
+
     #[On('panels.administrator.business.delete.assign-data')]
     public function assignData(Business $business): void
     {
         $this->business = $business;
+        $this->confirmationName = '';
+        $this->resetValidation();
 
         Flux::modal('business.delete')->show();
     }
 
     public function delete(): void
     {
-        if ($this->business) {
-            $this->business->delete();
+        if ($this->business === null) {
+            return;
         }
 
-        $this->reset('business');
+        $this->validate([
+            'confirmationName' => [
+                'required',
+                'string',
+                Rule::in([$this->business->name]),
+            ],
+        ], [
+            'confirmationName.in' => __('general.business_name_confirmation_mismatch'),
+            'confirmationName.required' => __('general.type_business_name_to_confirm'),
+        ], [
+            'confirmationName' => __('general.name'),
+        ]);
+
+        $this->business->delete();
+
+        $this->reset('business', 'confirmationName');
 
         $this->dispatch('panels.administrator.business.index.table');
 
@@ -49,6 +69,15 @@ new class extends Component
             <flux:callout icon="box" variant="secondary" inline>
                 {{ $business->name }}
             </flux:callout>
+
+            <flux:field>
+                <flux:label>{{ __('general.type_business_name_to_confirm') }}</flux:label>
+                <flux:input
+                    wire:model="confirmationName"
+                    placeholder="{{ $business->name }}"
+                />
+                <flux:error name="confirmationName" />
+            </flux:field>
         @endif
 
         <div class="flex gap-2">

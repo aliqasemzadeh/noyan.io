@@ -95,9 +95,9 @@ class extends Component
                 variant="primary"
                 color="teal"
                 icon="plus"
-                wire:click="$dispatch('panels.administrator.business.add-user.assign-data', { business: {{ $business->id }} })"
+                wire:click="$dispatch('panels.administrator.business.create-user.assign-data', { business: {{ $business->id }} })"
             >
-                {{ __('general.add_business_user') }}
+                {{ __('general.create_business_user') }}
             </flux:button>
         </div>
     </div>
@@ -155,6 +155,6 @@ class extends Component
         </flux:table>
     </flux:card>
 
-    <livewire:business.add-user :key="'business-add-user-'.$business->id" />
+    <livewire:business.create-user :key="'business-create-user-'.$business->id" />
     <livewire:business.remove-user :key="'business-remove-user-'.$business->id" />
 </div>
