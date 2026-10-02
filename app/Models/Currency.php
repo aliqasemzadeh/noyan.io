@@ -107,13 +107,36 @@ class Currency extends Model
      */
     public static function cachedActive(): Collection
     {
-        return Cache::remember(self::ACTIVE_CACHE_KEY, now()->addHour(), function () {
+        $ids = Cache::remember(self::ACTIVE_CACHE_KEY, now()->addHour(), function () {
             return static::query()
                 ->system()
                 ->active()
                 ->orderBy('code')
-                ->get();
+                ->pluck('id')
+                ->all();
         });
+
+        if (! is_array($ids)) {
+            self::forgetActiveCache();
+
+            $ids = static::query()
+                ->system()
+                ->active()
+                ->orderBy('code')
+                ->pluck('id')
+                ->all();
+
+            Cache::put(self::ACTIVE_CACHE_KEY, $ids, now()->addHour());
+        }
+
+        if ($ids === []) {
+            return new Collection;
+        }
+
+        return static::query()
+            ->whereIn('id', $ids)
+            ->orderBy('code')
+            ->get();
     }
 
     /**
@@ -121,13 +144,37 @@ class Currency extends Model
      */
     public static function cachedForBusiness(int $businessId): Collection
     {
-        return Cache::remember(BusinessCurrency::cacheKey($businessId), now()->addHour(), function () use ($businessId) {
+        $cacheKey = BusinessCurrency::cacheKey($businessId);
+
+        $ids = Cache::remember($cacheKey, now()->addHour(), function () use ($businessId) {
             return static::query()
                 ->enabledForBusiness($businessId)
-                ->with(['businessCurrencies' => fn ($query) => $query->where('business_id', $businessId)])
                 ->orderBy('code')
-                ->get();
+                ->pluck('id')
+                ->all();
         });
+
+        if (! is_array($ids)) {
+            BusinessCurrency::forgetCache($businessId);
+
+            $ids = static::query()
+                ->enabledForBusiness($businessId)
+                ->orderBy('code')
+                ->pluck('id')
+                ->all();
+
+            Cache::put($cacheKey, $ids, now()->addHour());
+        }
+
+        if ($ids === []) {
+            return new Collection;
+        }
+
+        return static::query()
+            ->whereIn('id', $ids)
+            ->with(['businessCurrencies' => fn ($query) => $query->where('business_id', $businessId)])
+            ->orderBy('code')
+            ->get();
     }
 
     public static function forgetActiveCache(): void

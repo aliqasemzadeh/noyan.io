@@ -3,9 +3,11 @@
 namespace Tests\Feature;
 
 use App\Enums\CurrencyType;
+use App\Models\Accounting\BusinessCurrency;
 use App\Models\Business;
 use App\Models\Currency;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Tests\TestCase;
@@ -127,5 +129,27 @@ class BusinessCurrencyManagementTest extends TestCase
             ->get(route('accounting.currencies.index'))
             ->assertOk()
             ->assertSee('BTC');
+    }
+
+    public function test_cached_for_business_survives_database_cache_unserialize(): void
+    {
+        config(['cache.default' => 'database']);
+
+        $user = User::factory()->create();
+        $business = Business::factory()->for($user, 'owner')->create();
+        $currency = Currency::factory()->create(['code' => 'USD']);
+        $business->activateCurrency($currency, '1');
+
+        BusinessCurrency::forgetCache($business->id);
+
+        $first = Currency::cachedForBusiness($business->id);
+        $this->assertInstanceOf(Collection::class, $first);
+        $this->assertTrue($first->contains('id', $currency->id));
+
+        $second = Currency::cachedForBusiness($business->id);
+        $this->assertInstanceOf(Collection::class, $second);
+        $this->assertTrue($second->first() instanceof Currency);
+        $this->assertTrue($second->contains('id', $currency->id));
+        $this->assertTrue($second->first()->relationLoaded('businessCurrencies'));
     }
 }

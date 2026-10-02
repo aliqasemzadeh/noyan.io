@@ -51,10 +51,14 @@ new class extends Component
 };
 ?>
 
-<div>
-    @if ($variant === 'sidebar')
-        <flux:dropdown position="top" align="start" class="max-lg:hidden">
-            <flux:sidebar.profile :name="auth()->user()->currentBusiness?->name ?? auth()->user()->mobile" />
+@php
+    $profileName = auth()->user()->currentBusiness?->name ?? auth()->user()->mobile;
+@endphp
+
+@if ($variant === 'sidebar')
+    <div class="w-full max-lg:hidden">
+        <flux:dropdown position="top" align="start" class="w-full">
+            <flux:sidebar.profile :name="$profileName" />
 
             <flux:menu>
                 @if ($this->businesses->isNotEmpty())
@@ -78,31 +82,31 @@ new class extends Component
                 </flux:menu.item>
             </flux:menu>
         </flux:dropdown>
-    @else
-        <flux:dropdown position="top" align="end">
-            <flux:profile :name="auth()->user()->currentBusiness?->name ?? auth()->user()->mobile" />
+    </div>
+@else
+    <flux:dropdown position="top" align="start">
+        <flux:profile avatar:name="{{ $profileName }}" />
 
-            <flux:menu>
-                @if ($this->businesses->isNotEmpty())
-                    <flux:menu.radio.group>
-                        @foreach ($this->businesses as $business)
-                            <flux:menu.radio
-                                wire:key="header-business-{{ $business->id }}"
-                                :checked="auth()->user()->current_business_id === $business->id"
-                                wire:click="switchBusiness({{ $business->id }})"
-                            >
-                                {{ $business->name }}
-                            </flux:menu.radio>
-                        @endforeach
-                    </flux:menu.radio.group>
+        <flux:menu>
+            @if ($this->businesses->isNotEmpty())
+                <flux:menu.radio.group>
+                    @foreach ($this->businesses as $business)
+                        <flux:menu.radio
+                            wire:key="header-business-{{ $business->id }}"
+                            :checked="auth()->user()->current_business_id === $business->id"
+                            wire:click="switchBusiness({{ $business->id }})"
+                        >
+                            {{ $business->name }}
+                        </flux:menu.radio>
+                    @endforeach
+                </flux:menu.radio.group>
 
-                    <flux:menu.separator />
-                @endif
+                <flux:menu.separator />
+            @endif
 
-                <flux:menu.item icon="arrow-right-start-on-rectangle" wire:click="logout">
-                    {{ __('general.logout') }}
-                </flux:menu.item>
-            </flux:menu>
-        </flux:dropdown>
-    @endif
-</div>
+            <flux:menu.item icon="arrow-right-start-on-rectangle" wire:click="logout">
+                {{ __('general.logout') }}
+            </flux:menu.item>
+        </flux:menu>
+    </flux:dropdown>
+@endif

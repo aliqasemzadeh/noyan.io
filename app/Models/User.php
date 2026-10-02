@@ -58,9 +58,26 @@ class User extends Authenticatable
      */
     public function cachedBusinesses(): Collection
     {
-        return Cache::remember($this->businessesCacheKey(), now()->addHour(), function () {
-            return $this->businesses()->orderBy('name')->get();
+        $ids = Cache::remember($this->businessesCacheKey(), now()->addHour(), function () {
+            return $this->businesses()->orderBy('name')->pluck('businesses.id')->all();
         });
+
+        if (! is_array($ids)) {
+            $this->forgetBusinessesCache();
+
+            $ids = $this->businesses()->orderBy('name')->pluck('businesses.id')->all();
+
+            Cache::put($this->businessesCacheKey(), $ids, now()->addHour());
+        }
+
+        if ($ids === []) {
+            return new Collection;
+        }
+
+        return Business::query()
+            ->whereIn('id', $ids)
+            ->orderBy('name')
+            ->get();
     }
 
     public function forgetBusinessesCache(): void
