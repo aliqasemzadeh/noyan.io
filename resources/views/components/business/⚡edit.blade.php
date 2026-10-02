@@ -106,6 +106,7 @@ new class extends Component
             <flux:select
                 wire:model="form.owner_id"
                 variant="combobox"
+                clearable
                 :filter="false"
                 placeholder="{{ __('general.select_owner') }}"
             >
