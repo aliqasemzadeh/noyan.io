@@ -104,31 +104,27 @@ new class extends Component
     <form wire:submit="save" class="space-y-6">
         <flux:field>
             <flux:label>{{ __('general.user') }}</flux:label>
-            <flux:select
-                wire:model="form.user_id"
-                variant="combobox"
-                :filter="false"
-                placeholder="{{ __('general.select_user') }}"
-            >
-                <x-slot name="input">
-                    <flux:select.input
-                        wire:model.live.debounce.300ms="userSearch"
-                        placeholder="{{ __('general.search_user_placeholder') }}"
-                    />
-                </x-slot>
-
-                @foreach ($this->userOptions as $user)
-                    <flux:select.option :value="$user->id" wire:key="add-user-option-{{ $user->id }}">
-                        {{ $user->mobile }}
-                    </flux:select.option>
-                @endforeach
-            </flux:select>
+            <div class="space-y-2">
+                <flux:input
+                    wire:model.live.debounce.300ms="userSearch"
+                    icon="search"
+                    placeholder="{{ __('general.search_user_placeholder') }}"
+                    clearable
+                />
+                <flux:select wire:model="form.user_id" placeholder="{{ __('general.select_user') }}">
+                    @foreach ($this->userOptions as $user)
+                        <flux:select.option :value="$user->id" wire:key="add-user-option-{{ $user->id }}">
+                            {{ $user->mobile }}
+                        </flux:select.option>
+                    @endforeach
+                </flux:select>
+            </div>
             <flux:error name="form.user_id" />
         </flux:field>
 
         <flux:field>
             <flux:label>{{ __('general.role') }}</flux:label>
-            <flux:select wire:model="form.role" variant="listbox" searchable>
+            <flux:select wire:model="form.role">
                 @foreach ($this->roles as $role)
                     <flux:select.option :value="$role['value']">{{ $role['label'] }}</flux:select.option>
                 @endforeach
