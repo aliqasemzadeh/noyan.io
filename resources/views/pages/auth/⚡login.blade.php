@@ -98,6 +98,8 @@ class extends Component
 
         session()->regenerate();
 
+        $user->ensureCurrentBusiness();
+
         Flux::toast(__('general.login_success'));
 
         return $this->redirectIntended(default: route('dashboard'), navigate: true);

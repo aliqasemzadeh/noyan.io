@@ -3,7 +3,6 @@
 namespace App\Livewire\Forms;
 
 use App\Enums\BusinessRole;
-use App\Enums\Currency;
 use App\Models\Business;
 use App\Models\BusinessUser;
 use App\Models\User;
@@ -21,8 +20,6 @@ class BusinessForm extends Form
 
     public ?int $owner_id = null;
 
-    public string $default_currency = 'IRR';
-
     public bool $is_active = true;
 
     public function setModel(Business $business): void
@@ -31,7 +28,6 @@ class BusinessForm extends Form
         $this->name = $business->name;
         $this->slug = $business->slug;
         $this->owner_id = $business->owner_id;
-        $this->default_currency = $business->default_currency->value;
         $this->is_active = $business->is_active;
     }
 
@@ -49,7 +45,6 @@ class BusinessForm extends Form
                 Rule::unique('businesses', 'slug')->ignore($this->business?->id),
             ],
             'owner_id' => ['required', 'integer', 'exists:users,id'],
-            'default_currency' => ['required', Rule::enum(Currency::class)],
             'is_active' => ['boolean'],
         ];
     }
@@ -63,7 +58,6 @@ class BusinessForm extends Form
             'name' => __('general.name'),
             'slug' => __('general.slug'),
             'owner_id' => __('general.owner'),
-            'default_currency' => __('general.default_currency'),
             'is_active' => __('general.is_active'),
         ];
     }
@@ -79,6 +73,9 @@ class BusinessForm extends Form
 
         $this->syncOwnerMembership($business, $previousOwnerId);
         $this->ensureOwnerCurrentBusiness($business);
+
+        $owner = User::query()->find($business->owner_id);
+        $owner?->forgetBusinessesCache();
 
         $this->reset();
 
@@ -96,6 +93,9 @@ class BusinessForm extends Form
 
         $this->syncOwnerMembership($this->business->fresh(), $previousOwnerId);
         $this->ensureOwnerCurrentBusiness($this->business->fresh());
+
+        User::query()->find($previousOwnerId)?->forgetBusinessesCache();
+        User::query()->find($this->business->owner_id)?->forgetBusinessesCache();
 
         $this->reset();
     }

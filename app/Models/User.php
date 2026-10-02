@@ -5,6 +5,7 @@ namespace App\Models;
 use Database\Factories\UserFactory;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -12,6 +13,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Cache;
 use Spatie\OneTimePasswords\Models\Concerns\HasOneTimePasswords;
 use Spatie\Permission\Traits\HasRoles;
 
@@ -52,6 +54,43 @@ class User extends Authenticatable
     }
 
     /**
+     * @return Collection<int, Business>
+     */
+    public function cachedBusinesses(): Collection
+    {
+        return Cache::remember($this->businessesCacheKey(), now()->addHour(), function () {
+            return $this->businesses()->orderBy('name')->get();
+        });
+    }
+
+    public function forgetBusinessesCache(): void
+    {
+        Cache::forget($this->businessesCacheKey());
+    }
+
+    public function businessesCacheKey(): string
+    {
+        return "user.{$this->id}.businesses";
+    }
+
+    public function ensureCurrentBusiness(): void
+    {
+        if ($this->current_business_id !== null) {
+            $current = Business::query()->find($this->current_business_id);
+
+            if ($current !== null && $this->belongsToBusiness($current)) {
+                return;
+            }
+        }
+
+        $firstBusiness = $this->businesses()->orderBy('name')->first();
+
+        $this->forceFill([
+            'current_business_id' => $firstBusiness?->id,
+        ])->save();
+    }
+
+    /**
      * @throws AuthorizationException
      */
     public function switchBusiness(Business $business): void
@@ -63,5 +102,7 @@ class User extends Authenticatable
         $this->forceFill([
             'current_business_id' => $business->id,
         ])->save();
+
+        $this->forgetBusinessesCache();
     }
 }

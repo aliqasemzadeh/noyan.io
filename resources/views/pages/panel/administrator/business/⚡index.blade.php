@@ -1,6 +1,5 @@
 <?php
 
-use App\Enums\Currency;
 use App\Models\Business;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Livewire\Attributes\Computed;
@@ -54,11 +53,6 @@ class extends Component
     {
         return Jalalian::fromDateTime($business->created_at)->format('Y/m/d H:i');
     }
-
-    public function currencyLabel(Currency $currency): string
-    {
-        return __('general.currency_'.$currency->value);
-    }
 };
 ?>
 
@@ -104,7 +98,6 @@ class extends Component
                 <flux:table.column>{{ __('general.name') }}</flux:table.column>
                 <flux:table.column>{{ __('general.slug') }}</flux:table.column>
                 <flux:table.column>{{ __('general.owner') }}</flux:table.column>
-                <flux:table.column>{{ __('general.default_currency') }}</flux:table.column>
                 <flux:table.column>{{ __('general.is_active') }}</flux:table.column>
                 <flux:table.column>{{ __('general.members_count') }}</flux:table.column>
                 <flux:table.column>{{ __('general.created_at') }}</flux:table.column>
@@ -121,7 +114,6 @@ class extends Component
                         <flux:table.cell>
                             <span dir="ltr">{{ $business->owner?->mobile }}</span>
                         </flux:table.cell>
-                        <flux:table.cell>{{ $this->currencyLabel($business->default_currency) }}</flux:table.cell>
                         <flux:table.cell>
                             <flux:badge size="sm" :color="$business->is_active ? 'green' : 'zinc'">
                                 {{ $business->is_active ? __('general.active') : __('general.inactive') }}
@@ -168,7 +160,7 @@ class extends Component
                     </flux:table.row>
                 @empty
                     <flux:table.row>
-                        <flux:table.cell colspan="8">
+                        <flux:table.cell colspan="7">
                             {{ __('general.no_businesses') }}
                         </flux:table.cell>
                     </flux:table.row>

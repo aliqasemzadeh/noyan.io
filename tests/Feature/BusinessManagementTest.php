@@ -3,7 +3,6 @@
 namespace Tests\Feature;
 
 use App\Enums\BusinessRole;
-use App\Enums\Currency;
 use App\Models\Business;
 use App\Models\BusinessUser;
 use App\Models\User;
@@ -28,7 +27,6 @@ class BusinessManagementTest extends TestCase
             ->test('business.create')
             ->set('form.name', 'Noyan Co')
             ->set('form.owner_id', $owner->id)
-            ->set('form.default_currency', Currency::Irr->value)
             ->set('form.is_active', true)
             ->call('save')
             ->assertHasNoErrors();

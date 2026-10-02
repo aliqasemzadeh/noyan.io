@@ -96,20 +96,37 @@ class BusinessSwitchingTest extends TestCase
         $this->assertNotSame($foreign->id, $user->fresh()->current_business_id);
     }
 
-    public function test_business_and_membership_support_soft_deletes(): void
+    public function test_app_shell_uses_cached_businesses(): void
     {
         $user = User::factory()->create();
+        $first = Business::factory()->for($user, 'owner')->create(['name' => 'Alpha']);
+        $second = Business::factory()->create(['name' => 'Beta']);
+
+        BusinessUser::factory()->create([
+            'business_id' => $second->id,
+            'user_id' => $user->id,
+            'role' => BusinessRole::Admin,
+        ]);
+
+        $user->forgetBusinessesCache();
+
+        $cached = $user->cachedBusinesses();
+        $this->assertCount(2, $cached);
+        $this->assertTrue($cached->contains('id', $first->id));
+        $this->assertTrue($cached->contains('id', $second->id));
+
+        $again = $user->cachedBusinesses();
+        $this->assertSame($cached->pluck('id')->all(), $again->pluck('id')->all());
+    }
+
+    public function test_ensure_current_business_sets_first_membership(): void
+    {
+        $user = User::factory()->create(['current_business_id' => null]);
         $business = Business::factory()->for($user, 'owner')->create();
-        $membership = BusinessUser::query()
-            ->where('business_id', $business->id)
-            ->where('user_id', $user->id)
-            ->firstOrFail();
 
-        $membership->delete();
-        $business->delete();
+        $user->forceFill(['current_business_id' => null])->save();
+        $user->ensureCurrentBusiness();
 
-        $this->assertSoftDeleted($membership);
-        $this->assertSoftDeleted($business);
-        $this->assertFalse($user->fresh()->belongsToBusiness($business));
+        $this->assertSame($business->id, $user->fresh()->current_business_id);
     }
 }

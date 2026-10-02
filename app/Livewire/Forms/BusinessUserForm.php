@@ -5,6 +5,7 @@ namespace App\Livewire\Forms;
 use App\Enums\BusinessRole;
 use App\Models\Business;
 use App\Models\BusinessUser;
+use App\Models\User;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Livewire\Form;
@@ -97,6 +98,8 @@ class BusinessUserForm extends Form
                 'role' => $validated['role'],
             ]);
         }
+
+        User::query()->find($validated['user_id'])?->forgetBusinessesCache();
 
         $this->reset(['user_id', 'role']);
         $this->role = BusinessRole::Viewer->value;

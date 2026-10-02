@@ -17,7 +17,7 @@ new class extends Component
     #[Computed]
     public function businesses()
     {
-        return Auth::user()->businesses()->orderBy('name')->get();
+        return Auth::user()->cachedBusinesses();
     }
 
     public function switchBusiness(int $businessId): void
@@ -54,7 +54,7 @@ new class extends Component
 <div>
     @if ($variant === 'sidebar')
         <flux:dropdown position="top" align="start" class="max-lg:hidden">
-            <flux:sidebar.profile :name="auth()->user()->mobile" />
+            <flux:sidebar.profile :name="auth()->user()->currentBusiness?->name ?? auth()->user()->mobile" />
 
             <flux:menu>
                 @if ($this->businesses->isNotEmpty())
@@ -80,7 +80,7 @@ new class extends Component
         </flux:dropdown>
     @else
         <flux:dropdown position="top" align="end">
-            <flux:profile :name="auth()->user()->mobile" />
+            <flux:profile :name="auth()->user()->currentBusiness?->name ?? auth()->user()->mobile" />
 
             <flux:menu>
                 @if ($this->businesses->isNotEmpty())

@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Enums\Currency;
 use Database\Factories\BusinessFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -12,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-#[Fillable(['owner_id', 'name', 'slug', 'default_currency', 'is_active'])]
+#[Fillable(['owner_id', 'name', 'slug', 'is_active'])]
 class Business extends Model
 {
     /** @use HasFactory<BusinessFactory> */
@@ -24,7 +23,6 @@ class Business extends Model
     protected function casts(): array
     {
         return [
-            'default_currency' => Currency::class,
             'is_active' => 'boolean',
         ];
     }
@@ -45,5 +43,13 @@ class Business extends Model
             ->withPivot(['role'])
             ->withTimestamps()
             ->wherePivotNull('deleted_at');
+    }
+
+    /**
+     * @return HasMany<\App\Models\Accounting\Account, $this>
+     */
+    public function accounts(): HasMany
+    {
+        return $this->hasMany(\App\Models\Accounting\Account::class);
     }
 }

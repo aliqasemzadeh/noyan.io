@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Business;
+use App\Models\User;
 use Flux\Flux;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\On;
@@ -41,7 +42,11 @@ new class extends Component
             'confirmationName' => __('general.name'),
         ]);
 
+        $memberIds = $this->business->users()->pluck('users.id');
+
         $this->business->delete();
+
+        User::query()->whereIn('id', $memberIds)->each(fn (User $user) => $user->forgetBusinessesCache());
 
         $this->reset('business', 'confirmationName');
 

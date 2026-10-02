@@ -18,6 +18,7 @@ Route::middleware('auth')->group(function () {
         Route::livewire('/users', 'pages::user.index')->name('users.index');
         Route::livewire('/businesses', 'pages::panel.administrator.business.index')->name('businesses.index');
         Route::livewire('/businesses/{business}/users', 'pages::panel.administrator.business.users')->name('businesses.users');
+        Route::livewire('/currencies', 'pages::panel.administrator.currency.index')->name('currencies.index');
     });
 
     Route::prefix('user')->name('user.')->group(function () {
@@ -26,5 +27,6 @@ Route::middleware('auth')->group(function () {
 
     Route::prefix('accounting')->name('accounting.')->group(function () {
         Route::livewire('/', 'pages::panel.accounting.dashboard.index')->name('dashboard');
+        Route::livewire('/accounts', 'pages::panel.accounting.account.index')->name('accounts.index');
     });
 });

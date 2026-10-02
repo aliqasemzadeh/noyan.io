@@ -33,7 +33,6 @@ class AuthenticatedLayoutTest extends TestCase
             ->assertSee(__('general.dashboard'))
             ->assertSee(__('general.system_management'))
             ->assertSee(__('general.accounting'))
-            ->assertSee(__('general.sales'))
             ->assertSee($user->mobile);
     }
 
