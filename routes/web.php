@@ -16,6 +16,8 @@ Route::middleware('auth')->group(function () {
     Route::prefix('system')->name('system.')->group(function () {
         Route::livewire('/', 'pages::panel.administrator.dashboard.index')->name('dashboard');
         Route::livewire('/users', 'pages::user.index')->name('users.index');
+        Route::livewire('/businesses', 'pages::panel.administrator.business.index')->name('businesses.index');
+        Route::livewire('/businesses/{business}/users', 'pages::panel.administrator.business.users')->name('businesses.users');
     });
 
     Route::prefix('user')->name('user.')->group(function () {

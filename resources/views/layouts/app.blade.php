@@ -57,6 +57,14 @@
                     >
                         {{ __('general.users') }}
                     </flux:navbar.item>
+
+                    <flux:navbar.item
+                        :href="route('system.businesses.index')"
+                        wire:navigate
+                        :current="request()->routeIs('system.businesses.*')"
+                    >
+                        {{ __('general.businesses') }}
+                    </flux:navbar.item>
                 @elseif (request()->routeIs('user.*'))
                     <flux:navbar.item
                         :href="route('user.dashboard')"
