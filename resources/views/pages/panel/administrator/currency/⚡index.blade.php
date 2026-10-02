@@ -1,6 +1,6 @@
 <?php
 
-use App\Models\Business;
+use App\Models\Currency;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
@@ -10,7 +10,7 @@ use Livewire\WithPagination;
 use Morilog\Jalali\Jalalian;
 
 new
-#[Title('Businesses')]
+#[Title('Currencies')]
 class extends Component
 {
     use WithPagination;
@@ -22,36 +22,32 @@ class extends Component
         $this->resetPage();
     }
 
-    #[On('panels.administrator.business.index.table')]
+    #[On('panels.administrator.currency.index.table')]
     public function refreshTable(): void
     {
-        unset($this->businesses);
+        unset($this->currencies);
     }
 
     #[Computed]
-    public function businesses(): LengthAwarePaginator
+    public function currencies(): LengthAwarePaginator
     {
-        return Business::query()
-            ->with('owner')
-            ->withCount('memberships')
+        return Currency::query()
             ->when($this->search !== '', function ($query): void {
                 $search = '%'.$this->search.'%';
 
                 $query->where(function ($query) use ($search): void {
-                    $query->where('name', 'like', $search)
-                        ->orWhere('slug', 'like', $search)
-                        ->orWhereHas('owner', function ($query) use ($search): void {
-                            $query->where('mobile', 'like', $search);
-                        });
+                    $query->where('code', 'like', $search)
+                        ->orWhere('name', 'like', $search)
+                        ->orWhere('symbol', 'like', $search);
                 });
             })
             ->latest()
             ->paginate(15);
     }
 
-    public function formatCreatedAt(Business $business): string
+    public function formatCreatedAt(Currency $currency): string
     {
-        return Jalalian::fromDateTime($business->created_at)->format('Y/m/d H:i');
+        return Jalalian::fromDateTime($currency->created_at)->format('Y/m/d H:i');
     }
 };
 ?>
@@ -66,18 +62,18 @@ class extends Component
                 {{ __('general.system_management') }}
             </flux:breadcrumbs.item>
             <flux:breadcrumbs.item>
-                {{ __('general.businesses') }}
+                {{ __('general.currencies') }}
             </flux:breadcrumbs.item>
         </flux:breadcrumbs>
 
         <div class="mt-4 flex items-center justify-between">
             <flux:heading size="xl" level="1">
-                {{ __('general.businesses') }}
+                {{ __('general.currencies') }}
             </flux:heading>
 
-            <flux:modal.trigger name="business.create">
+            <flux:modal.trigger name="currency.create">
                 <flux:button variant="primary" color="teal" icon="plus">
-                    {{ __('general.create_business') }}
+                    {{ __('general.create_currency') }}
                 </flux:button>
             </flux:modal.trigger>
         </div>
@@ -93,34 +89,36 @@ class extends Component
             />
         </div>
 
-        <flux:table :paginate="$this->businesses">
+        <flux:table :paginate="$this->currencies">
             <flux:table.columns>
+                <flux:table.column>{{ __('general.currency_code') }}</flux:table.column>
                 <flux:table.column>{{ __('general.name') }}</flux:table.column>
-                <flux:table.column>{{ __('general.slug') }}</flux:table.column>
-                <flux:table.column>{{ __('general.owner') }}</flux:table.column>
+                <flux:table.column>{{ __('general.currency_symbol') }}</flux:table.column>
+                <flux:table.column>{{ __('general.decimal_places') }}</flux:table.column>
                 <flux:table.column>{{ __('general.is_active') }}</flux:table.column>
-                <flux:table.column>{{ __('general.members_count') }}</flux:table.column>
                 <flux:table.column>{{ __('general.created_at') }}</flux:table.column>
                 <flux:table.column align="end">{{ __('general.actions') }}</flux:table.column>
             </flux:table.columns>
 
             <flux:table.rows>
-                @forelse ($this->businesses as $business)
-                    <flux:table.row :key="$business->id">
-                        <flux:table.cell>{{ $business->name }}</flux:table.cell>
+                @forelse ($this->currencies as $currency)
+                    <flux:table.row :key="$currency->id">
                         <flux:table.cell>
-                            <span dir="ltr">{{ $business->slug }}</span>
+                            <span dir="ltr">{{ $currency->code }}</span>
+                        </flux:table.cell>
+                        <flux:table.cell>{{ $currency->name }}</flux:table.cell>
+                        <flux:table.cell>
+                            <span dir="ltr">{{ $currency->symbol }}</span>
                         </flux:table.cell>
                         <flux:table.cell>
-                            <span dir="ltr">{{ $business->owner?->mobile }}</span>
+                            <span dir="ltr">{{ $currency->decimal_places }}</span>
                         </flux:table.cell>
                         <flux:table.cell>
-                            <flux:badge size="sm" :color="$business->is_active ? 'green' : 'zinc'">
-                                {{ $business->is_active ? __('general.active') : __('general.inactive') }}
+                            <flux:badge size="sm" :color="$currency->is_active ? 'green' : 'zinc'">
+                                {{ $currency->is_active ? __('general.active') : __('general.inactive') }}
                             </flux:badge>
                         </flux:table.cell>
-                        <flux:table.cell>{{ $business->memberships_count }}</flux:table.cell>
-                        <flux:table.cell>{{ $this->formatCreatedAt($business) }}</flux:table.cell>
+                        <flux:table.cell>{{ $this->formatCreatedAt($currency) }}</flux:table.cell>
                         <flux:table.cell align="end">
                             <div class="flex justify-end gap-2">
                                 <flux:tooltip content="{{ __('general.edit') }}">
@@ -130,19 +128,7 @@ class extends Component
                                         color="blue"
                                         icon="pencil"
                                         icon:variant="outline"
-                                        wire:click="$dispatch('panels.administrator.business.edit.assign-data', { business: {{ $business->id }} })"
-                                    />
-                                </flux:tooltip>
-
-                                <flux:tooltip content="{{ __('general.business_users') }}">
-                                    <flux:button
-                                        size="xs"
-                                        variant="primary"
-                                        color="teal"
-                                        icon="users"
-                                        icon:variant="outline"
-                                        :href="route('system.businesses.users', $business)"
-                                        wire:navigate
+                                        wire:click="$dispatch('panels.administrator.currency.edit.assign-data', { currency: {{ $currency->id }} })"
                                     />
                                 </flux:tooltip>
 
@@ -152,7 +138,7 @@ class extends Component
                                         variant="danger"
                                         icon="trash"
                                         icon:variant="outline"
-                                        wire:click="$dispatch('panels.administrator.business.delete.assign-data', { business: {{ $business->id }} })"
+                                        wire:click="$dispatch('panels.administrator.currency.delete.assign-data', { currency: {{ $currency->id }} })"
                                     />
                                 </flux:tooltip>
                             </div>
@@ -161,7 +147,7 @@ class extends Component
                 @empty
                     <flux:table.row>
                         <flux:table.cell colspan="7">
-                            {{ __('general.no_businesses') }}
+                            {{ __('general.no_currencies') }}
                         </flux:table.cell>
                     </flux:table.row>
                 @endforelse
@@ -169,7 +155,7 @@ class extends Component
         </flux:table>
     </flux:card>
 
-    <livewire:business.create :key="'business-create'" />
-    <livewire:business.edit :key="'business-edit'" />
-    <livewire:business.delete :key="'business-delete'" />
+    <livewire:currency.create :key="'currency-create'" />
+    <livewire:currency.edit :key="'currency-edit'" />
+    <livewire:currency.delete :key="'currency-delete'" />
 </div>

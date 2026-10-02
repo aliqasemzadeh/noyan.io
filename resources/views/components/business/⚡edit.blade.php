@@ -1,6 +1,5 @@
 <?php
 
-use App\Enums\Currency;
 use App\Livewire\Forms\BusinessForm;
 use App\Models\Business;
 use App\Models\User;
@@ -161,18 +160,6 @@ new class extends Component
                 </flux:select.option.create>
             </flux:select>
             <flux:error name="form.owner_id" />
-        </flux:field>
-
-        <flux:field>
-            <flux:label>{{ __('general.default_currency') }}</flux:label>
-            <flux:select wire:model="form.default_currency" searchable variant="listbox">
-                @foreach (Currency::cases() as $currency)
-                    <flux:select.option value="{{ $currency->value }}">
-                        {{ __('general.currency_'.$currency->value) }}
-                    </flux:select.option>
-                @endforeach
-            </flux:select>
-            <flux:error name="form.default_currency" />
         </flux:field>
 
         <flux:field variant="inline">

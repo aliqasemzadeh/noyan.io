@@ -10,8 +10,8 @@
 
         @fluxAppearance
     </head>
-    <body class="min-h-screen bg-white dark:bg-zinc-800 antialiased">
-        <flux:sidebar sticky collapsible="mobile" class="bg-zinc-50 dark:bg-zinc-900 border-r border-zinc-200 dark:border-zinc-700">
+    <body class="min-h-dvh bg-zinc-50 dark:bg-zinc-900 antialiased">
+        <flux:sidebar sticky collapsible class="bg-zinc-50 dark:bg-zinc-900">
             <flux:sidebar.header>
                 <flux:sidebar.brand
                     :href="route('system.dashboard')"
@@ -19,7 +19,7 @@
                     :name="config('app.name')"
                 />
 
-                <flux:sidebar.collapse class="lg:hidden" />
+                <flux:sidebar.collapse class="in-data-flux-sidebar-on-desktop:not-in-data-flux-sidebar-collapsed-desktop:-mr-2" />
             </flux:sidebar.header>
 
             <livewire:layout.app.sidebar :key="'layout-app-sidebar'" />
@@ -31,61 +31,15 @@
             <livewire:layout.app-shell variant="sidebar" :key="'layout-app-shell-sidebar'" />
         </flux:sidebar>
 
-        <flux:header class="block! bg-white lg:bg-zinc-50 dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-700">
-            <flux:navbar class="lg:hidden w-full">
-                <flux:sidebar.toggle class="lg:hidden" icon="bars-2" inset="left" />
+        <flux:header class="lg:hidden bg-white dark:bg-zinc-800">
+            <flux:sidebar.toggle class="lg:hidden" icon="bars-2" inset="left" />
 
-                <flux:spacer />
+            <flux:spacer />
 
-                <livewire:layout.app-shell variant="header" :key="'layout-app-shell-header'" />
-            </flux:navbar>
-
-            <flux:navbar scrollable>
-                @if (request()->routeIs('system.*'))
-                    <flux:navbar.item
-                        :href="route('system.dashboard')"
-                        wire:navigate
-                        :current="request()->routeIs('system.dashboard')"
-                    >
-                        {{ __('general.dashboard') }}
-                    </flux:navbar.item>
-
-                    <flux:navbar.item
-                        :href="route('system.users.index')"
-                        wire:navigate
-                        :current="request()->routeIs('system.users.*')"
-                    >
-                        {{ __('general.users') }}
-                    </flux:navbar.item>
-
-                    <flux:navbar.item
-                        :href="route('system.businesses.index')"
-                        wire:navigate
-                        :current="request()->routeIs('system.businesses.*')"
-                    >
-                        {{ __('general.businesses') }}
-                    </flux:navbar.item>
-                @elseif (request()->routeIs('user.*'))
-                    <flux:navbar.item
-                        :href="route('user.dashboard')"
-                        wire:navigate
-                        :current="request()->routeIs('user.dashboard')"
-                    >
-                        {{ __('general.dashboard') }}
-                    </flux:navbar.item>
-                @elseif (request()->routeIs('accounting.*'))
-                    <flux:navbar.item
-                        :href="route('accounting.dashboard')"
-                        wire:navigate
-                        :current="request()->routeIs('accounting.dashboard')"
-                    >
-                        {{ __('general.dashboard') }}
-                    </flux:navbar.item>
-                @endif
-            </flux:navbar>
+            <livewire:layout.app-shell variant="header" :key="'layout-app-shell-header'" />
         </flux:header>
 
-        <flux:main>
+        <flux:main inset class="lg:ms-0">
             {{ $slot }}
         </flux:main>
 

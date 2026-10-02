@@ -31,7 +31,10 @@ new class extends Component
             return;
         }
 
+        $user = $this->membership->user;
+
         $this->membership->delete();
+        $user?->forgetBusinessesCache();
         $this->reset('membership');
 
         $this->dispatch('panels.administrator.business.users.table');

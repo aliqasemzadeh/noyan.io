@@ -3,7 +3,6 @@
 namespace Database\Factories;
 
 use App\Enums\BusinessRole;
-use App\Enums\Currency;
 use App\Models\Business;
 use App\Models\BusinessUser;
 use App\Models\User;
@@ -26,7 +25,6 @@ class BusinessFactory extends Factory
             'owner_id' => User::factory(),
             'name' => $name,
             'slug' => Str::slug($name).'-'.fake()->unique()->numerify('###'),
-            'default_currency' => Currency::Irr,
             'is_active' => true,
         ];
     }
@@ -51,6 +49,8 @@ class BusinessFactory extends Factory
                     'current_business_id' => $business->id,
                 ])->save();
             }
+
+            $owner?->forgetBusinessesCache();
         });
     }
 }

@@ -37,6 +37,15 @@ new class extends Component
             >
                 {{ __('general.businesses') }}
             </flux:sidebar.item>
+
+            <flux:sidebar.item
+                icon="coins"
+                :href="route('system.currencies.index')"
+                wire:navigate
+                :current="request()->routeIs('system.currencies.*')"
+            >
+                {{ __('general.currencies') }}
+            </flux:sidebar.item>
         @elseif (request()->routeIs('user.*'))
             <flux:sidebar.item
                 icon="home"
@@ -54,6 +63,15 @@ new class extends Component
                 :current="request()->routeIs('accounting.dashboard')"
             >
                 {{ __('general.dashboard') }}
+            </flux:sidebar.item>
+
+            <flux:sidebar.item
+                icon="wallet"
+                :href="route('accounting.accounts.index')"
+                wire:navigate
+                :current="request()->routeIs('accounting.accounts.*')"
+            >
+                {{ __('general.accounts') }}
             </flux:sidebar.item>
         @endif
     </flux:sidebar.nav>
