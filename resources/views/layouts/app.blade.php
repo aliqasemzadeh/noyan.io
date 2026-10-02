@@ -14,7 +14,7 @@
         <flux:sidebar sticky collapsible="mobile" class="bg-zinc-50 dark:bg-zinc-900 border-r border-zinc-200 dark:border-zinc-700">
             <flux:sidebar.header>
                 <flux:sidebar.brand
-                    :href="route('dashboard')"
+                    :href="route('system.dashboard')"
                     wire:navigate
                     :name="config('app.name')"
                 />
@@ -22,39 +22,11 @@
                 <flux:sidebar.collapse class="lg:hidden" />
             </flux:sidebar.header>
 
-            <flux:sidebar.nav>
-                <flux:sidebar.item
-                    icon="home"
-                    :href="route('dashboard')"
-                    wire:navigate
-                    :current="request()->routeIs('dashboard')"
-                >
-                    {{ __('general.dashboard') }}
-                </flux:sidebar.item>
-            </flux:sidebar.nav>
+            <livewire:layout.app.sidebar :key="'layout-app-sidebar'" />
 
             <flux:sidebar.spacer />
 
-            <flux:sidebar.nav>
-                <flux:sidebar.group heading="{{ __('general.panels') }}" class="grid">
-                    <flux:sidebar.item
-                        icon="cog-6-tooth"
-                        :href="route('system.users.index')"
-                        wire:navigate
-                        :current="request()->routeIs('system.*')"
-                    >
-                        {{ __('general.system_management') }}
-                    </flux:sidebar.item>
-
-                    <flux:sidebar.item icon="calculator" disabled>
-                        {{ __('general.accounting') }}
-                    </flux:sidebar.item>
-
-                    <flux:sidebar.item icon="shopping-bag" disabled>
-                        {{ __('general.sales') }}
-                    </flux:sidebar.item>
-                </flux:sidebar.group>
-            </flux:sidebar.nav>
+            <livewire:layout.app.panels :key="'layout-app-panels'" />
 
             <livewire:layout.app-shell variant="sidebar" :key="'layout-app-shell-sidebar'" />
         </flux:sidebar>
@@ -71,17 +43,33 @@
             <flux:navbar scrollable>
                 @if (request()->routeIs('system.*'))
                     <flux:navbar.item
+                        :href="route('system.dashboard')"
+                        wire:navigate
+                        :current="request()->routeIs('system.dashboard')"
+                    >
+                        {{ __('general.dashboard') }}
+                    </flux:navbar.item>
+
+                    <flux:navbar.item
                         :href="route('system.users.index')"
                         wire:navigate
                         :current="request()->routeIs('system.users.*')"
                     >
                         {{ __('general.users') }}
                     </flux:navbar.item>
-                @else
+                @elseif (request()->routeIs('user.*'))
                     <flux:navbar.item
-                        :href="route('dashboard')"
+                        :href="route('user.dashboard')"
                         wire:navigate
-                        :current="request()->routeIs('dashboard')"
+                        :current="request()->routeIs('user.dashboard')"
+                    >
+                        {{ __('general.dashboard') }}
+                    </flux:navbar.item>
+                @elseif (request()->routeIs('accounting.*'))
+                    <flux:navbar.item
+                        :href="route('accounting.dashboard')"
+                        wire:navigate
+                        :current="request()->routeIs('accounting.dashboard')"
                     >
                         {{ __('general.dashboard') }}
                     </flux:navbar.item>
