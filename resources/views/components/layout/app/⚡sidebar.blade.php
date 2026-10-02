@@ -28,6 +28,15 @@ new class extends Component
             >
                 {{ __('general.users') }}
             </flux:sidebar.item>
+
+            <flux:sidebar.item
+                icon="building"
+                :href="route('system.businesses.index')"
+                wire:navigate
+                :current="request()->routeIs('system.businesses.*')"
+            >
+                {{ __('general.businesses') }}
+            </flux:sidebar.item>
         @elseif (request()->routeIs('user.*'))
             <flux:sidebar.item
                 icon="home"
