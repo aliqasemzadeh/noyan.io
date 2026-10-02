@@ -17,6 +17,10 @@ class AccountForm extends Form
 
     public ?int $currency_id = null;
 
+    public string $account_number = '';
+
+    public string $note = '';
+
     public string $opening_balance = '0';
 
     public bool $is_active = true;
@@ -26,6 +30,8 @@ class AccountForm extends Form
         $this->account = $account;
         $this->name = $account->name;
         $this->currency_id = $account->currency_id;
+        $this->account_number = $account->account_number ?? '';
+        $this->note = $account->note ?? '';
         $this->opening_balance = rtrim(rtrim((string) $account->opening_balance, '0'), '.') ?: '0';
         $this->is_active = $account->is_active;
     }
@@ -36,17 +42,7 @@ class AccountForm extends Form
     public function rules(): array
     {
         $decimalPlaces = $this->selectedCurrency()?->decimal_places ?? 18;
-        $allowedCurrencyIds = Currency::query()
-            ->whereNull('deleted_at')
-            ->where(function ($query): void {
-                $query->where('is_active', true);
-
-                if ($this->account?->currency_id) {
-                    $query->orWhere('id', $this->account->currency_id);
-                }
-            })
-            ->pluck('id')
-            ->all();
+        $allowedCurrencyIds = $this->allowedCurrencyIds();
 
         $openingBalanceRule = $decimalPlaces === 0
             ? ['required', 'string', 'regex:/^-?\d+$/']
@@ -59,6 +55,8 @@ class AccountForm extends Form
                 'integer',
                 Rule::in($allowedCurrencyIds),
             ],
+            'account_number' => ['nullable', 'string', 'max:255'],
+            'note' => ['nullable', 'string', 'max:2000'],
             'opening_balance' => $openingBalanceRule,
             'is_active' => ['boolean'],
         ];
@@ -72,6 +70,8 @@ class AccountForm extends Form
         return [
             'name' => __('general.name'),
             'currency_id' => __('general.currency'),
+            'account_number' => __('general.account_number'),
+            'note' => __('general.note'),
             'opening_balance' => __('general.opening_balance'),
             'is_active' => __('general.is_active'),
         ];
@@ -103,6 +103,8 @@ class AccountForm extends Form
 
         $validated = $this->validate();
         $validated['business_id'] = $businessId;
+        $validated['account_number'] = $validated['account_number'] !== '' ? $validated['account_number'] : null;
+        $validated['note'] = $validated['note'] !== '' ? $validated['note'] : null;
         $validated['opening_balance'] = $this->normalizeBalance((string) $validated['opening_balance']);
 
         $account = Account::create($validated);
@@ -115,11 +117,33 @@ class AccountForm extends Form
     public function update(): void
     {
         $validated = $this->validate();
+        $validated['account_number'] = $validated['account_number'] !== '' ? $validated['account_number'] : null;
+        $validated['note'] = $validated['note'] !== '' ? $validated['note'] : null;
         $validated['opening_balance'] = $this->normalizeBalance((string) $validated['opening_balance']);
 
         $this->account->update($validated);
 
         $this->reset();
+    }
+
+    /**
+     * @return list<int>
+     */
+    protected function allowedCurrencyIds(): array
+    {
+        $businessId = Auth::user()?->current_business_id;
+
+        if ($businessId === null) {
+            return [];
+        }
+
+        $ids = Currency::cachedForBusiness($businessId)->pluck('id')->all();
+
+        if ($this->account?->currency_id && ! in_array($this->account->currency_id, $ids, true)) {
+            $ids[] = $this->account->currency_id;
+        }
+
+        return $ids;
     }
 
     protected function selectedCurrency(): ?Currency

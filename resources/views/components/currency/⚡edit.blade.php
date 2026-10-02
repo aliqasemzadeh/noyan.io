@@ -76,6 +76,18 @@ new class extends Component
         </flux:field>
 
         <flux:field>
+            <flux:label>{{ __('general.currency_type') }}</flux:label>
+            <flux:select wire:model="form.type" variant="listbox">
+                @foreach (\App\Enums\CurrencyType::cases() as $type)
+                    <flux:select.option value="{{ $type->value }}" wire:key="edit-type-{{ $type->value }}">
+                        {{ $type->label() }}
+                    </flux:select.option>
+                @endforeach
+            </flux:select>
+            <flux:error name="form.type" />
+        </flux:field>
+
+        <flux:field>
             <flux:label>{{ __('general.decimal_places') }}</flux:label>
             <flux:input type="number" wire:model="form.decimal_places" min="0" max="18" dir="ltr" />
             <flux:description>{{ __('general.decimal_places_hint') }}</flux:description>

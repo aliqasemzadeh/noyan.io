@@ -32,6 +32,7 @@ class extends Component
     public function currencies(): LengthAwarePaginator
     {
         return Currency::query()
+            ->system()
             ->when($this->search !== '', function ($query): void {
                 $search = '%'.$this->search.'%';
 
@@ -94,6 +95,7 @@ class extends Component
                 <flux:table.column>{{ __('general.currency_code') }}</flux:table.column>
                 <flux:table.column>{{ __('general.name') }}</flux:table.column>
                 <flux:table.column>{{ __('general.currency_symbol') }}</flux:table.column>
+                <flux:table.column>{{ __('general.currency_type') }}</flux:table.column>
                 <flux:table.column>{{ __('general.decimal_places') }}</flux:table.column>
                 <flux:table.column>{{ __('general.is_active') }}</flux:table.column>
                 <flux:table.column>{{ __('general.created_at') }}</flux:table.column>
@@ -110,6 +112,7 @@ class extends Component
                         <flux:table.cell>
                             <span dir="ltr">{{ $currency->symbol }}</span>
                         </flux:table.cell>
+                        <flux:table.cell>{{ $currency->type->label() }}</flux:table.cell>
                         <flux:table.cell>
                             <span dir="ltr">{{ $currency->decimal_places }}</span>
                         </flux:table.cell>
@@ -146,7 +149,7 @@ class extends Component
                     </flux:table.row>
                 @empty
                     <flux:table.row>
-                        <flux:table.cell colspan="7">
+                        <flux:table.cell colspan="8">
                             {{ __('general.no_currencies') }}
                         </flux:table.cell>
                     </flux:table.row>

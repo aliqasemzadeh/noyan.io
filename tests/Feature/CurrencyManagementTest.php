@@ -21,6 +21,7 @@ class CurrencyManagementTest extends TestCase
             ->set('form.code', 'btc')
             ->set('form.name', 'Bitcoin')
             ->set('form.symbol', '₿')
+            ->set('form.type', 'crypto')
             ->set('form.decimal_places', 8)
             ->set('form.is_active', true)
             ->call('save')

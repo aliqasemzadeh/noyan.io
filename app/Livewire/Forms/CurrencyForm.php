@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Forms;
 
+use App\Enums\CurrencyType;
 use App\Models\Currency;
 use Illuminate\Validation\Rule;
 use Livewire\Form;
@@ -16,6 +17,8 @@ class CurrencyForm extends Form
 
     public string $symbol = '';
 
+    public string $type = CurrencyType::Fiat->value;
+
     public int $decimal_places = 2;
 
     public bool $is_active = true;
@@ -26,6 +29,7 @@ class CurrencyForm extends Form
         $this->code = $currency->code;
         $this->name = $currency->name;
         $this->symbol = $currency->symbol ?? '';
+        $this->type = $currency->type->value;
         $this->decimal_places = $currency->decimal_places;
         $this->is_active = $currency->is_active;
     }
@@ -42,11 +46,13 @@ class CurrencyForm extends Form
                 'max:16',
                 'alpha_dash:ascii',
                 Rule::unique('currencies', 'code')
+                    ->whereNull('business_id')
                     ->whereNull('deleted_at')
                     ->ignore($this->currency?->id),
             ],
             'name' => ['required', 'string', 'max:255'],
             'symbol' => ['nullable', 'string', 'max:16'],
+            'type' => ['required', Rule::enum(CurrencyType::class)],
             'decimal_places' => ['required', 'integer', 'min:0', 'max:18'],
             'is_active' => ['boolean'],
         ];
@@ -61,6 +67,7 @@ class CurrencyForm extends Form
             'code' => __('general.currency_code'),
             'name' => __('general.name'),
             'symbol' => __('general.currency_symbol'),
+            'type' => __('general.currency_type'),
             'decimal_places' => __('general.decimal_places'),
             'is_active' => __('general.is_active'),
         ];
@@ -71,6 +78,8 @@ class CurrencyForm extends Form
         $validated = $this->validate();
         $validated['code'] = strtoupper($validated['code']);
         $validated['symbol'] = $validated['symbol'] !== '' ? $validated['symbol'] : null;
+        $validated['is_system'] = true;
+        $validated['business_id'] = null;
 
         $currency = Currency::create($validated);
 

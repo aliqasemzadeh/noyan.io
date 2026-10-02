@@ -73,6 +73,15 @@ new class extends Component
             >
                 {{ __('general.accounts') }}
             </flux:sidebar.item>
+
+            <flux:sidebar.item
+                icon="coins"
+                :href="route('accounting.currencies.index')"
+                wire:navigate
+                :current="request()->routeIs('accounting.currencies.*')"
+            >
+                {{ __('general.business_currencies') }}
+            </flux:sidebar.item>
         @endif
     </flux:sidebar.nav>
 </div>
