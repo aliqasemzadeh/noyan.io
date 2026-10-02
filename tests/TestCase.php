@@ -3,7 +3,6 @@
 namespace Tests;
 
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
-use Illuminate\Support\Facades\File;
 
 abstract class TestCase extends BaseTestCase
 {
@@ -11,7 +10,9 @@ abstract class TestCase extends BaseTestCase
     {
         $compiledPath = dirname(__DIR__).DIRECTORY_SEPARATOR.'storage'.DIRECTORY_SEPARATOR.'framework'.DIRECTORY_SEPARATOR.'testing'.DIRECTORY_SEPARATOR.'views';
 
-        File::ensureDirectoryExists($compiledPath);
+        if (! is_dir($compiledPath)) {
+            mkdir($compiledPath, 0777, true);
+        }
 
         putenv('VIEW_COMPILED_PATH='.$compiledPath);
         $_ENV['VIEW_COMPILED_PATH'] = $compiledPath;
