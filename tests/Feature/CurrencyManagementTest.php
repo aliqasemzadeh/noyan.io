@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Currency;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Tests\TestCase;
@@ -82,5 +83,29 @@ class CurrencyManagementTest extends TestCase
             ->get(route('system.currencies.index'))
             ->assertOk()
             ->assertSee('IRR');
+    }
+
+    public function test_cached_active_survives_database_cache_unserialize(): void
+    {
+        config(['cache.default' => 'database']);
+
+        $currency = Currency::factory()->create([
+            'code' => 'IRR',
+            'name' => 'Iranian Rial',
+            'is_system' => true,
+            'business_id' => null,
+            'is_active' => true,
+        ]);
+
+        Currency::forgetActiveCache();
+
+        $first = Currency::cachedActive();
+        $this->assertInstanceOf(Collection::class, $first);
+        $this->assertTrue($first->contains('id', $currency->id));
+
+        $second = Currency::cachedActive();
+        $this->assertInstanceOf(Collection::class, $second);
+        $this->assertTrue($second->first() instanceof Currency);
+        $this->assertTrue($second->contains('id', $currency->id));
     }
 }

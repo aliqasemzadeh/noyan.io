@@ -7,6 +7,7 @@ use App\Models\Business;
 use App\Models\BusinessUser;
 use App\Models\User;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Tests\TestCase;
@@ -134,6 +135,26 @@ class BusinessSwitchingTest extends TestCase
 
         $again = $user->cachedBusinesses();
         $this->assertSame($cached->pluck('id')->all(), $again->pluck('id')->all());
+    }
+
+    public function test_cached_businesses_survives_database_cache_unserialize(): void
+    {
+        config(['cache.default' => 'database']);
+
+        $user = User::factory()->create();
+        $business = Business::factory()->for($user, 'owner')->create(['name' => 'Cached Co']);
+
+        $user->forgetBusinessesCache();
+
+        $first = $user->cachedBusinesses();
+        $this->assertInstanceOf(Collection::class, $first);
+        $this->assertCount(1, $first);
+        $this->assertTrue($first->first() instanceof Business);
+
+        $second = $user->cachedBusinesses();
+        $this->assertInstanceOf(Collection::class, $second);
+        $this->assertTrue($second->first() instanceof Business);
+        $this->assertSame([$business->id], $second->pluck('id')->all());
     }
 
     public function test_ensure_current_business_sets_first_membership(): void
