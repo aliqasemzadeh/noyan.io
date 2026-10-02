@@ -48,6 +48,10 @@ class AccountForm extends Form
             ->pluck('id')
             ->all();
 
+        $openingBalanceRule = $decimalPlaces === 0
+            ? ['required', 'string', 'regex:/^-?\d+$/']
+            : ['required', 'string', 'regex:/^-?\d+(\.\d{1,'.$decimalPlaces.'})?$/'];
+
         return [
             'name' => ['required', 'string', 'max:255'],
             'currency_id' => [
@@ -55,11 +59,7 @@ class AccountForm extends Form
                 'integer',
                 Rule::in($allowedCurrencyIds),
             ],
-            'opening_balance' => [
-                'required',
-                'string',
-                'regex:/^-?\d+(\.\d{1,'.$decimalPlaces.'})?$/',
-            ],
+            'opening_balance' => $openingBalanceRule,
             'is_active' => ['boolean'],
         ];
     }

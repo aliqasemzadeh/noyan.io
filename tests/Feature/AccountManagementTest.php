@@ -41,9 +41,7 @@ class AccountManagementTest extends TestCase
 
         $account = Account::query()->where('name', 'Cold Wallet')->first();
         $this->assertNotNull($account);
-        $this->assertSame('0.12345678', rtrim(rtrim((string) $account->opening_balance, '0'), '.') === '0.12345678' || (string) $account->opening_balance === '0.123456780000000000'
-            ? '0.12345678'
-            : (string) $account->opening_balance);
+        $this->assertSame('0.12345678', rtrim(rtrim((string) $account->opening_balance, '0'), '.'));
     }
 
     public function test_opening_balance_respects_currency_decimal_places(): void
