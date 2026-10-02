@@ -60,7 +60,7 @@ new class extends Component
             ->limit(20)
             ->get();
 
-        if (blank($search) && $this->form->user_id) {
+        if ($this->form->user_id) {
             $selected = User::query()
                 ->whereIn('id', [$this->form->user_id])
                 ->whereNotIn('id', $results->pluck('id'))
