@@ -33,6 +33,7 @@ class AccountFactory extends Factory
             'iban' => null,
             'note' => null,
             'opening_balance' => '0',
+            'current_balance' => '0',
             'is_active' => true,
         ];
     }

@@ -140,8 +140,11 @@ class AccountForm extends Form
         $validated['type'] = AccountType::Asset;
         $validated = $this->normalizeOptionalStrings($validated);
         $validated['opening_balance'] = $this->normalizeBalance((string) $validated['opening_balance']);
+        $validated['current_balance'] = $validated['opening_balance'];
 
         $account = Account::create($validated);
+
+        Account::forgetOptionsCache($businessId);
 
         $this->reset();
         $this->sub_type = AccountSubType::Cash->value;
@@ -158,7 +161,16 @@ class AccountForm extends Form
         $validated = $this->normalizeOptionalStrings($validated);
         $validated['opening_balance'] = $this->normalizeBalance((string) $validated['opening_balance']);
 
+        $previousOpening = $this->normalizeBalance((string) $this->account->opening_balance);
+        $openingDelta = bcsub($validated['opening_balance'], $previousOpening, 18);
+        $validated['current_balance'] = $this->normalizeBalance(
+            bcadd((string) $this->account->current_balance, $openingDelta, 18)
+        );
+
         $this->account->update($validated);
+
+        Account::forgetBalanceCache((int) $this->account->business_id, (int) $this->account->id);
+        Account::forgetOptionsCache((int) $this->account->business_id);
 
         $this->reset();
         $this->sub_type = AccountSubType::Cash->value;

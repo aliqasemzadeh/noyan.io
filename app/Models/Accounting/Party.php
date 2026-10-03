@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Cache;
 
 #[Fillable([
     'business_id',
@@ -97,5 +98,25 @@ class Party extends Model
     public function displayName(): string
     {
         return $this->legal_name ?: $this->name;
+    }
+
+    public static function balanceCacheKey(int $businessId, int $partyId): string
+    {
+        return "party_balance.{$businessId}.{$partyId}";
+    }
+
+    public static function optionsCacheKey(int $businessId): string
+    {
+        return "business.{$businessId}.parties.options";
+    }
+
+    public static function forgetBalanceCache(int $businessId, int $partyId): void
+    {
+        Cache::forget(self::balanceCacheKey($businessId, $partyId));
+    }
+
+    public static function forgetOptionsCache(int $businessId): void
+    {
+        Cache::forget(self::optionsCacheKey($businessId));
     }
 }
