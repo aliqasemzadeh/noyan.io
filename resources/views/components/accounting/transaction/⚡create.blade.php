@@ -7,7 +7,6 @@ use App\Models\Accounting\Party;
 use Flux\Flux;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Cache;
 use Livewire\Attributes\Computed;
 use Livewire\Component;
 
@@ -41,15 +40,7 @@ new class extends Component
             return collect();
         }
 
-        return Cache::remember(
-            Account::optionsCacheKey($businessId),
-            now()->addHour(),
-            fn () => Account::query()
-                ->where('business_id', $businessId)
-                ->where('is_active', true)
-                ->orderBy('name')
-                ->get(['id', 'name', 'currency_id'])
-        );
+        return Account::cachedOptionsForBusiness($businessId);
     }
 
     /**
@@ -64,15 +55,7 @@ new class extends Component
             return collect();
         }
 
-        return Cache::remember(
-            Party::optionsCacheKey($businessId),
-            now()->addHour(),
-            fn () => Party::query()
-                ->where('business_id', $businessId)
-                ->where('is_active', true)
-                ->orderBy('name')
-                ->get(['id', 'name', 'legal_name'])
-        );
+        return Party::cachedOptionsForBusiness($businessId);
     }
 
     public function save(): void
