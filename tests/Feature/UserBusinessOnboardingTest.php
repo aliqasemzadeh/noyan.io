@@ -56,7 +56,7 @@ class UserBusinessOnboardingTest extends TestCase
             ->set('form.category', BusinessCategory::Computers->value)
             ->call('save')
             ->assertHasNoErrors()
-            ->assertRedirect(route('user.dashboard'));
+            ->assertRedirect(route('accounting.accounts.index'));
 
         $business = Business::query()->where('name', 'فروشگاه نوید')->first();
 

@@ -9,6 +9,7 @@ use App\Models\Business;
 use App\Models\Currency;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -237,5 +238,47 @@ class AccountManagementTest extends TestCase
         $this->assertDatabaseMissing('accounting_accounts', [
             'id' => $account->id,
         ]);
+    }
+
+    public function test_accounts_guide_shows_until_dismissed(): void
+    {
+        $user = User::factory()->create();
+        $business = Business::factory()->for($user, 'owner')->create();
+        $user->forceFill(['current_business_id' => $business->id])->save();
+
+        Livewire::actingAs($user)
+            ->test('pages::panel.accounting.account.index')
+            ->assertSet('showAccountsGuide', true)
+            ->assertSee(__('general.accounts_guide_heading'))
+            ->call('dismissAccountsGuide')
+            ->assertSet('showAccountsGuide', false)
+            ->assertDontSee(__('general.accounts_guide_heading'));
+
+        $this->assertTrue(Cache::has("accounts_guide_dismissed:{$user->id}:{$business->id}"));
+
+        Livewire::actingAs($user)
+            ->test('pages::panel.accounting.account.index')
+            ->assertSet('showAccountsGuide', false)
+            ->assertDontSee(__('general.accounts_guide_heading'));
+    }
+
+    public function test_accounts_guide_shows_again_for_another_business(): void
+    {
+        $user = User::factory()->create();
+        $first = Business::factory()->for($user, 'owner')->create();
+        $second = Business::factory()->for($user, 'owner')->create();
+        $user->forceFill(['current_business_id' => $first->id])->save();
+
+        Livewire::actingAs($user)
+            ->test('pages::panel.accounting.account.index')
+            ->call('dismissAccountsGuide')
+            ->assertSet('showAccountsGuide', false);
+
+        $user->forceFill(['current_business_id' => $second->id])->save();
+
+        Livewire::actingAs($user)
+            ->test('pages::panel.accounting.account.index')
+            ->assertSet('showAccountsGuide', true)
+            ->assertSee(__('general.accounts_guide_heading'));
     }
 }
