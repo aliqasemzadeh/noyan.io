@@ -11,7 +11,7 @@ new class extends Component
 <x-slot name="title">{{ __('general.user_settings') }} - {{ __('general.app_name') }}</x-slot>
 
 <div class="space-y-6">
-<div class="flex items-center justify-between gap-3">
+    <div class="flex items-center justify-between gap-3">
         <div>
             <flux:heading size="xl" level="1">
                 {{ __('general.user_settings') }}
