@@ -1,6 +1,6 @@
 <?php
 
-use App\Enums\BusinessRole;
+use App\Enums\Business\BusinessRole;
 use App\Models\BusinessUser;
 use Flux\Flux;
 use Livewire\Attributes\On;

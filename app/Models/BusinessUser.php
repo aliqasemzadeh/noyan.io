@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-use App\Enums\BusinessRole;
+use App\Enums\Business\BusinessRole;
 use Database\Factories\BusinessUserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Table;

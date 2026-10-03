@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Enums\Business\BusinessCategory;
+use App\Enums\Business\BusinessType;
 use App\Models\Accounting\Account;
 use App\Models\Accounting\BusinessCurrency;
 use Database\Factories\BusinessFactory;
@@ -14,7 +16,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\DB;
 
-#[Fillable(['owner_id', 'name', 'slug', 'is_active'])]
+#[Fillable(['owner_id', 'name', 'slug', 'type', 'category', 'is_active'])]
 class Business extends Model
 {
     /** @use HasFactory<BusinessFactory> */
@@ -26,6 +28,8 @@ class Business extends Model
     protected function casts(): array
     {
         return [
+            'type' => BusinessType::class,
+            'category' => BusinessCategory::class,
             'is_active' => 'boolean',
         ];
     }

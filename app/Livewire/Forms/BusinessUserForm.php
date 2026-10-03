@@ -2,7 +2,7 @@
 
 namespace App\Livewire\Forms;
 
-use App\Enums\BusinessRole;
+use App\Enums\Business\BusinessRole;
 use App\Models\Business;
 use App\Models\BusinessUser;
 use App\Models\User;

@@ -1,6 +1,6 @@
 <?php
 
-use App\Enums\BusinessRole;
+use App\Enums\Business\BusinessRole;
 use App\Models\Business;
 use App\Models\BusinessUser;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
