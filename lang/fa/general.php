@@ -1,6 +1,7 @@
 <?php
 
 return [
+    'app_name' => 'نویان',
     'login' => 'ورود',
     'logout' => 'خروج',
     'dashboard' => 'داشبورد',

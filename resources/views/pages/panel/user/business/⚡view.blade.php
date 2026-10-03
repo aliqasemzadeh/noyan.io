@@ -2,13 +2,10 @@
 
 use App\Models\Business;
 use Illuminate\Support\Facades\Auth;
-use Livewire\Attributes\Title;
 use Livewire\Component;
 use Morilog\Jalali\Jalalian;
 
-new
-#[Title('Business')]
-class extends Component
+new class extends Component
 {
     public Business $business;
 
@@ -27,7 +24,7 @@ class extends Component
 ?>
 
 <div class="space-y-6">
-    <x-slot name="title">{{ $business->name }} - {{ config('app.name') }}</x-slot>
+    <x-slot name="title">{{ $business->name }} - {{ __('general.app_name') }}</x-slot>
 
     <div>
         <flux:breadcrumbs>

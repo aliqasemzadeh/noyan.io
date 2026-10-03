@@ -5,13 +5,10 @@ use App\Models\Currency;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
-use Livewire\Attributes\Title;
 use Livewire\Component;
 use Morilog\Jalali\Jalalian;
 
-new
-#[Title('Account')]
-class extends Component
+new class extends Component
 {
     public Account $account;
 
@@ -64,7 +61,7 @@ class extends Component
 ?>
 
 <div class="space-y-6">
-    <x-slot name="title">{{ $account->name }} - {{ config('app.name') }}</x-slot>
+    <x-slot name="title">{{ $account->name }} - {{ __('general.app_name') }}</x-slot>
 
     <div>
         <flux:breadcrumbs>

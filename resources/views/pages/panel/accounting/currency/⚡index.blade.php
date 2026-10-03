@@ -5,13 +5,10 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
-use Livewire\Attributes\Title;
 use Livewire\Component;
 use Livewire\WithPagination;
 
-new
-#[Title('Business Currencies')]
-class extends Component
+new class extends Component
 {
     use WithPagination;
 
@@ -56,6 +53,8 @@ class extends Component
 ?>
 
 <div class="space-y-6">
+    <x-slot name="title">{{ __('general.business_currencies') }} - {{ __('general.app_name') }}</x-slot>
+
     <div>
         <flux:breadcrumbs>
             <flux:breadcrumbs.item :href="route('accounting.dashboard')" wire:navigate>
