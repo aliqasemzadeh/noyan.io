@@ -165,6 +165,7 @@ class CreateBusinessAction
                 'type' => AccountType::Asset,
                 'sub_type' => AccountSubType::Cash,
                 'opening_balance' => 0,
+                'current_balance' => 0,
                 'is_active' => true,
             ],
             [
@@ -173,6 +174,7 @@ class CreateBusinessAction
                 'type' => AccountType::Asset,
                 'sub_type' => AccountSubType::Bank,
                 'opening_balance' => 0,
+                'current_balance' => 0,
                 'is_active' => true,
             ],
         ]);

@@ -24,6 +24,7 @@ return new class extends Migration
             $table->string('iban')->nullable();
             $table->text('note')->nullable();
             $table->decimal('opening_balance', 36, 18)->default(0);
+            $table->decimal('current_balance', 36, 18)->default(0);
             $table->boolean('is_active')->default(true);
             $table->timestamps();
 
