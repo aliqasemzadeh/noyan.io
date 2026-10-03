@@ -203,7 +203,7 @@ new class extends Component
             </x-slot>
 
             <x-slot name="controls">
-                <flux:button icon="x-mark" variant="ghost" wire:click="dismissAccountsGuide" />
+                <flux:button icon="x" variant="ghost" wire:click="dismissAccountsGuide" />
             </x-slot>
         </flux:callout>
     @endif
