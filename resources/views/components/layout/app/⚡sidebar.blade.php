@@ -83,6 +83,15 @@ new class extends Component
                 {{ __('general.invoices') }}
             </flux:sidebar.item>
 
+            <flux:sidebar.item
+                icon="arrow-left-right"
+                :href="route('accounting.transactions.index')"
+                wire:navigate
+                :current="request()->routeIs('accounting.transactions.*')"
+            >
+                {{ __('general.transactions') }}
+            </flux:sidebar.item>
+
             <flux:sidebar.group
                 expandable
                 :expanded="request()->routeIs('accounting.parties.*')"
