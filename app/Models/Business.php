@@ -8,6 +8,7 @@ use App\Enums\CategoryType;
 use App\Models\Accounting\Account;
 use App\Models\Accounting\BusinessCurrency;
 use App\Models\Accounting\Invoice;
+use App\Models\Accounting\Loan;
 use App\Models\Accounting\Party;
 use App\Models\Catalog\Brand;
 use App\Models\Catalog\Product;
@@ -79,6 +80,14 @@ class Business extends Model
     public function invoices(): HasMany
     {
         return $this->hasMany(Invoice::class);
+    }
+
+    /**
+     * @return HasMany<Loan, $this>
+     */
+    public function loans(): HasMany
+    {
+        return $this->hasMany(Loan::class);
     }
 
     /**

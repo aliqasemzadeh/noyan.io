@@ -1,16 +1,32 @@
 <?php
 
+use App\Enums\Accounting\TransactionType;
 use App\Models\Accounting\Account;
+use App\Models\Accounting\Transaction;
 use App\Models\Currency;
+use App\Support\LocaleDate;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
 use Livewire\Component;
-use Morilog\Jalali\Jalalian;
+use Livewire\WithPagination;
 
 new class extends Component
 {
+    use WithPagination;
+
     public Account $account;
+
+    public string $search = '';
+
+    public string $typeFilter = '';
+
+    public string $directionFilter = '';
+
+    public string $dateFrom = '';
+
+    public string $dateTo = '';
 
     public function mount(Account $account): void
     {
@@ -24,11 +40,36 @@ new class extends Component
         $this->account = $account->loadMissing('currency');
     }
 
+    public function updatedSearch(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatedTypeFilter(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatedDirectionFilter(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatedDateFrom(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatedDateTo(): void
+    {
+        $this->resetPage();
+    }
+
     #[On('panels.accounting.account.view.refresh')]
     public function refreshAccount(): void
     {
         $this->account->refresh()->loadMissing('currency');
-        unset($this->formattedBalance, $this->formattedCreatedAt);
+        unset($this->formattedOpeningBalance, $this->formattedCurrentBalance, $this->formattedCreatedAt, $this->ledgerTransactions);
     }
 
     #[On('panels.accounting.account.index.table')]
@@ -39,23 +80,134 @@ new class extends Component
         }
     }
 
-    #[Computed]
-    public function formattedBalance(): string
+    #[On('panels.accounting.transaction.index.table')]
+    #[On('panels.accounting.loan.index.table')]
+    public function refreshLedger(): void
     {
-        /** @var Currency|null $currency */
-        $currency = $this->account->currency;
+        $this->account->refresh()->loadMissing('currency');
+        unset($this->ledgerTransactions, $this->formattedCurrentBalance);
+    }
 
-        if ($currency === null) {
-            return (string) $this->account->opening_balance;
-        }
+    /**
+     * @return LengthAwarePaginator<int, Transaction>
+     */
+    #[Computed]
+    public function ledgerTransactions(): LengthAwarePaginator
+    {
+        $accountId = (int) $this->account->id;
+        $dateFrom = LocaleDate::parseFilterDate($this->dateFrom);
+        $dateTo = LocaleDate::parseFilterDate($this->dateTo);
 
-        return $currency->formatAmount((string) $this->account->opening_balance);
+        return Transaction::query()
+            ->with(['party', 'invoice:id,invoice_number', 'loan:id,title', 'account', 'destinationAccount'])
+            ->where(function ($query) use ($accountId): void {
+                $query->where('account_id', $accountId)
+                    ->orWhere('destination_account_id', $accountId);
+            })
+            ->when($this->search !== '', function ($query): void {
+                $search = '%'.$this->search.'%';
+
+                $query->where(function ($query) use ($search): void {
+                    $query->where('reference_number', 'like', $search)
+                        ->orWhere('note', 'like', $search)
+                        ->orWhereHas('party', function ($partyQuery) use ($search): void {
+                            $partyQuery->where('name', 'like', $search)
+                                ->orWhere('legal_name', 'like', $search);
+                        });
+                });
+            })
+            ->when($this->typeFilter !== '', fn ($query) => $query->where('type', $this->typeFilter))
+            ->when($this->directionFilter === 'in', function ($query) use ($accountId): void {
+                $query->where(function ($query) use ($accountId): void {
+                    $query->where(function ($query) use ($accountId): void {
+                        $query->where('account_id', $accountId)
+                            ->where('type', TransactionType::Income);
+                    })->orWhere(function ($query) use ($accountId): void {
+                        $query->where('destination_account_id', $accountId)
+                            ->where('type', TransactionType::Transfer);
+                    });
+                });
+            })
+            ->when($this->directionFilter === 'out', function ($query) use ($accountId): void {
+                $query->where(function ($query) use ($accountId): void {
+                    $query->where(function ($query) use ($accountId): void {
+                        $query->where('account_id', $accountId)
+                            ->whereIn('type', [TransactionType::Expense, TransactionType::Transfer]);
+                    });
+                });
+            })
+            ->when($dateFrom !== null, fn ($query) => $query->whereDate('transaction_date', '>=', $dateFrom))
+            ->when($dateTo !== null, fn ($query) => $query->whereDate('transaction_date', '<=', $dateTo))
+            ->latest('transaction_date')
+            ->latest('id')
+            ->paginate(config('general.per_page', 15));
+    }
+
+    public function directionFor(Transaction $transaction): string
+    {
+        $accountId = (int) $this->account->id;
+
+        return match ($transaction->type) {
+            TransactionType::Income => 'in',
+            TransactionType::Expense => 'out',
+            TransactionType::Transfer => (int) $transaction->destination_account_id === $accountId ? 'in' : 'out',
+        };
+    }
+
+    #[Computed]
+    public function formattedOpeningBalance(): string
+    {
+        return $this->formatCurrencyAmount((string) $this->account->opening_balance);
+    }
+
+    #[Computed]
+    public function formattedCurrentBalance(): string
+    {
+        return $this->formatCurrencyAmount((string) $this->account->current_balance);
     }
 
     #[Computed]
     public function formattedCreatedAt(): string
     {
-        return Jalalian::fromDateTime($this->account->created_at)->format('Y/m/d H:i');
+        return LocaleDate::formatDateTime($this->account->created_at);
+    }
+
+    public function formatDate(\DateTimeInterface|string|null $date): string
+    {
+        return LocaleDate::formatDate($date);
+    }
+
+    public function formatAmount(string $amount): string
+    {
+        return $this->formatCurrencyAmount($amount);
+    }
+
+    public function dateFilterPlaceholder(): string
+    {
+        return LocaleDate::filterPlaceholder();
+    }
+
+    public function dateFilterInputType(): string
+    {
+        return LocaleDate::filterInputType();
+    }
+
+    protected function formatCurrencyAmount(string $amount): string
+    {
+        /** @var Currency|null $currency */
+        $currency = $this->account->currency;
+
+        if ($currency !== null) {
+            return $currency->formatAmount($amount);
+        }
+
+        if (! str_contains($amount, '.')) {
+            return number_format((float) $amount);
+        }
+
+        $normalized = rtrim(rtrim($amount, '0'), '.') ?: '0';
+
+        return number_format((float) $normalized, substr_count($normalized, '.') ? strlen(explode('.', $normalized)[1]) : 0);
     }
 };
 ?>
@@ -135,7 +287,12 @@ new class extends Component
 
                 <div class="flex items-center justify-between gap-4 border-b border-zinc-100 pb-3 dark:border-zinc-700">
                     <flux:text class="text-zinc-500">{{ __('general.opening_balance') }}</flux:text>
-                    <flux:text class="font-medium" dir="ltr">{{ $this->formattedBalance }}</flux:text>
+                    <flux:text class="font-medium" dir="ltr">{{ $this->formattedOpeningBalance }}</flux:text>
+                </div>
+
+                <div class="flex items-center justify-between gap-4 border-b border-zinc-100 pb-3 dark:border-zinc-700">
+                    <flux:text class="text-zinc-500">{{ __('general.current_balance') }}</flux:text>
+                    <flux:text class="font-medium" dir="ltr">{{ $this->formattedCurrentBalance }}</flux:text>
                 </div>
 
                 <div class="flex items-center justify-between gap-4 border-b border-zinc-100 pb-3 dark:border-zinc-700">
@@ -200,6 +357,90 @@ new class extends Component
             <flux:text>{{ $account->note }}</flux:text>
         </flux:card>
     @endif
+
+    <flux:card class="space-y-4">
+        <div>
+            <flux:heading size="lg">{{ __('general.account_ledger') }}</flux:heading>
+            <flux:text class="mt-1">{{ __('general.account_ledger_hint') }}</flux:text>
+        </div>
+
+        <div class="grid gap-3 md:grid-cols-4">
+            <flux:input
+                wire:model.live.debounce.300ms="search"
+                icon="search"
+                placeholder="{{ __('general.search') }}..."
+                clearable
+                class="md:col-span-2"
+            />
+
+            <flux:select wire:model.live="typeFilter" searchable variant="listbox" placeholder="{{ __('general.all_transaction_types') }}">
+                <flux:select.option value="">{{ __('general.all_transaction_types') }}</flux:select.option>
+                @foreach (TransactionType::cases() as $type)
+                    <flux:select.option value="{{ $type->value }}" wire:key="account-tx-type-{{ $type->value }}">
+                        {{ $type->label() }}
+                    </flux:select.option>
+                @endforeach
+            </flux:select>
+
+            <flux:select wire:model.live="directionFilter" searchable variant="listbox" placeholder="{{ __('general.all_directions') }}">
+                <flux:select.option value="">{{ __('general.all_directions') }}</flux:select.option>
+                <flux:select.option value="in">{{ __('general.direction_in') }}</flux:select.option>
+                <flux:select.option value="out">{{ __('general.direction_out') }}</flux:select.option>
+            </flux:select>
+
+            <flux:input
+                :type="$this->dateFilterInputType()"
+                wire:model.live="dateFrom"
+                placeholder="{{ __('general.date_from') }} ({{ $this->dateFilterPlaceholder() }})"
+                clearable
+            />
+            <flux:input
+                :type="$this->dateFilterInputType()"
+                wire:model.live="dateTo"
+                placeholder="{{ __('general.date_to') }} ({{ $this->dateFilterPlaceholder() }})"
+                clearable
+            />
+        </div>
+
+        <flux:table :paginate="$this->ledgerTransactions">
+            <flux:table.columns>
+                <flux:table.column>{{ __('general.transaction_date') }}</flux:table.column>
+                <flux:table.column>{{ __('general.transaction_type') }}</flux:table.column>
+                <flux:table.column>{{ __('general.direction') }}</flux:table.column>
+                <flux:table.column>{{ __('general.party') }}</flux:table.column>
+                <flux:table.column>{{ __('general.amount') }}</flux:table.column>
+                <flux:table.column>{{ __('general.reference_number') }}</flux:table.column>
+                <flux:table.column>{{ __('general.note') }}</flux:table.column>
+            </flux:table.columns>
+
+            <flux:table.rows>
+                @forelse ($this->ledgerTransactions as $transaction)
+                    @php($direction = $this->directionFor($transaction))
+                    <flux:table.row :key="'account-tx-'.$transaction->id">
+                        <flux:table.cell>{{ $this->formatDate($transaction->transaction_date) }}</flux:table.cell>
+                        <flux:table.cell>
+                            <flux:badge size="sm" :color="$transaction->type->badgeColor()">
+                                {{ $transaction->type->label() }}
+                            </flux:badge>
+                        </flux:table.cell>
+                        <flux:table.cell>
+                            <flux:badge size="sm" :color="$direction === 'in' ? 'green' : 'rose'">
+                                {{ $direction === 'in' ? __('general.direction_in') : __('general.direction_out') }}
+                            </flux:badge>
+                        </flux:table.cell>
+                        <flux:table.cell>{{ $transaction->party?->displayName() ?? '—' }}</flux:table.cell>
+                        <flux:table.cell dir="ltr">{{ $this->formatAmount((string) $transaction->amount) }}</flux:table.cell>
+                        <flux:table.cell>{{ $transaction->reference_number ?: '—' }}</flux:table.cell>
+                        <flux:table.cell>{{ $transaction->note ?: '—' }}</flux:table.cell>
+                    </flux:table.row>
+                @empty
+                    <flux:table.row>
+                        <flux:table.cell colspan="7">{{ __('general.no_transactions') }}</flux:table.cell>
+                    </flux:table.row>
+                @endforelse
+            </flux:table.rows>
+        </flux:table>
+    </flux:card>
 
     <livewire:accounting.account.edit :key="'account-edit-view-'.$account->id" />
     <livewire:accounting.account.delete :key="'account-delete-view-'.$account->id" />

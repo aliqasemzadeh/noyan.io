@@ -7,6 +7,7 @@ use App\Enums\Accounting\TransactionType;
 use App\Enums\CategoryType;
 use App\Models\Accounting\Account;
 use App\Models\Accounting\Invoice;
+use App\Models\Accounting\Loan;
 use App\Models\Accounting\Party;
 use App\Models\Accounting\Transaction;
 use App\Models\Category;
@@ -25,6 +26,7 @@ class ProcessTransactionAction
      *     party_id?: int|null,
      *     invoice_id?: int|null,
      *     category_id?: int|null,
+     *     loan_id?: int|null,
      *     transaction_date: string,
      *     currency?: string|null,
      *     exchange_rate?: string|null,
@@ -170,6 +172,23 @@ class ProcessTransactionAction
                 $categoryId = null;
             }
 
+            $loanId = $data['loan_id'] ?? null;
+
+            if ($loanId !== null && $type !== TransactionType::Transfer) {
+                $loan = Loan::query()
+                    ->where('business_id', $businessId)
+                    ->whereKey($loanId)
+                    ->first();
+
+                if ($loan === null) {
+                    throw ValidationException::withMessages([
+                        'loan_id' => [__('general.transaction_loan_invalid')],
+                    ]);
+                }
+            } else {
+                $loanId = null;
+            }
+
             $currency = $data['currency'] ?? $account->currency?->code;
 
             if ($currency === null || $currency === '') {
@@ -198,6 +217,7 @@ class ProcessTransactionAction
                 'party_id' => $partyId,
                 'invoice_id' => $invoiceId,
                 'category_id' => $categoryId,
+                'loan_id' => $loanId,
                 'type' => $type,
                 'transaction_date' => $data['transaction_date'],
                 'currency' => $currency,
@@ -219,7 +239,7 @@ class ProcessTransactionAction
                 $this->applyInvoicePayment($invoice, $amount);
             }
 
-            return $transaction->fresh(['account', 'destinationAccount', 'party', 'invoice', 'category']);
+            return $transaction->fresh(['account', 'destinationAccount', 'party', 'invoice', 'category', 'loan']);
         });
     }
 

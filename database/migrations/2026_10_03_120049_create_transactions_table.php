@@ -22,6 +22,8 @@ return new class extends Migration
                 ->restrictOnDelete();
             $table->foreignId('party_id')->nullable()->constrained('parties')->restrictOnDelete();
             $table->foreignId('invoice_id')->nullable()->constrained('invoices')->restrictOnDelete();
+            $table->foreignId('category_id')->nullable()->constrained('categories')->nullOnDelete();
+            $table->foreignId('loan_id')->nullable()->constrained('loans')->nullOnDelete();
             $table->string('type', 32);
             $table->date('transaction_date');
             $table->string('currency', 16);
@@ -36,6 +38,8 @@ return new class extends Migration
 
             $table->index(['business_id', 'account_id']);
             $table->index(['business_id', 'party_id']);
+            $table->index(['business_id', 'category_id']);
+            $table->index(['business_id', 'loan_id']);
             $table->index(['business_id', 'transaction_date']);
         });
     }

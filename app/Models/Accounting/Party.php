@@ -96,6 +96,22 @@ class Party extends Model
         return $this->hasMany(Invoice::class);
     }
 
+    /**
+     * @return HasMany<Transaction, $this>
+     */
+    public function transactions(): HasMany
+    {
+        return $this->hasMany(Transaction::class);
+    }
+
+    /**
+     * @return HasMany<Loan, $this>
+     */
+    public function loans(): HasMany
+    {
+        return $this->hasMany(Loan::class);
+    }
+
     public function displayName(): string
     {
         return $this->legal_name ?: $this->name;

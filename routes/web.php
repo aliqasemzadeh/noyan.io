@@ -47,6 +47,8 @@ Route::middleware('auth')->group(function () {
         Route::livewire('/invoices/create/{type}', 'pages::panel.accounting.invoice.form')->name('invoices.create');
         Route::livewire('/invoices/{invoice}/edit', 'pages::panel.accounting.invoice.form')->name('invoices.edit');
         Route::livewire('/transactions', 'pages::panel.accounting.transaction.index')->name('transactions.index');
+        Route::livewire('/loans', 'pages::panel.accounting.loan.index')->name('loans.index');
+        Route::livewire('/loans/{loan}', 'pages::panel.accounting.loan.show')->name('loans.show');
         Route::livewire('/currencies', 'pages::panel.accounting.currency.index')->name('currencies.index');
     });
 });

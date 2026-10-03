@@ -101,6 +101,15 @@ new class extends Component
                 {{ __('general.transactions') }}
             </flux:sidebar.item>
 
+            <flux:sidebar.item
+                icon="hand-coins"
+                :href="route('accounting.loans.index')"
+                wire:navigate
+                :current="request()->routeIs('accounting.loans.*')"
+            >
+                {{ __('general.debts_and_loans') }}
+            </flux:sidebar.item>
+
             <flux:sidebar.group
                 expandable
                 :expanded="request()->routeIs('accounting.parties.*')"
