@@ -74,6 +74,16 @@ new class extends Component
                 {{ __('general.dashboard') }}
             </flux:sidebar.item>
 
+            <flux:sidebar.group expandable icon="users" heading="{{ __('general.parties') }}" class="grid">
+                <flux:sidebar.item
+                    :href="route('accounting.parties.index')"
+                    wire:navigate
+                    :current="request()->routeIs('accounting.parties.*')"
+                >
+                    {{ __('general.parties') }}
+                </flux:sidebar.item>
+            </flux:sidebar.group>
+
             <flux:sidebar.group expandable icon="wallet" heading="{{ __('general.treasury') }}" class="grid">
                 <flux:sidebar.item
                     :href="route('accounting.accounts.index')"

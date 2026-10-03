@@ -6,6 +6,7 @@ use App\Enums\Business\BusinessCategory;
 use App\Enums\Business\BusinessType;
 use App\Models\Accounting\Account;
 use App\Models\Accounting\BusinessCurrency;
+use App\Models\Accounting\Party;
 use Database\Factories\BusinessFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -58,6 +59,14 @@ class Business extends Model
     public function accounts(): HasMany
     {
         return $this->hasMany(Account::class);
+    }
+
+    /**
+     * @return HasMany<Party, $this>
+     */
+    public function parties(): HasMany
+    {
+        return $this->hasMany(Party::class);
     }
 
     /**

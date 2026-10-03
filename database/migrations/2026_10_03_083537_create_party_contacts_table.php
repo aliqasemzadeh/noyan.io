@@ -13,7 +13,19 @@ return new class extends Migration
     {
         Schema::create('party_contacts', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('party_id')->constrained('parties')->cascadeOnDelete();
+            $table->string('name');
+            $table->string('position')->nullable();
+            $table->string('phone', 32)->nullable();
+            $table->string('mobile', 32)->nullable();
+            $table->string('email')->nullable();
+            $table->text('note')->nullable();
+            $table->boolean('is_primary')->default(false);
             $table->timestamps();
+            $table->softDeletes();
+
+            $table->index(['party_id', 'name']);
+            $table->index(['party_id', 'is_primary']);
         });
     }
 

@@ -36,6 +36,8 @@ Route::middleware('auth')->group(function () {
         Route::livewire('/', 'pages::panel.accounting.dashboard.index')->name('dashboard');
         Route::livewire('/accounts', 'pages::panel.accounting.account.index')->name('accounts.index');
         Route::livewire('/accounts/{account}', 'pages::panel.accounting.account.view')->name('accounts.view');
+        Route::livewire('/parties', 'pages::panel.accounting.party.index')->name('parties.index');
+        Route::livewire('/parties/{party}', 'pages::panel.accounting.party.view')->name('parties.view');
         Route::livewire('/currencies', 'pages::panel.accounting.currency.index')->name('currencies.index');
     });
 });
