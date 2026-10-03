@@ -16,6 +16,7 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         $this->call(CurrencySeeder::class);
+        $this->call(CategorySeeder::class);
 
         User::factory()->create([
             'mobile' => '09123456789',

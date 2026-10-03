@@ -19,6 +19,7 @@ Route::middleware('auth')->group(function () {
         Route::livewire('/businesses', 'pages::panel.administrator.business.index')->name('businesses.index');
         Route::livewire('/businesses/{business}/users', 'pages::panel.administrator.business.users')->name('businesses.users');
         Route::livewire('/currencies', 'pages::panel.administrator.currency.index')->name('currencies.index');
+        Route::livewire('/categories', 'pages::panel.administrator.category.index')->name('categories.index');
     });
 
     Route::prefix('user')->name('user.')->group(function () {
@@ -39,8 +40,9 @@ Route::middleware('auth')->group(function () {
         Route::livewire('/parties', 'pages::panel.accounting.party.index')->name('parties.index');
         Route::livewire('/parties/{party}', 'pages::panel.accounting.party.view')->name('parties.view');
         Route::livewire('/catalog/products', 'pages::panel.accounting.catalog.product.index')->name('catalog.products.index');
-        Route::livewire('/catalog/categories', 'pages::panel.accounting.catalog.category.index')->name('catalog.categories.index');
+        Route::livewire('/catalog/categories', 'pages::panel.accounting.category.index')->name('catalog.categories.index');
         Route::livewire('/catalog/brands', 'pages::panel.accounting.catalog.brand.index')->name('catalog.brands.index');
+        Route::livewire('/categories', 'pages::panel.accounting.category.index')->name('categories.index');
         Route::livewire('/invoices', 'pages::panel.accounting.invoice.index')->name('invoices.index');
         Route::livewire('/invoices/create/{type}', 'pages::panel.accounting.invoice.form')->name('invoices.create');
         Route::livewire('/invoices/{invoice}/edit', 'pages::panel.accounting.invoice.form')->name('invoices.edit');

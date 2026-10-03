@@ -1,9 +1,11 @@
 <?php
 
 use App\Enums\Accounting\TransactionType;
+use App\Enums\CategoryType;
 use App\Livewire\Forms\TransactionForm;
 use App\Models\Accounting\Account;
 use App\Models\Accounting\Party;
+use App\Models\Category;
 use Flux\Flux;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
@@ -21,11 +23,30 @@ new class extends Component
 
     public function updatedFormType(): void
     {
+        $this->form->category_id = null;
+        unset($this->transactionCategories);
+
         if ($this->form->type === TransactionType::Transfer->value) {
             $this->form->party_id = null;
         } else {
             $this->form->destination_account_id = null;
         }
+    }
+
+    /**
+     * @return Collection<int, array{id: int, name: string, path: string, depth: int, is_leaf: bool, is_system: bool}>
+     */
+    #[Computed]
+    public function transactionCategories(): Collection
+    {
+        $businessId = Auth::user()?->current_business_id;
+        $type = CategoryType::tryFrom($this->form->type);
+
+        if ($businessId === null || $type === null) {
+            return collect();
+        }
+
+        return Category::selectOptionsForBusiness($businessId, $type);
     }
 
     /**
@@ -145,6 +166,28 @@ new class extends Component
                     @endforeach
                 </flux:select>
                 <flux:error name="form.party_id" />
+            </flux:field>
+
+            <flux:field>
+                <flux:label>{{ __('general.category') }}</flux:label>
+                <flux:select
+                    wire:model="form.category_id"
+                    searchable
+                    variant="listbox"
+                    clearable
+                    placeholder="{{ __('general.select_category') }}"
+                >
+                    @foreach ($this->transactionCategories as $option)
+                        <flux:select.option
+                            value="{{ $option['id'] }}"
+                            :disabled="! $option['is_leaf']"
+                            wire:key="create-tx-category-{{ $option['id'] }}"
+                        >
+                            {{ str_repeat('— ', $option['depth']) }}{{ $option['name'] }}
+                        </flux:select.option>
+                    @endforeach
+                </flux:select>
+                <flux:error name="form.category_id" />
             </flux:field>
         @endif
 

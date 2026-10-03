@@ -3,7 +3,8 @@
 use App\Enums\Catalog\ProductType;
 use App\Models\Catalog\Brand;
 use App\Models\Catalog\Product;
-use App\Models\Catalog\ProductCategory;
+use App\Enums\CategoryType;
+use App\Models\Category;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
@@ -100,7 +101,7 @@ new class extends Component
     }
 
     /**
-     * @return Collection<int, ProductCategory>
+     * @return Collection<int, Category>
      */
     #[Computed]
     public function categories(): Collection
@@ -111,8 +112,9 @@ new class extends Component
             return collect();
         }
 
-        return ProductCategory::query()
-            ->where('business_id', $businessId)
+        return Category::query()
+            ->availableToBusiness($businessId)
+            ->ofType(CategoryType::Product)
             ->orderBy('name')
             ->get(['id', 'name']);
     }

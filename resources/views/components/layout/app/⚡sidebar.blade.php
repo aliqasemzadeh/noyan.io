@@ -46,6 +46,15 @@ new class extends Component
             >
                 {{ __('general.currencies') }}
             </flux:sidebar.item>
+
+            <flux:sidebar.item
+                icon="folder-tree"
+                :href="route('system.categories.index')"
+                wire:navigate
+                :current="request()->routeIs('system.categories.*')"
+            >
+                {{ __('general.system_categories') }}
+            </flux:sidebar.item>
         @elseif (request()->routeIs('user.*'))
             <flux:sidebar.item
                 icon="home"
@@ -142,7 +151,7 @@ new class extends Component
 
             <flux:sidebar.group
                 expandable
-                :expanded="request()->routeIs('accounting.accounts.*') || request()->routeIs('accounting.currencies.*')"
+                :expanded="request()->routeIs('accounting.accounts.*') || request()->routeIs('accounting.currencies.*') || request()->routeIs('accounting.categories.*')"
                 icon="wallet"
                 heading="{{ __('general.treasury') }}"
                 class="grid"
@@ -153,6 +162,14 @@ new class extends Component
                     :current="request()->routeIs('accounting.accounts.*')"
                 >
                     {{ __('general.cash_and_bank_accounts') }}
+                </flux:sidebar.item>
+
+                <flux:sidebar.item
+                    :href="route('accounting.categories.index')"
+                    wire:navigate
+                    :current="request()->routeIs('accounting.categories.*')"
+                >
+                    {{ __('general.categories') }}
                 </flux:sidebar.item>
 
                 <flux:sidebar.item

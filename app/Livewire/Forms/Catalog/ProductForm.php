@@ -6,6 +6,7 @@ use App\Enums\Catalog\PriceType;
 use App\Enums\Catalog\ProductType;
 use App\Enums\Catalog\ProductUnit;
 use App\Enums\Catalog\StockMovementType;
+use App\Enums\CategoryType;
 use App\Models\Catalog\Product;
 use App\Models\Catalog\ProductPriceHistory;
 use App\Models\Catalog\ProductStockMovement;
@@ -108,8 +109,14 @@ class ProductForm extends Form
             'category_id' => [
                 'nullable',
                 'integer',
-                Rule::exists('product_categories', 'id')
-                    ->where(fn ($query) => $query->where('business_id', $businessId)->whereNull('deleted_at')),
+                Rule::exists('categories', 'id')
+                    ->where(fn ($query) => $query
+                        ->where('type', CategoryType::Product->value)
+                        ->where('is_active', true)
+                        ->whereNull('deleted_at')
+                        ->where(fn ($query) => $query
+                            ->whereNull('business_id')
+                            ->orWhere('business_id', $businessId))),
             ],
             'brand_id' => [
                 'nullable',

@@ -5,11 +5,12 @@ namespace Tests\Feature;
 use App\Enums\Catalog\PriceType;
 use App\Enums\Catalog\ProductType;
 use App\Enums\Catalog\StockMovementType;
+use App\Enums\CategoryType;
 use App\Models\Business;
 use App\Models\Catalog\Brand;
 use App\Models\Catalog\Product;
-use App\Models\Catalog\ProductCategory;
 use App\Models\Catalog\ProductPriceHistory;
+use App\Models\Category;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
@@ -23,7 +24,7 @@ class CatalogProductManagementTest extends TestCase
     {
         [$user, $business] = $this->actingBusinessUser();
 
-        $category = ProductCategory::factory()->create([
+        $category = Category::factory()->product()->create([
             'business_id' => $business->id,
             'name' => 'Storage',
             'slug' => 'storage',
@@ -100,7 +101,8 @@ class CatalogProductManagementTest extends TestCase
         [$user, $business] = $this->actingBusinessUser();
 
         Livewire::actingAs($user)
-            ->test('accounting.catalog.category.create')
+            ->test('accounting.category.create')
+            ->set('form.type', CategoryType::Product->value)
             ->set('form.name', 'Parts')
             ->set('form.is_active', true)
             ->call('save')
@@ -113,8 +115,9 @@ class CatalogProductManagementTest extends TestCase
             ->call('save')
             ->assertHasNoErrors();
 
-        $this->assertDatabaseHas('product_categories', [
+        $this->assertDatabaseHas('categories', [
             'business_id' => $business->id,
+            'type' => CategoryType::Product->value,
             'name' => 'Parts',
         ]);
 
@@ -174,12 +177,13 @@ class CatalogProductManagementTest extends TestCase
             ->call('createBrand')
             ->assertHasNoErrors();
 
-        $category = ProductCategory::query()->where('name', 'Storage Devices')->first();
+        $category = Category::query()->where('name', 'Storage Devices')->first();
         $brand = Brand::query()->where('name', 'Samsung')->first();
 
         $this->assertNotNull($category);
         $this->assertNotNull($brand);
         $this->assertSame($business->id, $category->business_id);
+        $this->assertSame(CategoryType::Product, $category->type);
         $this->assertSame($business->id, $brand->business_id);
         $this->assertSame($category->id, $component->get('form.category_id'));
         $this->assertSame($brand->id, $component->get('form.brand_id'));

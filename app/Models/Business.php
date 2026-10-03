@@ -4,13 +4,13 @@ namespace App\Models;
 
 use App\Enums\Business\BusinessCategory;
 use App\Enums\Business\BusinessType;
+use App\Enums\CategoryType;
 use App\Models\Accounting\Account;
 use App\Models\Accounting\BusinessCurrency;
 use App\Models\Accounting\Invoice;
 use App\Models\Accounting\Party;
 use App\Models\Catalog\Brand;
 use App\Models\Catalog\Product;
-use App\Models\Catalog\ProductCategory;
 use Database\Factories\BusinessFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -82,11 +82,19 @@ class Business extends Model
     }
 
     /**
-     * @return HasMany<ProductCategory, $this>
+     * @return HasMany<Category, $this>
+     */
+    public function categories(): HasMany
+    {
+        return $this->hasMany(Category::class);
+    }
+
+    /**
+     * @return HasMany<Category, $this>
      */
     public function productCategories(): HasMany
     {
-        return $this->hasMany(ProductCategory::class);
+        return $this->categories()->ofType(CategoryType::Product);
     }
 
     /**
