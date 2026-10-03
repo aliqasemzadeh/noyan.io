@@ -3,6 +3,7 @@
 namespace App\Models\Accounting;
 
 use App\Enums\Accounting\TransactionType;
+use App\Models\Category;
 use App\Models\Concerns\BelongsToBusiness;
 use App\Models\User;
 use Database\Factories\Accounting\TransactionFactory;
@@ -19,6 +20,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'destination_account_id',
     'party_id',
     'invoice_id',
+    'category_id',
     'type',
     'transaction_date',
     'currency',
@@ -115,5 +117,10 @@ class Transaction extends Model
     public function invoice(): BelongsTo
     {
         return $this->belongsTo(Invoice::class);
+    }
+
+    public function category(): BelongsTo
+    {
+        return $this->belongsTo(Category::class);
     }
 }

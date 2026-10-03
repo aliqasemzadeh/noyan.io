@@ -4,10 +4,12 @@ namespace App\Actions\Transactions;
 
 use App\Enums\Accounting\InvoicePaymentStatus;
 use App\Enums\Accounting\TransactionType;
+use App\Enums\CategoryType;
 use App\Models\Accounting\Account;
 use App\Models\Accounting\Invoice;
 use App\Models\Accounting\Party;
 use App\Models\Accounting\Transaction;
+use App\Models\Category;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -22,6 +24,7 @@ class ProcessTransactionAction
      *     destination_account_id?: int|null,
      *     party_id?: int|null,
      *     invoice_id?: int|null,
+     *     category_id?: int|null,
      *     transaction_date: string,
      *     currency?: string|null,
      *     exchange_rate?: string|null,
@@ -135,6 +138,38 @@ class ProcessTransactionAction
                 $invoiceId = null;
             }
 
+            $categoryId = $data['category_id'] ?? null;
+
+            if ($categoryId !== null && $type !== TransactionType::Transfer) {
+                $categoryType = CategoryType::tryFrom($type->value);
+
+                if ($categoryType === null) {
+                    throw ValidationException::withMessages([
+                        'category_id' => [__('general.transaction_category_invalid')],
+                    ]);
+                }
+
+                $category = Category::query()
+                    ->availableToBusiness($businessId)
+                    ->ofType($categoryType)
+                    ->whereKey($categoryId)
+                    ->first();
+
+                if ($category === null) {
+                    throw ValidationException::withMessages([
+                        'category_id' => [__('general.transaction_category_invalid')],
+                    ]);
+                }
+
+                if (! $category->isLeaf()) {
+                    throw ValidationException::withMessages([
+                        'category_id' => [__('general.transaction_category_must_be_leaf')],
+                    ]);
+                }
+            } else {
+                $categoryId = null;
+            }
+
             $currency = $data['currency'] ?? $account->currency?->code;
 
             if ($currency === null || $currency === '') {
@@ -162,6 +197,7 @@ class ProcessTransactionAction
                 'destination_account_id' => $destinationAccountId,
                 'party_id' => $partyId,
                 'invoice_id' => $invoiceId,
+                'category_id' => $categoryId,
                 'type' => $type,
                 'transaction_date' => $data['transaction_date'],
                 'currency' => $currency,
@@ -183,7 +219,7 @@ class ProcessTransactionAction
                 $this->applyInvoicePayment($invoice, $amount);
             }
 
-            return $transaction->fresh(['account', 'destinationAccount', 'party', 'invoice']);
+            return $transaction->fresh(['account', 'destinationAccount', 'party', 'invoice', 'category']);
         });
     }
 

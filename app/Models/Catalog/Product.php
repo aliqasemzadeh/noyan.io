@@ -6,6 +6,7 @@ use App\Enums\Catalog\ProductType;
 use App\Enums\Catalog\ProductUnit;
 use App\Models\Accounting\InvoiceItem;
 use App\Models\Business;
+use App\Models\Category;
 use Database\Factories\Catalog\ProductFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -76,7 +77,7 @@ class Product extends Model
 
     public function category(): BelongsTo
     {
-        return $this->belongsTo(ProductCategory::class, 'category_id');
+        return $this->belongsTo(Category::class, 'category_id');
     }
 
     public function brand(): BelongsTo

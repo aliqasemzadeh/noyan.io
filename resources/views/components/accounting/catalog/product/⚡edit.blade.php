@@ -2,10 +2,11 @@
 
 use App\Enums\Catalog\ProductType;
 use App\Enums\Catalog\ProductUnit;
+use App\Enums\CategoryType;
 use App\Livewire\Forms\Catalog\ProductForm;
 use App\Models\Catalog\Brand;
 use App\Models\Catalog\Product;
-use App\Models\Catalog\ProductCategory;
+use App\Models\Category;
 use Flux\Flux;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
@@ -26,7 +27,7 @@ new class extends Component
     public string $brandSearch = '';
 
     /**
-     * @return Collection<int, ProductCategory>
+     * @return Collection<int, Category>
      */
     #[Computed]
     public function categories(): Collection
@@ -37,9 +38,9 @@ new class extends Component
             return collect();
         }
 
-        return ProductCategory::query()
-            ->where('business_id', $businessId)
-            ->where('is_active', true)
+        return Category::query()
+            ->availableToBusiness($businessId)
+            ->ofType(CategoryType::Product)
             ->orderBy('name')
             ->get(['id', 'name']);
     }
@@ -96,8 +97,9 @@ new class extends Component
         $suffix = 1;
 
         while (
-            ProductCategory::withTrashed()
+            Category::withTrashed()
                 ->where('business_id', $businessId)
+                ->where('type', CategoryType::Product)
                 ->where('slug', $slug)
                 ->exists()
         ) {
@@ -105,13 +107,17 @@ new class extends Component
             $suffix++;
         }
 
-        $category = ProductCategory::create([
+        $category = Category::create([
             'business_id' => $businessId,
+            'type' => CategoryType::Product,
             'name' => $name,
             'slug' => $slug,
+            'is_system' => false,
             'is_active' => true,
             'sort_order' => 0,
         ]);
+
+        Category::forgetBusinessCache($businessId, CategoryType::Product);
 
         $this->form->category_id = $category->id;
         $this->categorySearch = '';

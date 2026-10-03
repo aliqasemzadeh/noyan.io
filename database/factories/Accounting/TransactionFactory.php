@@ -28,6 +28,7 @@ class TransactionFactory extends Factory
             'destination_account_id' => null,
             'party_id' => null,
             'invoice_id' => null,
+            'category_id' => null,
             'type' => TransactionType::Income,
             'transaction_date' => now()->toDateString(),
             'currency' => 'IRR',

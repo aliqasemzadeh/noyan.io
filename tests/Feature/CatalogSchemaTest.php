@@ -6,14 +6,16 @@ use App\Enums\Catalog\PriceType;
 use App\Enums\Catalog\ProductType;
 use App\Enums\Catalog\ProductUnit;
 use App\Enums\Catalog\StockMovementType;
+use App\Enums\CategoryType;
 use App\Models\Business;
 use App\Models\Catalog\Brand;
 use App\Models\Catalog\Product;
-use App\Models\Catalog\ProductCategory;
 use App\Models\Catalog\ProductPriceHistory;
 use App\Models\Catalog\ProductStockMovement;
+use App\Models\Category;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
 class CatalogSchemaTest extends TestCase
@@ -25,7 +27,7 @@ class CatalogSchemaTest extends TestCase
         $user = User::factory()->create();
         $business = Business::factory()->for($user, 'owner')->create();
 
-        $category = ProductCategory::factory()->create([
+        $category = Category::factory()->product()->create([
             'business_id' => $business->id,
             'name' => 'Storage',
             'slug' => 'storage',
@@ -85,6 +87,8 @@ class CatalogSchemaTest extends TestCase
         $this->assertSame('8.000000000000000000', $product->availableQuantity());
         $this->assertNull($stockMovement->reference_type);
         $this->assertNull($stockMovement->reference_id);
+        $this->assertFalse(Schema::hasTable('product_categories'));
+        $this->assertSame(CategoryType::Product, $category->type);
     }
 
     public function test_service_products_do_not_track_inventory_by_default_in_factory(): void
