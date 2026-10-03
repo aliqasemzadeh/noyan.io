@@ -74,6 +74,15 @@ new class extends Component
                 {{ __('general.dashboard') }}
             </flux:sidebar.item>
 
+            <flux:sidebar.item
+                icon="file-text"
+                :href="route('accounting.invoices.index')"
+                wire:navigate
+                :current="request()->routeIs('accounting.invoices.*')"
+            >
+                {{ __('general.invoices') }}
+            </flux:sidebar.item>
+
             <flux:sidebar.group
                 expandable
                 :expanded="request()->routeIs('accounting.parties.*')"

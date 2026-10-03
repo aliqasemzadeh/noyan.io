@@ -41,6 +41,9 @@ Route::middleware('auth')->group(function () {
         Route::livewire('/catalog/products', 'pages::panel.accounting.catalog.product.index')->name('catalog.products.index');
         Route::livewire('/catalog/categories', 'pages::panel.accounting.catalog.category.index')->name('catalog.categories.index');
         Route::livewire('/catalog/brands', 'pages::panel.accounting.catalog.brand.index')->name('catalog.brands.index');
+        Route::livewire('/invoices', 'pages::panel.accounting.invoice.index')->name('invoices.index');
+        Route::livewire('/invoices/create/{type}', 'pages::panel.accounting.invoice.form')->name('invoices.create');
+        Route::livewire('/invoices/{invoice}/edit', 'pages::panel.accounting.invoice.form')->name('invoices.edit');
         Route::livewire('/currencies', 'pages::panel.accounting.currency.index')->name('currencies.index');
     });
 });

@@ -4,6 +4,7 @@ namespace App\Models\Catalog;
 
 use App\Enums\Catalog\ProductType;
 use App\Enums\Catalog\ProductUnit;
+use App\Models\Accounting\InvoiceItem;
 use App\Models\Business;
 use Database\Factories\Catalog\ProductFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -97,6 +98,14 @@ class Product extends Model
     public function stockMovements(): HasMany
     {
         return $this->hasMany(ProductStockMovement::class);
+    }
+
+    /**
+     * @return HasMany<InvoiceItem, $this>
+     */
+    public function invoiceItems(): HasMany
+    {
+        return $this->hasMany(InvoiceItem::class);
     }
 
     public function availableQuantity(): string

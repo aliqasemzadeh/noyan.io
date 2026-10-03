@@ -6,6 +6,7 @@ use App\Enums\Business\BusinessCategory;
 use App\Enums\Business\BusinessType;
 use App\Models\Accounting\Account;
 use App\Models\Accounting\BusinessCurrency;
+use App\Models\Accounting\Invoice;
 use App\Models\Accounting\Party;
 use App\Models\Catalog\Brand;
 use App\Models\Catalog\Product;
@@ -70,6 +71,14 @@ class Business extends Model
     public function parties(): HasMany
     {
         return $this->hasMany(Party::class);
+    }
+
+    /**
+     * @return HasMany<Invoice, $this>
+     */
+    public function invoices(): HasMany
+    {
+        return $this->hasMany(Invoice::class);
     }
 
     /**
