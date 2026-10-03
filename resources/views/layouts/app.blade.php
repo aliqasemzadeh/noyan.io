@@ -4,7 +4,7 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-        <title>{{ $title ?? config('app.name') }}</title>
+        <title>{{ $title ?? __('general.app_name') }}</title>
 
         @vite(['resources/css/app.css', 'resources/js/app.js'])
 
@@ -16,7 +16,7 @@
                 <flux:sidebar.brand
                     :href="route('system.dashboard')"
                     wire:navigate
-                    :name="config('app.name')"
+                    :name="__('general.app_name')"
                 />
 
                 <flux:sidebar.collapse class="in-data-flux-sidebar-on-desktop:not-in-data-flux-sidebar-collapsed-desktop:-mr-2" />

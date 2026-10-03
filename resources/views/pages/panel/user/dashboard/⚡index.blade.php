@@ -1,18 +1,15 @@
 <?php
 
-use Livewire\Attributes\Title;
 use Livewire\Component;
 
-new
-#[Title('User settings')]
-class extends Component
+new class extends Component
 {
     //
 };
 ?>
 
 <div class="space-y-6">
-    <x-slot name="title">{{ __('general.user_settings') }} - {{ config('app.name') }}</x-slot>
+    <x-slot name="title">{{ __('general.user_settings') }} - {{ __('general.app_name') }}</x-slot>
 
     <div class="flex items-center justify-between gap-3">
         <div>

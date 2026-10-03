@@ -4,14 +4,11 @@ use App\Models\Business;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
-use Livewire\Attributes\Title;
 use Livewire\Component;
 use Livewire\WithPagination;
 use Morilog\Jalali\Jalalian;
 
-new
-#[Title('Businesses')]
-class extends Component
+new class extends Component
 {
     use WithPagination;
 
@@ -57,6 +54,8 @@ class extends Component
 ?>
 
 <div class="space-y-6">
+    <x-slot name="title">{{ __('general.businesses') }} - {{ __('general.app_name') }}</x-slot>
+
     <div>
         <flux:breadcrumbs>
             <flux:breadcrumbs.item :href="route('dashboard')" wire:navigate>

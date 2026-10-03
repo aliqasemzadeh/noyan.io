@@ -10,15 +10,12 @@ use Laravel\Ai\Files\Base64Audio;
 use Laravel\Ai\Transcription;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
-use Livewire\Attributes\Title;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 use Livewire\WithPagination;
 use Morilog\Jalali\Jalalian;
 
-new
-#[Title('Users')]
-class extends Component
+new class extends Component
 {
     use WithFileUploads;
     use WithPagination;
@@ -160,6 +157,8 @@ class extends Component
 ?>
 
 <div class="space-y-6">
+    <x-slot name="title">{{ __('general.users') }} - {{ __('general.app_name') }}</x-slot>
+
     <div>
         <flux:breadcrumbs>
             <flux:breadcrumbs.item :href="route('dashboard')" wire:navigate>

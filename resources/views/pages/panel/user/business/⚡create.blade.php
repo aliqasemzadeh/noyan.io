@@ -9,12 +9,9 @@ use Flux\Flux;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
-use Livewire\Attributes\Title;
 use Livewire\Component;
 
-new
-#[Title('Create business')]
-class extends Component
+new class extends Component
 {
     public UserBusinessForm $form;
 
@@ -70,7 +67,7 @@ class extends Component
 ?>
 
 <div class="space-y-6">
-    <x-slot name="title">{{ __('general.create_business') }} - {{ config('app.name') }}</x-slot>
+    <x-slot name="title">{{ __('general.create_business') }} - {{ __('general.app_name') }}</x-slot>
 
     <div>
         <flux:breadcrumbs>

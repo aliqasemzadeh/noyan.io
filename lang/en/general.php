@@ -1,6 +1,7 @@
 <?php
 
 return [
+    'app_name' => 'Noyan',
     'login' => 'Login',
     'logout' => 'Log out',
     'dashboard' => 'Dashboard',

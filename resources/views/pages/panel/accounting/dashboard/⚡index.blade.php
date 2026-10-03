@@ -1,18 +1,15 @@
 <?php
 
-use Livewire\Attributes\Title;
 use Livewire\Component;
 
-new
-#[Title('Accounting')]
-class extends Component
+new class extends Component
 {
     //
 };
 ?>
 
 <div class="space-y-6">
-    <x-slot name="title">{{ __('general.accounting') }} - {{ config('app.name') }}</x-slot>
+    <x-slot name="title">{{ __('general.accounting') }} - {{ __('general.app_name') }}</x-slot>
 
     <div>
         <flux:heading size="xl" level="1">

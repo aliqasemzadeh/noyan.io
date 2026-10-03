@@ -6,14 +6,11 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
-use Livewire\Attributes\Title;
 use Livewire\Component;
 use Livewire\WithPagination;
 use Morilog\Jalali\Jalalian;
 
-new
-#[Title('Accounts')]
-class extends Component
+new class extends Component
 {
     use WithPagination;
 
@@ -85,7 +82,7 @@ class extends Component
 ?>
 
 <div class="space-y-6">
-    <x-slot name="title">{{ __('general.cash_and_bank_accounts') }} - {{ config('app.name') }}</x-slot>
+    <x-slot name="title">{{ __('general.cash_and_bank_accounts') }} - {{ __('general.app_name') }}</x-slot>
 
     <div>
         <flux:breadcrumbs>

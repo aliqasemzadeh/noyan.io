@@ -5,14 +5,12 @@ use App\Models\User;
 use Flux\Flux;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
-use Livewire\Attributes\Title;
 use Livewire\Component;
 use Sadegh19b\LaravelPersianValidation\Rules\IranianMobile;
 use Spatie\OneTimePasswords\Enums\ConsumeOneTimePasswordResult;
 
 new
 #[Layout('layouts::auth')]
-#[Title('Login')]
 class extends Component
 {
     public string $step = 'mobile';
@@ -146,9 +144,11 @@ class extends Component
 ?>
 
 <div class="space-y-6">
+    <x-slot name="title">{{ __('general.login') }} - {{ __('general.app_name') }}</x-slot>
+
     <div class="space-y-2 text-center">
         <div class="flex justify-center opacity-70">
-            <span class="text-xl font-semibold text-zinc-800 dark:text-white">{{ config('app.name') }}</span>
+            <span class="text-xl font-semibold text-zinc-800 dark:text-white">{{ __('general.app_name') }}</span>
         </div>
 
         <flux:heading class="text-center" size="xl">{{ __('general.welcome_back') }}</flux:heading>
