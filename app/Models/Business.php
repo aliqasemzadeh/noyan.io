@@ -7,6 +7,9 @@ use App\Enums\Business\BusinessType;
 use App\Models\Accounting\Account;
 use App\Models\Accounting\BusinessCurrency;
 use App\Models\Accounting\Party;
+use App\Models\Catalog\Brand;
+use App\Models\Catalog\Product;
+use App\Models\Catalog\ProductCategory;
 use Database\Factories\BusinessFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -67,6 +70,30 @@ class Business extends Model
     public function parties(): HasMany
     {
         return $this->hasMany(Party::class);
+    }
+
+    /**
+     * @return HasMany<ProductCategory, $this>
+     */
+    public function productCategories(): HasMany
+    {
+        return $this->hasMany(ProductCategory::class);
+    }
+
+    /**
+     * @return HasMany<Brand, $this>
+     */
+    public function brands(): HasMany
+    {
+        return $this->hasMany(Brand::class);
+    }
+
+    /**
+     * @return HasMany<Product, $this>
+     */
+    public function products(): HasMany
+    {
+        return $this->hasMany(Product::class);
     }
 
     /**
