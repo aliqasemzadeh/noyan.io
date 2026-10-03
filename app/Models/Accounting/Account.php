@@ -31,7 +31,7 @@ class Account extends Model
     /** @use HasFactory<AccountFactory> */
     use HasFactory;
 
-    protected $table = 'accounting_accounts';
+    protected $table = 'accounts';
 
     /**
      * @return array<string, string>
