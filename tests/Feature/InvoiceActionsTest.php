@@ -6,7 +6,6 @@ use App\Actions\Invoices\FinalizeInvoiceAction;
 use App\Actions\Invoices\SaveInvoiceAction;
 use App\Enums\Accounting\InvoiceType;
 use App\Enums\Catalog\StockMovementType;
-use App\Models\Accounting\Invoice;
 use App\Models\Accounting\Party;
 use App\Models\Business;
 use App\Models\Catalog\Product;
@@ -53,8 +52,8 @@ class InvoiceActionsTest extends TestCase
         ]);
 
         $this->assertNull($invoice->finalized_at);
-        $this->assertSame('0', (string) $product->fresh()->stock_quantity);
-        $this->assertSame('0', (string) $party->fresh()->balance);
+        $this->assertSame(0, bccomp((string) $product->fresh()->stock_quantity, '0', 18));
+        $this->assertSame(0, bccomp((string) $party->fresh()->balance, '0', 18));
         $this->assertSame(2, $invoice->items()->count());
         // (2*10000 + 3000+200) - 1000 + 500 = 22700
         $this->assertSame(0, bccomp((string) $invoice->total_amount, '22700', 18));

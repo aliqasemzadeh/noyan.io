@@ -75,10 +75,38 @@ class BusinessSwitchingTest extends TestCase
 
         $user->forceFill(['current_business_id' => $first->id])->save();
 
+        $this->from(route('accounting.parties.index'));
+
         Livewire::actingAs($user)
             ->test('layout.app-shell', ['variant' => 'sidebar'])
             ->call('switchBusiness', $second->id)
-            ->assertHasNoErrors();
+            ->assertHasNoErrors()
+            ->assertRedirect(route('accounting.parties.index'));
+
+        $this->assertSame($second->id, $user->fresh()->current_business_id);
+    }
+
+    public function test_app_shell_redirects_resource_view_to_index_after_switch(): void
+    {
+        $user = User::factory()->create();
+        $first = Business::factory()->for($user, 'owner')->create();
+        $second = Business::factory()->create();
+
+        BusinessUser::factory()->create([
+            'business_id' => $second->id,
+            'user_id' => $user->id,
+            'role' => BusinessRole::Admin,
+        ]);
+
+        $user->forceFill(['current_business_id' => $first->id])->save();
+
+        $this->from(url('/accounting/parties/99'));
+
+        Livewire::actingAs($user)
+            ->test('layout.app-shell', ['variant' => 'sidebar'])
+            ->call('switchBusiness', $second->id)
+            ->assertHasNoErrors()
+            ->assertRedirect(route('accounting.parties.index'));
 
         $this->assertSame($second->id, $user->fresh()->current_business_id);
     }

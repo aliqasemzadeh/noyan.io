@@ -71,6 +71,7 @@ return [
     'my_businesses' => 'My businesses',
     'business_switched' => 'Business switched.',
     'business_switch_denied' => 'You do not have access to this business.',
+    'switching_business' => 'Switching business...',
     'users_page_placeholder' => 'User management will be available here soon.',
     'users_ai_hint' => 'Give a text or voice command, e.g. “Add a user with mobile 09171234567”.',
     'ai_prompt' => 'AI prompt',
