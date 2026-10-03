@@ -30,6 +30,7 @@ class TransactionFactory extends Factory
             'invoice_id' => null,
             'category_id' => null,
             'loan_id' => null,
+            'cheque_id' => null,
             'type' => TransactionType::Income,
             'transaction_date' => now()->toDateString(),
             'currency' => 'IRR',

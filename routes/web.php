@@ -49,6 +49,7 @@ Route::middleware('auth')->group(function () {
         Route::livewire('/transactions', 'pages::panel.accounting.transaction.index')->name('transactions.index');
         Route::livewire('/loans', 'pages::panel.accounting.loan.index')->name('loans.index');
         Route::livewire('/loans/{loan}', 'pages::panel.accounting.loan.show')->name('loans.show');
+        Route::livewire('/cheques', 'pages::panel.accounting.cheque.index')->name('cheques.index');
         Route::livewire('/currencies', 'pages::panel.accounting.currency.index')->name('currencies.index');
     });
 });
