@@ -65,8 +65,11 @@ new class extends Component
 <div class="space-y-6">
     <div>
         <flux:breadcrumbs>
-            <flux:breadcrumbs.item :href="route('accounting.dashboard')" wire:navigate>
+            <flux:breadcrumbs.item :href="route('user.dashboard')" wire:navigate>
                 {{ __('general.dashboard') }}
+            </flux:breadcrumbs.item>
+            <flux:breadcrumbs.item :href="route('accounting.dashboard')" wire:navigate>
+                {{ __('general.accounting') }}
             </flux:breadcrumbs.item>
             <flux:breadcrumbs.item :href="route('accounting.accounts.index')" wire:navigate>
                 {{ __('general.cash_and_bank_accounts') }}
