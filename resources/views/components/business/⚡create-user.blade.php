@@ -1,6 +1,6 @@
 <?php
 
-use App\Enums\BusinessRole;
+use App\Enums\Business\BusinessRole;
 use App\Livewire\Forms\BusinessUserForm;
 use App\Models\Business;
 use App\Models\User;

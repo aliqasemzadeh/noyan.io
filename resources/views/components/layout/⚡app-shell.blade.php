@@ -77,6 +77,12 @@ new class extends Component
                     <flux:menu.separator />
                 @endif
 
+                <flux:menu.item icon="plus" :href="route('user.businesses.create')" wire:navigate>
+                    {{ __('general.add_business') }}
+                </flux:menu.item>
+
+                <flux:menu.separator />
+
                 <flux:menu.item icon="arrow-right-start-on-rectangle" wire:click="logout">
                     {{ __('general.logout') }}
                 </flux:menu.item>
@@ -103,6 +109,12 @@ new class extends Component
 
                 <flux:menu.separator />
             @endif
+
+            <flux:menu.item icon="plus" :href="route('user.businesses.create')" wire:navigate>
+                {{ __('general.add_business') }}
+            </flux:menu.item>
+
+            <flux:menu.separator />
 
             <flux:menu.item icon="arrow-right-start-on-rectangle" wire:click="logout">
                 {{ __('general.logout') }}

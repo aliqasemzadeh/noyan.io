@@ -2,7 +2,9 @@
 
 namespace Database\Factories;
 
-use App\Enums\BusinessRole;
+use App\Enums\Business\BusinessCategory;
+use App\Enums\Business\BusinessRole;
+use App\Enums\Business\BusinessType;
 use App\Models\Business;
 use App\Models\BusinessUser;
 use App\Models\User;
@@ -25,6 +27,8 @@ class BusinessFactory extends Factory
             'owner_id' => User::factory(),
             'name' => $name,
             'slug' => Str::slug($name).'-'.fake()->unique()->numerify('###'),
+            'type' => fake()->randomElement(BusinessType::cases()),
+            'category' => fake()->randomElement(BusinessCategory::cases()),
             'is_active' => true,
         ];
     }
