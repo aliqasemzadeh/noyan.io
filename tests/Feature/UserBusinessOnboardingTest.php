@@ -176,13 +176,15 @@ class UserBusinessOnboardingTest extends TestCase
     public function test_business_type_label_falls_back_to_case_name(): void
     {
         app()->setLocale('en');
-
         $this->assertSame('Store / Trading', BusinessType::Store->label());
 
-        // Simulate missing translation key by using a temporary locale with empty file behavior:
-        // __() returns the key when missing; label() then falls back to case name.
-        $key = 'business_types.'.BusinessType::Personal->value;
-        $this->assertNotSame($key, BusinessType::Personal->label());
+        app('translator')->addLines([
+            'business_types.personal' => 'business_types.personal',
+            'business_categories.home_appliances' => 'business_categories.home_appliances',
+        ], 'en');
+
+        $this->assertSame('Personal', BusinessType::Personal->label());
+        $this->assertSame('HomeAppliances', BusinessCategory::HomeAppliances->label());
     }
 
     public function test_user_with_membership_but_null_current_gets_auto_selected(): void

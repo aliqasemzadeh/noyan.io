@@ -58,6 +58,15 @@ new class extends Component
                 >
                     {{ __('general.dashboard') }}
                 </flux:sidebar.item>
+
+                <flux:sidebar.item
+                    icon="building"
+                    :href="route('user.businesses.index')"
+                    wire:navigate
+                    :current="request()->routeIs('user.businesses.*')"
+                >
+                    {{ __('general.my_businesses') }}
+                </flux:sidebar.item>
             </flux:sidebar.group>
         @elseif (request()->routeIs('accounting.*'))
             <flux:sidebar.group heading="{{ __('general.accounting') }}" class="grid">

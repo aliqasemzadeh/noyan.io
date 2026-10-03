@@ -74,12 +74,14 @@ class extends Component
 
     <div>
         <flux:breadcrumbs>
-            <flux:breadcrumbs.item :href="route('user.dashboard')" wire:navigate>
-                {{ __('general.dashboard') }}
-            </flux:breadcrumbs.item>
-            <flux:breadcrumbs.item :href="route('user.businesses.index')" wire:navigate>
-                {{ __('general.my_businesses') }}
-            </flux:breadcrumbs.item>
+            @if (auth()->user()->businesses()->exists())
+                <flux:breadcrumbs.item :href="route('user.dashboard')" wire:navigate>
+                    {{ __('general.dashboard') }}
+                </flux:breadcrumbs.item>
+                <flux:breadcrumbs.item :href="route('user.businesses.index')" wire:navigate>
+                    {{ __('general.my_businesses') }}
+                </flux:breadcrumbs.item>
+            @endif
             <flux:breadcrumbs.item>
                 {{ __('general.create_business') }}
             </flux:breadcrumbs.item>
