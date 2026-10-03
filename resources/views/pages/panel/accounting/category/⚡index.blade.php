@@ -124,11 +124,14 @@ new class extends Component
                 <flux:text class="mt-1">{{ __('general.categories_page_hint') }}</flux:text>
             </div>
 
-            <flux:modal.trigger name="accounting.category.create">
-                <flux:button variant="primary" color="teal" icon="plus">
-                    {{ __('general.create_category') }}
-                </flux:button>
-            </flux:modal.trigger>
+            <flux:button
+                variant="primary"
+                color="teal"
+                icon="plus"
+                wire:click="$dispatch('panels.accounting.category.create.assign-data', { parent: null })"
+            >
+                {{ __('general.create_category') }}
+            </flux:button>
         </div>
     </div>
 
@@ -195,27 +198,42 @@ new class extends Component
                         </flux:table.cell>
                         <flux:table.cell>{{ $this->formatCreatedAt($category) }}</flux:table.cell>
                         <flux:table.cell align="end">
-                            @if (! $category->is_system && (int) $category->business_id === (int) Auth::user()?->current_business_id)
+                            @php($editable = ! $category->is_system && (int) $category->business_id === (int) Auth::user()?->current_business_id)
+                            @if ($category->is_active || $editable)
                                 <div class="flex justify-end gap-2">
-                                    <flux:tooltip content="{{ __('general.edit') }}">
-                                        <flux:button
-                                            size="xs"
-                                            variant="primary"
-                                            color="blue"
-                                            icon="pencil"
-                                            icon:variant="outline"
-                                            wire:click="$dispatch('panels.accounting.category.edit.assign-data', { category: {{ $category->id }} })"
-                                        />
-                                    </flux:tooltip>
-                                    <flux:tooltip content="{{ __('general.delete') }}">
-                                        <flux:button
-                                            size="xs"
-                                            variant="danger"
-                                            icon="trash"
-                                            icon:variant="outline"
-                                            wire:click="$dispatch('panels.accounting.category.delete.assign-data', { category: {{ $category->id }} })"
-                                        />
-                                    </flux:tooltip>
+                                    @if ($category->is_active)
+                                        <flux:tooltip content="{{ __('general.create_subcategory') }}">
+                                            <flux:button
+                                                size="xs"
+                                                variant="primary"
+                                                color="teal"
+                                                icon="plus"
+                                                icon:variant="outline"
+                                                wire:click="$dispatch('panels.accounting.category.create.assign-data', { parent: {{ $category->id }} })"
+                                            />
+                                        </flux:tooltip>
+                                    @endif
+                                    @if ($editable)
+                                        <flux:tooltip content="{{ __('general.edit') }}">
+                                            <flux:button
+                                                size="xs"
+                                                variant="primary"
+                                                color="blue"
+                                                icon="pencil"
+                                                icon:variant="outline"
+                                                wire:click="$dispatch('panels.accounting.category.edit.assign-data', { category: {{ $category->id }} })"
+                                            />
+                                        </flux:tooltip>
+                                        <flux:tooltip content="{{ __('general.delete') }}">
+                                            <flux:button
+                                                size="xs"
+                                                variant="danger"
+                                                icon="trash"
+                                                icon:variant="outline"
+                                                wire:click="$dispatch('panels.accounting.category.delete.assign-data', { category: {{ $category->id }} })"
+                                            />
+                                        </flux:tooltip>
+                                    @endif
                                 </div>
                             @else
                                 <span class="text-zinc-400">—</span>

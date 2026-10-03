@@ -89,6 +89,12 @@ class CatalogSchemaTest extends TestCase
         $this->assertNull($stockMovement->reference_id);
         $this->assertFalse(Schema::hasTable('product_categories'));
         $this->assertSame(CategoryType::Product, $category->type);
+
+        $categoryForeignKey = collect(Schema::getForeignKeys('products'))
+            ->first(fn (array $foreignKey): bool => $foreignKey['columns'] === ['category_id']);
+
+        $this->assertNotNull($categoryForeignKey);
+        $this->assertSame('categories', $categoryForeignKey['foreign_table']);
     }
 
     public function test_service_products_do_not_track_inventory_by_default_in_factory(): void
