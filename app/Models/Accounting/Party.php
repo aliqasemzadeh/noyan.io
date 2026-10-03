@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 
 #[Fillable([
@@ -118,5 +119,44 @@ class Party extends Model
     public static function forgetOptionsCache(int $businessId): void
     {
         Cache::forget(self::optionsCacheKey($businessId));
+    }
+
+    /**
+     * @return Collection<int, Party>
+     */
+    public static function cachedOptionsForBusiness(int $businessId): Collection
+    {
+        $cacheKey = self::optionsCacheKey($businessId);
+
+        $ids = Cache::remember($cacheKey, now()->addHour(), function () use ($businessId): array {
+            return static::query()
+                ->where('business_id', $businessId)
+                ->where('is_active', true)
+                ->orderBy('name')
+                ->pluck('id')
+                ->all();
+        });
+
+        if (! is_array($ids)) {
+            self::forgetOptionsCache($businessId);
+
+            $ids = static::query()
+                ->where('business_id', $businessId)
+                ->where('is_active', true)
+                ->orderBy('name')
+                ->pluck('id')
+                ->all();
+
+            Cache::put($cacheKey, $ids, now()->addHour());
+        }
+
+        if ($ids === []) {
+            return new Collection;
+        }
+
+        return static::query()
+            ->whereIn('id', $ids)
+            ->orderBy('name')
+            ->get(['id', 'name', 'legal_name']);
     }
 }

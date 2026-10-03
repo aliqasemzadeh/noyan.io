@@ -171,6 +171,8 @@ class PartyForm extends Form
 
         $party = Party::create($validated);
 
+        Party::forgetOptionsCache($businessId);
+
         $this->resetFormState();
 
         return $party;
@@ -184,6 +186,8 @@ class PartyForm extends Form
         $validated['credit_limit'] = $this->normalizeAmount((string) $validated['credit_limit']);
 
         $this->party->update($validated);
+
+        Party::forgetOptionsCache((int) $this->party->business_id);
 
         $this->resetFormState();
     }
