@@ -6,6 +6,7 @@ use App\Enums\Accounting\InvoicePaymentStatus;
 use App\Enums\Accounting\TransactionType;
 use App\Enums\CategoryType;
 use App\Models\Accounting\Account;
+use App\Models\Accounting\Cheque;
 use App\Models\Accounting\Invoice;
 use App\Models\Accounting\Loan;
 use App\Models\Accounting\Party;
@@ -27,6 +28,8 @@ class ProcessTransactionAction
      *     invoice_id?: int|null,
      *     category_id?: int|null,
      *     loan_id?: int|null,
+     *     cheque_id?: int|null,
+     *     skip_party_balance?: bool,
      *     transaction_date: string,
      *     currency?: string|null,
      *     exchange_rate?: string|null,
@@ -189,6 +192,23 @@ class ProcessTransactionAction
                 $loanId = null;
             }
 
+            $chequeId = $data['cheque_id'] ?? null;
+
+            if ($chequeId !== null && $type !== TransactionType::Transfer) {
+                $cheque = Cheque::query()
+                    ->where('business_id', $businessId)
+                    ->whereKey($chequeId)
+                    ->first();
+
+                if ($cheque === null) {
+                    throw ValidationException::withMessages([
+                        'cheque_id' => [__('general.transaction_cheque_invalid')],
+                    ]);
+                }
+            } else {
+                $chequeId = null;
+            }
+
             $currency = $data['currency'] ?? $account->currency?->code;
 
             if ($currency === null || $currency === '') {
@@ -218,6 +238,7 @@ class ProcessTransactionAction
                 'invoice_id' => $invoiceId,
                 'category_id' => $categoryId,
                 'loan_id' => $loanId,
+                'cheque_id' => $chequeId,
                 'type' => $type,
                 'transaction_date' => $data['transaction_date'],
                 'currency' => $currency,
@@ -229,9 +250,11 @@ class ProcessTransactionAction
                 'meta' => $data['meta'] ?? null,
             ]);
 
+            $balanceParty = ($data['skip_party_balance'] ?? false) ? null : $party;
+
             match ($type) {
-                TransactionType::Income => $this->applyIncome($account, $party, $amount),
-                TransactionType::Expense => $this->applyExpense($account, $party, $amount),
+                TransactionType::Income => $this->applyIncome($account, $balanceParty, $amount),
+                TransactionType::Expense => $this->applyExpense($account, $balanceParty, $amount),
                 TransactionType::Transfer => $this->applyTransfer($account, $destinationAccount, $amount),
             };
 
@@ -239,7 +262,7 @@ class ProcessTransactionAction
                 $this->applyInvoicePayment($invoice, $amount);
             }
 
-            return $transaction->fresh(['account', 'destinationAccount', 'party', 'invoice', 'category', 'loan']);
+            return $transaction->fresh(['account', 'destinationAccount', 'party', 'invoice', 'category', 'loan', 'cheque']);
         });
     }
 
