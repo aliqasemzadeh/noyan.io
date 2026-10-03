@@ -78,13 +78,22 @@ class ProductForm extends Form
 
     public function updatedType(string $value): void
     {
-        if ($value === ProductType::Service->value) {
-            $this->track_inventory = false;
-            $this->unit = ProductUnit::Hour->value;
-        } elseif ($this->product === null) {
-            $this->track_inventory = true;
-            $this->unit = ProductUnit::Piece->value;
+        $type = ProductType::tryFrom($value);
+
+        if ($type === null) {
+            return;
         }
+
+        $this->track_inventory = $type->tracksInventoryByDefault();
+
+        if ($this->product !== null) {
+            return;
+        }
+
+        $this->unit = match ($type) {
+            ProductType::Service => ProductUnit::Hour->value,
+            ProductType::Digital, ProductType::Goods => ProductUnit::Piece->value,
+        };
     }
 
     /**
@@ -243,7 +252,9 @@ class ProductForm extends Form
             ? $this->normalizeAmount((string) $validated['tax_rate'])
             : null;
 
-        if ($validated['type'] === ProductType::Service->value) {
+        $type = ProductType::tryFrom((string) $validated['type']);
+
+        if ($type !== null && ! $type->tracksInventoryByDefault()) {
             $validated['track_inventory'] = false;
         }
 

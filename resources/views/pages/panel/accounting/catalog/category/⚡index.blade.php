@@ -75,7 +75,7 @@ new class extends Component
 };
 ?>
 
-<x-slot name="title">{{ __('general.product_categories') }} - {{ __('general.app_name') }}</x-slot>
+<x-slot name="title">{{ __('general.categories') }} - {{ __('general.app_name') }}</x-slot>
 
 <div class="space-y-6">
     <div>
@@ -87,13 +87,13 @@ new class extends Component
                 {{ __('general.accounting') }}
             </flux:breadcrumbs.item>
             <flux:breadcrumbs.item>
-                {{ __('general.product_categories') }}
+                {{ __('general.categories') }}
             </flux:breadcrumbs.item>
         </flux:breadcrumbs>
 
         <div class="mt-4 flex items-center justify-between gap-4">
             <div>
-                <flux:heading size="xl">{{ __('general.product_categories') }}</flux:heading>
+                <flux:heading size="xl">{{ __('general.categories') }}</flux:heading>
                 <flux:text class="mt-1">{{ __('general.product_categories_page_hint') }}</flux:text>
             </div>
 
