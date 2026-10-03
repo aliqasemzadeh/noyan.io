@@ -51,7 +51,7 @@ class UserBusinessOnboardingTest extends TestCase
             ->test('pages::panel.user.business.create')
             ->assertOk()
             ->set('form.name', 'فروشگاه نوید')
-            ->set('form.currency_id', $currency->id)
+            ->set('form.currency_ids', [$currency->id])
             ->set('form.type', BusinessType::Store->value)
             ->set('form.category', BusinessCategory::Computers->value)
             ->call('save')
@@ -93,6 +93,67 @@ class UserBusinessOnboardingTest extends TestCase
         ]);
     }
 
+    public function test_user_can_create_business_with_multiple_currencies(): void
+    {
+        $user = User::factory()->create(['current_business_id' => null]);
+        $base = $this->seedIrtCurrency();
+        $usd = Currency::factory()->create([
+            'code' => 'USD',
+            'name' => 'US Dollar',
+            'symbol' => '$',
+            'type' => CurrencyType::Fiat,
+            'is_system' => true,
+            'business_id' => null,
+            'decimal_places' => 2,
+            'is_active' => true,
+        ]);
+
+        Livewire::actingAs($user)
+            ->test('pages::panel.user.business.create')
+            ->set('form.name', 'Multi Currency Biz')
+            ->set('form.currency_ids', [$base->id, $usd->id])
+            ->set('form.type', BusinessType::Store->value)
+            ->set('form.category', BusinessCategory::Other->value)
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $business = Business::query()->where('name', 'Multi Currency Biz')->first();
+
+        $this->assertNotNull($business);
+
+        $this->assertDatabaseHas('business_currencies', [
+            'business_id' => $business->id,
+            'currency_id' => $base->id,
+            'is_base' => true,
+        ]);
+        $this->assertDatabaseHas('business_currencies', [
+            'business_id' => $business->id,
+            'currency_id' => $usd->id,
+            'is_base' => false,
+        ]);
+
+        $this->assertSame(2, Account::query()->where('business_id', $business->id)->count());
+        $this->assertSame(0, Account::query()
+            ->where('business_id', $business->id)
+            ->where('currency_id', $usd->id)
+            ->count());
+    }
+
+    public function test_create_business_requires_at_least_one_currency(): void
+    {
+        $user = User::factory()->create(['current_business_id' => null]);
+        $this->seedIrtCurrency();
+
+        Livewire::actingAs($user)
+            ->test('pages::panel.user.business.create')
+            ->set('form.name', 'No Currency Biz')
+            ->set('form.currency_ids', [])
+            ->set('form.type', BusinessType::Store->value)
+            ->set('form.category', BusinessCategory::Other->value)
+            ->call('save')
+            ->assertHasErrors(['form.currency_ids']);
+    }
+
     public function test_create_business_validates_enum_values(): void
     {
         $user = User::factory()->create();
@@ -101,7 +162,7 @@ class UserBusinessOnboardingTest extends TestCase
         Livewire::actingAs($user)
             ->test('pages::panel.user.business.create')
             ->set('form.name', 'Test Biz')
-            ->set('form.currency_id', $currency->id)
+            ->set('form.currency_ids', [$currency->id])
             ->set('form.type', 'not-a-type')
             ->set('form.category', 'not-a-category')
             ->call('save')
@@ -118,7 +179,7 @@ class UserBusinessOnboardingTest extends TestCase
         Livewire::actingAs($user)
             ->test('pages::panel.user.business.create')
             ->set('form.name', 'Second Business')
-            ->set('form.currency_id', $currency->id)
+            ->set('form.currency_ids', [$currency->id])
             ->set('form.type', BusinessType::Service->value)
             ->set('form.category', BusinessCategory::Freelance->value)
             ->call('save')

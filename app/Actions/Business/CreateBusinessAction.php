@@ -11,13 +11,14 @@ use App\Models\Business;
 use App\Models\BusinessUser;
 use App\Models\Currency;
 use App\Models\User;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class CreateBusinessAction
 {
     /**
-     * @param  array{name: string, type: string|BusinessType, category: string|BusinessCategory, currency_id?: int|null}  $data
+     * @param  array{name: string, type: string|BusinessType, category: string|BusinessCategory, currency_ids?: list<int|string>, currency_id?: int|null}  $data
      */
     public function handle(User $user, array $data): Business
     {
@@ -51,10 +52,14 @@ class CreateBusinessAction
 
             $user->forgetBusinessesCache();
 
-            $currency = $this->resolveCurrency($data['currency_id'] ?? null);
-            $business->activateCurrency($currency, '1', true);
+            $currencies = $this->resolveCurrencies($data);
+            $baseCurrency = $currencies->first();
 
-            $this->seedDefaultAccounts($business, $currency);
+            foreach ($currencies as $index => $currency) {
+                $business->activateCurrency($currency, '1', $index === 0);
+            }
+
+            $this->seedDefaultAccounts($business, $baseCurrency);
 
             return $business->fresh();
         });
@@ -77,6 +82,47 @@ class CreateBusinessAction
         }
 
         return $candidate;
+    }
+
+    /**
+     * @param  array{currency_ids?: list<int|string>, currency_id?: int|null}  $data
+     * @return Collection<int, Currency>
+     */
+    protected function resolveCurrencies(array $data): Collection
+    {
+        $ids = collect($data['currency_ids'] ?? [])
+            ->when(
+                filled($data['currency_id'] ?? null),
+                fn (Collection $collection): Collection => $collection->prepend($data['currency_id']),
+            )
+            ->map(fn (mixed $id): int => (int) $id)
+            ->filter(fn (int $id): bool => $id > 0)
+            ->unique()
+            ->values();
+
+        $currencies = collect();
+
+        if ($ids->isNotEmpty()) {
+            $found = Currency::query()
+                ->system()
+                ->active()
+                ->whereKey($ids->all())
+                ->get()
+                ->keyBy('id');
+
+            $currencies = $ids
+                ->map(fn (int $id): ?Currency => $found->get($id))
+                ->filter()
+                ->values();
+        }
+
+        if ($currencies->isNotEmpty()) {
+            return $currencies;
+        }
+
+        $fallback = $this->resolveCurrency(null);
+
+        return collect([$fallback]);
     }
 
     protected function resolveCurrency(?int $currencyId): Currency

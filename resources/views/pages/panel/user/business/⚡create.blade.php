@@ -19,7 +19,8 @@ new class extends Component
 
     public function mount(): void
     {
-        $this->form->currency_id = $this->form->defaultCurrencyId();
+        $defaultCurrencyId = $this->form->defaultCurrencyId();
+        $this->form->currency_ids = $defaultCurrencyId !== null ? [$defaultCurrencyId] : [];
         $this->form->type = BusinessType::Store->value;
         $this->form->category = BusinessCategory::Other->value;
     }
@@ -43,7 +44,7 @@ new class extends Component
         }
 
         if ($this->step === 2) {
-            $this->form->validateOnly('currency_id');
+            $this->form->validateOnly('currency_ids');
             $this->step = 3;
         }
     }
@@ -134,15 +135,28 @@ new class extends Component
                         </div>
 
                         <flux:field>
-                            <flux:label>{{ __('general.base_currency') }}</flux:label>
-                            <flux:select wire:model="form.currency_id" searchable placeholder="{{ __('general.select_base_currency') }}">
+                            <flux:label>{{ __('general.currencies') }}</flux:label>
+                            <flux:select
+                                wire:model="form.currency_ids"
+                                variant="listbox"
+                                multiple
+                                searchable
+                                indicator="checkbox"
+                                clear="close"
+                                placeholder="{{ __('general.select_currencies') }}"
+                                selected-suffix="{{ __('general.currencies_selected') }}"
+                            >
                                 @foreach ($this->currencies as $currency)
-                                    <flux:select.option :value="$currency->id">
+                                    <flux:select.option
+                                        :value="$currency->id"
+                                        :keywords="$currency->code.' '.$currency->name"
+                                    >
                                         {{ $currency->code }} — {{ $currency->name }}
                                     </flux:select.option>
                                 @endforeach
                             </flux:select>
-                            <flux:error name="form.currency_id" />
+                            <flux:description>{{ __('general.business_wizard_currency_base_hint') }}</flux:description>
+                            <flux:error name="form.currency_ids" />
                         </flux:field>
                     </div>
                 @endif
@@ -166,7 +180,12 @@ new class extends Component
 
                         <flux:field>
                             <flux:label>{{ __('general.business_category') }}</flux:label>
-                            <flux:select wire:model="form.category" searchable placeholder="{{ __('general.select_business_category') }}">
+                            <flux:select
+                                wire:model="form.category"
+                                variant="listbox"
+                                searchable
+                                placeholder="{{ __('general.select_business_category') }}"
+                            >
                                 @foreach (BusinessCategory::cases() as $category)
                                     <flux:select.option :value="$category->value">
                                         {{ $category->label() }}
