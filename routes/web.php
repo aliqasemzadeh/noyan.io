@@ -38,6 +38,9 @@ Route::middleware('auth')->group(function () {
         Route::livewire('/accounts/{account}', 'pages::panel.accounting.account.view')->name('accounts.view');
         Route::livewire('/parties', 'pages::panel.accounting.party.index')->name('parties.index');
         Route::livewire('/parties/{party}', 'pages::panel.accounting.party.view')->name('parties.view');
+        Route::livewire('/catalog/products', 'pages::panel.accounting.catalog.product.index')->name('catalog.products.index');
+        Route::livewire('/catalog/categories', 'pages::panel.accounting.catalog.category.index')->name('catalog.categories.index');
+        Route::livewire('/catalog/brands', 'pages::panel.accounting.catalog.brand.index')->name('catalog.brands.index');
         Route::livewire('/currencies', 'pages::panel.accounting.currency.index')->name('currencies.index');
     });
 });

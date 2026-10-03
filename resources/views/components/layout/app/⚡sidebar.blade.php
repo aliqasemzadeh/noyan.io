@@ -84,6 +84,34 @@ new class extends Component
                 </flux:sidebar.item>
             </flux:sidebar.group>
 
+            <flux:sidebar.group expandable icon="package" heading="{{ __('general.catalog') }}" class="grid">
+                <flux:sidebar.item
+                    :href="route('accounting.catalog.products.index')"
+                    wire:navigate
+                    :current="request()->routeIs('accounting.catalog.products.*')"
+                >
+                    {{ __('general.products') }}
+                </flux:sidebar.item>
+
+                <flux:sidebar.item
+                    icon="layers"
+                    :href="route('accounting.catalog.categories.index')"
+                    wire:navigate
+                    :current="request()->routeIs('accounting.catalog.categories.*')"
+                >
+                    {{ __('general.product_categories') }}
+                </flux:sidebar.item>
+
+                <flux:sidebar.item
+                    icon="tags"
+                    :href="route('accounting.catalog.brands.index')"
+                    wire:navigate
+                    :current="request()->routeIs('accounting.catalog.brands.*')"
+                >
+                    {{ __('general.brands') }}
+                </flux:sidebar.item>
+            </flux:sidebar.group>
+
             <flux:sidebar.group expandable icon="wallet" heading="{{ __('general.treasury') }}" class="grid">
                 <flux:sidebar.item
                     :href="route('accounting.accounts.index')"
