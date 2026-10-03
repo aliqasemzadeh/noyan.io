@@ -12,13 +12,24 @@ new class extends Component
 
 <div class="space-y-6">
     <div>
-        <flux:heading size="xl" level="1">
-            {{ __('general.accounting') }}
-        </flux:heading>
+        <flux:breadcrumbs>
+            <flux:breadcrumbs.item :href="route('user.dashboard')" wire:navigate>
+                {{ __('general.dashboard') }}
+            </flux:breadcrumbs.item>
+            <flux:breadcrumbs.item>
+                {{ __('general.accounting') }}
+            </flux:breadcrumbs.item>
+        </flux:breadcrumbs>
 
-        <flux:text class="mt-2 text-base">
-            {{ __('general.accounting_dashboard_placeholder') }}
-        </flux:text>
+        <div class="mt-4">
+            <flux:heading size="xl" level="1">
+                {{ __('general.accounting') }}
+            </flux:heading>
+
+            <flux:text class="mt-2 text-base">
+                {{ __('general.accounting_dashboard_placeholder') }}
+            </flux:text>
+        </div>
     </div>
 
     <div class="grid gap-4 sm:grid-cols-2">

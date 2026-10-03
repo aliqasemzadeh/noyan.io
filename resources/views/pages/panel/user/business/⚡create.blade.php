@@ -60,9 +60,11 @@ new class extends Component
     {
         $business = $this->form->store(Auth::user(), $action);
 
-        Flux::toast(__('general.business_created', ['name' => $business->name]));
+        session()->flash('accounts_setup_prompt', true);
 
-        $this->redirect(route('user.dashboard'), navigate: true);
+        Flux::toast(__('general.business_created_setup_accounts', ['name' => $business->name]));
+
+        $this->redirect(route('accounting.accounts.index'), navigate: true);
     }
 };
 ?>
@@ -136,25 +138,22 @@ new class extends Component
 
                         <flux:field>
                             <flux:label>{{ __('general.currencies') }}</flux:label>
-                            <flux:select
+                            <flux:pillbox
                                 wire:model="form.currency_ids"
-                                variant="listbox"
                                 multiple
                                 searchable
-                                indicator="checkbox"
-                                clear="close"
                                 placeholder="{{ __('general.select_currencies') }}"
-                                selected-suffix="{{ __('general.currencies_selected') }}"
+                                search:placeholder="{{ __('general.search') }}..."
                             >
                                 @foreach ($this->currencies as $currency)
-                                    <flux:select.option
+                                    <flux:pillbox.option
                                         :value="$currency->id"
-                                        :keywords="$currency->code.' '.$currency->name"
+                                        wire:key="currency-option-{{ $currency->id }}"
                                     >
                                         {{ $currency->code }} — {{ $currency->name }}
-                                    </flux:select.option>
+                                    </flux:pillbox.option>
                                 @endforeach
-                            </flux:select>
+                            </flux:pillbox>
                             <flux:description>{{ __('general.business_wizard_currency_base_hint') }}</flux:description>
                             <flux:error name="form.currency_ids" />
                         </flux:field>
