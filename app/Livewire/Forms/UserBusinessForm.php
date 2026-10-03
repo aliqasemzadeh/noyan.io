@@ -22,7 +22,10 @@ class UserBusinessForm extends Form
 
     public string $category = '';
 
-    public ?int $currency_id = null;
+    /**
+     * @var list<int|string>
+     */
+    public array $currency_ids = [];
 
     public function setModel(Business $business): void
     {
@@ -30,7 +33,7 @@ class UserBusinessForm extends Form
         $this->name = $business->name;
         $this->type = $business->type?->value ?? '';
         $this->category = $business->category?->value ?? '';
-        $this->currency_id = null;
+        $this->currency_ids = [];
     }
 
     /**
@@ -45,8 +48,8 @@ class UserBusinessForm extends Form
         ];
 
         if ($this->business === null) {
-            $rules['currency_id'] = [
-                'required',
+            $rules['currency_ids'] = ['required', 'array', 'min:1'];
+            $rules['currency_ids.*'] = [
                 'integer',
                 Rule::exists('currencies', 'id')->where(function ($query): void {
                     $query->where('is_system', true)
@@ -69,7 +72,8 @@ class UserBusinessForm extends Form
             'name' => __('general.name'),
             'type' => __('general.business_type'),
             'category' => __('general.business_category'),
-            'currency_id' => __('general.base_currency'),
+            'currency_ids' => __('general.currencies'),
+            'currency_ids.*' => __('general.currency'),
         ];
     }
 

@@ -85,7 +85,12 @@ new class extends Component
 
                 <flux:field>
                     <flux:label>{{ __('general.business_category') }}</flux:label>
-                    <flux:select wire:model="form.category" searchable placeholder="{{ __('general.select_business_category') }}">
+                    <flux:select
+                        wire:model="form.category"
+                        variant="listbox"
+                        searchable
+                        placeholder="{{ __('general.select_business_category') }}"
+                    >
                         @foreach (BusinessCategory::cases() as $category)
                             <flux:select.option :value="$category->value">
                                 {{ $category->label() }}
