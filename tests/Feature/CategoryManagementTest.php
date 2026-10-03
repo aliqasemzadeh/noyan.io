@@ -167,6 +167,117 @@ class CategoryManagementTest extends TestCase
             ->assertSee('اجاره');
     }
 
+    public function test_assign_data_prefills_parent_and_type_for_system_parent(): void
+    {
+        [$user, $business] = $this->actingBusinessUser();
+        $parent = Category::factory()->system()->expense()->create([
+            'code' => 'operating',
+            'name' => 'هزینه‌های عملیاتی',
+            'slug' => 'operating',
+        ]);
+
+        Livewire::actingAs($user)
+            ->test('accounting.category.create')
+            ->call('assignData', $parent->id)
+            ->assertSet('form.parent_id', $parent->id)
+            ->assertSet('form.type', CategoryType::Expense->value)
+            ->set('form.name', 'غذای ماهی')
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('categories', [
+            'business_id' => $business->id,
+            'parent_id' => $parent->id,
+            'type' => CategoryType::Expense->value,
+            'is_system' => false,
+            'name' => 'غذای ماهی',
+        ]);
+    }
+
+    public function test_assign_data_works_for_own_business_parent(): void
+    {
+        [$user, $business] = $this->actingBusinessUser();
+        $parent = Category::factory()->expense()->create([
+            'business_id' => $business->id,
+            'name' => 'هزینه‌های فروش',
+            'slug' => 'sales-costs',
+        ]);
+
+        Livewire::actingAs($user)
+            ->test('accounting.category.create')
+            ->call('assignData', $parent->id)
+            ->assertSet('form.parent_id', $parent->id)
+            ->assertSet('form.type', CategoryType::Expense->value)
+            ->set('form.name', 'حمل‌ونقل')
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('categories', [
+            'business_id' => $business->id,
+            'parent_id' => $parent->id,
+            'name' => 'حمل‌ونقل',
+        ]);
+    }
+
+    public function test_assign_data_forbidden_for_other_business_or_inactive_parent(): void
+    {
+        [$user] = $this->actingBusinessUser();
+        $otherBusiness = Business::factory()->create();
+        $foreignParent = Category::factory()->expense()->create([
+            'business_id' => $otherBusiness->id,
+            'slug' => 'foreign-parent',
+        ]);
+        $inactiveParent = Category::factory()->system()->expense()->create([
+            'code' => 'inactive-parent',
+            'slug' => 'inactive-parent',
+            'is_active' => false,
+        ]);
+
+        Livewire::actingAs($user)
+            ->test('accounting.category.create')
+            ->call('assignData', $foreignParent->id)
+            ->assertForbidden();
+
+        Livewire::actingAs($user)
+            ->test('accounting.category.create')
+            ->call('assignData', $inactiveParent->id)
+            ->assertForbidden();
+    }
+
+    public function test_assign_data_with_null_resets_parent(): void
+    {
+        [$user] = $this->actingBusinessUser();
+        $parent = Category::factory()->system()->expense()->create([
+            'code' => 'operating',
+            'slug' => 'operating',
+        ]);
+
+        Livewire::actingAs($user)
+            ->test('accounting.category.create', ['type' => CategoryType::Expense->value])
+            ->call('assignData', $parent->id)
+            ->assertSet('form.parent_id', $parent->id)
+            ->call('assignData', null)
+            ->assertSet('form.parent_id', null)
+            ->assertSet('parent', null)
+            ->assertSet('form.type', CategoryType::Expense->value);
+    }
+
+    public function test_index_renders_create_subcategory_button_for_system_row(): void
+    {
+        [$user] = $this->actingBusinessUser();
+        $system = Category::factory()->system()->expense()->create([
+            'code' => 'rent',
+            'name' => 'اجاره',
+            'slug' => 'rent',
+        ]);
+
+        Livewire::actingAs($user)
+            ->test('pages::panel.accounting.category.index')
+            ->assertOk()
+            ->assertSee('panels.accounting.category.create.assign-data')
+            ->assertSee((string) $system->id);
+    }
+
     /**
      * @return array{0: User, 1: Business}
      */

@@ -367,6 +367,7 @@ return [
     'system_categories' => 'دسته‌بندی‌های سیستم',
     'categories_page_hint' => 'دسته‌بندی‌های سیستمی و سفارشی کسب‌وکار را مدیریت کنید.',
     'create_category' => 'ایجاد دسته‌بندی',
+    'create_subcategory' => 'ایجاد زیردسته',
     'edit_category' => 'ویرایش دسته‌بندی',
     'create_system_category_hint' => 'یک دسته سراسری برای همه کسب‌وکارها تعریف کنید.',
     'create_custom_category_hint' => 'یک دسته اختصاصی برای کسب‌وکار خود بسازید.',

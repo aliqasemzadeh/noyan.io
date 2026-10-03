@@ -367,6 +367,7 @@ return [
     'system_categories' => 'System categories',
     'categories_page_hint' => 'Manage system-wide and business-specific categories.',
     'create_category' => 'Create category',
+    'create_subcategory' => 'Create subcategory',
     'edit_category' => 'Edit category',
     'create_system_category_hint' => 'Define a global category available to every business.',
     'create_custom_category_hint' => 'Create a custom category for your business.',

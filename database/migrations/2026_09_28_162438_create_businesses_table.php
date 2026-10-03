@@ -16,9 +16,18 @@ return new class extends Migration
             $table->foreignId('owner_id')->constrained('users')->cascadeOnDelete();
             $table->string('name');
             $table->string('slug')->unique();
+            $table->string('type')->nullable();
+            $table->string('category')->nullable();
             $table->boolean('is_active')->default(true);
             $table->timestamps();
             $table->softDeletes();
+        });
+
+        Schema::table('users', function (Blueprint $table): void {
+            $table->foreign('current_business_id')
+                ->references('id')
+                ->on('businesses')
+                ->nullOnDelete();
         });
     }
 
@@ -27,6 +36,10 @@ return new class extends Migration
      */
     public function down(): void
     {
+        Schema::table('users', function (Blueprint $table): void {
+            $table->dropForeign(['current_business_id']);
+        });
+
         Schema::dropIfExists('businesses');
     }
 };
