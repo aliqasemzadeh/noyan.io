@@ -96,6 +96,28 @@ class ProcessTransactionActionTest extends TestCase
         $this->assertNull($transaction->category_id);
     }
 
+    public function test_transfer_ignores_loan_id(): void
+    {
+        [$user, $account] = $this->prepareTransactionContext(CategoryType::Income);
+        $destination = Account::factory()->create([
+            'business_id' => $account->business_id,
+            'currency_id' => $account->currency_id,
+        ]);
+
+        $transaction = app(ProcessTransactionAction::class)->handle($user, [
+            'type' => TransactionType::Transfer,
+            'account_id' => $account->id,
+            'destination_account_id' => $destination->id,
+            'loan_id' => 999999,
+            'transaction_date' => now()->toDateString(),
+            'amount' => '100',
+            'currency' => 'IRR',
+            'exchange_rate' => '1',
+        ]);
+
+        $this->assertNull($transaction->loan_id);
+    }
+
     /**
      * @return array{0: User, 1: Account, 2: Category}
      */

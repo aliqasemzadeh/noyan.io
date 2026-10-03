@@ -21,6 +21,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'party_id',
     'invoice_id',
     'category_id',
+    'loan_id',
     'type',
     'transaction_date',
     'currency',
@@ -122,5 +123,10 @@ class Transaction extends Model
     public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class);
+    }
+
+    public function loan(): BelongsTo
+    {
+        return $this->belongsTo(Loan::class);
     }
 }
