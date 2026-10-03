@@ -66,10 +66,10 @@ new class extends Component
 };
 ?>
 
-<div class="space-y-6">
-    <x-slot name="title">{{ __('general.create_business') }} - {{ __('general.app_name') }}</x-slot>
+<x-slot name="title">{{ __('general.create_business') }} - {{ __('general.app_name') }}</x-slot>
 
-    <div>
+<div class="space-y-6">
+<div>
         <flux:breadcrumbs>
             @if (auth()->user()->businesses()->exists())
                 <flux:breadcrumbs.item :href="route('user.dashboard')" wire:navigate>
