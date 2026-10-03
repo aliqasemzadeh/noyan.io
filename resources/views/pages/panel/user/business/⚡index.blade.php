@@ -46,7 +46,7 @@ new class extends Component
 <x-slot name="title">{{ __('general.my_businesses') }} - {{ __('general.app_name') }}</x-slot>
 
 <div class="space-y-6">
-<div>
+    <div>
         <flux:breadcrumbs>
             <flux:breadcrumbs.item :href="route('user.dashboard')" wire:navigate>
                 {{ __('general.dashboard') }}

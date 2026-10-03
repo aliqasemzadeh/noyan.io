@@ -11,7 +11,7 @@ new class extends Component
 <x-slot name="title">{{ __('general.accounting') }} - {{ __('general.app_name') }}</x-slot>
 
 <div class="space-y-6">
-<div>
+    <div>
         <flux:heading size="xl" level="1">
             {{ __('general.accounting') }}
         </flux:heading>

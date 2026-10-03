@@ -69,7 +69,7 @@ new class extends Component
 <x-slot name="title">{{ __('general.create_business') }} - {{ __('general.app_name') }}</x-slot>
 
 <div class="space-y-6">
-<div>
+    <div>
         <flux:breadcrumbs>
             @if (auth()->user()->businesses()->exists())
                 <flux:breadcrumbs.item :href="route('user.dashboard')" wire:navigate>

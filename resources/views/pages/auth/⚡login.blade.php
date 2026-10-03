@@ -146,7 +146,7 @@ class extends Component
 <x-slot name="title">{{ __('general.login') }} - {{ __('general.app_name') }}</x-slot>
 
 <div class="space-y-6">
-<div class="space-y-2 text-center">
+    <div class="space-y-2 text-center">
         <div class="flex justify-center opacity-70">
             <span class="text-xl font-semibold text-zinc-800 dark:text-white">{{ __('general.app_name') }}</span>
         </div>
