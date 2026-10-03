@@ -116,6 +116,8 @@ new class extends Component
         $this->form->category_id = $category->id;
         $this->categorySearch = '';
         unset($this->categories);
+
+        Flux::toast(__('general.product_category_created', ['name' => $category->name]));
     }
 
     public function createBrand(): void
@@ -153,6 +155,8 @@ new class extends Component
         $this->form->brand_id = $brand->id;
         $this->brandSearch = '';
         unset($this->brands);
+
+        Flux::toast(__('general.brand_created', ['name' => $brand->name]));
     }
 
     public function save(): void
