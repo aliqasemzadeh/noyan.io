@@ -86,6 +86,14 @@ class Party extends Model
         return $this->hasMany(PartyContact::class);
     }
 
+    /**
+     * @return HasMany<Invoice, $this>
+     */
+    public function invoices(): HasMany
+    {
+        return $this->hasMany(Invoice::class);
+    }
+
     public function displayName(): string
     {
         return $this->legal_name ?: $this->name;
