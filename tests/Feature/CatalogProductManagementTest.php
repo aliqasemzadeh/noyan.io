@@ -161,6 +161,62 @@ class CatalogProductManagementTest extends TestCase
             ->assertOk();
     }
 
+    public function test_product_form_can_create_category_and_brand_options(): void
+    {
+        [$user, $business] = $this->actingBusinessUser();
+
+        $component = Livewire::actingAs($user)
+            ->test('accounting.catalog.product.create')
+            ->set('categorySearch', 'Storage Devices')
+            ->call('createCategory')
+            ->assertHasNoErrors()
+            ->set('brandSearch', 'Samsung')
+            ->call('createBrand')
+            ->assertHasNoErrors();
+
+        $category = ProductCategory::query()->where('name', 'Storage Devices')->first();
+        $brand = Brand::query()->where('name', 'Samsung')->first();
+
+        $this->assertNotNull($category);
+        $this->assertNotNull($brand);
+        $this->assertSame($business->id, $category->business_id);
+        $this->assertSame($business->id, $brand->business_id);
+        $this->assertSame($category->id, $component->get('form.category_id'));
+        $this->assertSame($brand->id, $component->get('form.brand_id'));
+    }
+
+    public function test_user_can_create_digital_product_without_inventory(): void
+    {
+        [$user, $business] = $this->actingBusinessUser();
+
+        Livewire::actingAs($user)
+            ->test('accounting.catalog.product.create')
+            ->set('form.type', ProductType::Digital->value)
+            ->set('form.name', 'License Key Pack')
+            ->set('form.sku', 'DIG-LIC-001')
+            ->set('form.purchase_price', '50000')
+            ->set('form.sale_price', '90000')
+            ->set('form.stock_quantity', '0')
+            ->set('form.is_active', true)
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('products', [
+            'business_id' => $business->id,
+            'sku' => 'DIG-LIC-001',
+            'type' => ProductType::Digital->value,
+            'track_inventory' => false,
+        ]);
+    }
+
+    public function test_product_types_are_sorted_goods_digital_service(): void
+    {
+        $this->assertSame(
+            [ProductType::Goods, ProductType::Digital, ProductType::Service],
+            ProductType::sorted()
+        );
+    }
+
     /**
      * @return array{0: User, 1: Business}
      */

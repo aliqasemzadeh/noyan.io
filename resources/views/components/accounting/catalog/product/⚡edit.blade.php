@@ -9,6 +9,8 @@ use App\Models\Catalog\ProductCategory;
 use Flux\Flux;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
 use Livewire\Component;
@@ -18,6 +20,10 @@ new class extends Component
     public ProductForm $form;
 
     public ?Product $product = null;
+
+    public string $categorySearch = '';
+
+    public string $brandSearch = '';
 
     /**
      * @return Collection<int, ProductCategory>
@@ -67,9 +73,86 @@ new class extends Component
 
         $this->product = $product;
         $this->form->setModel($this->product);
+        $this->categorySearch = '';
+        $this->brandSearch = '';
         $this->resetValidation();
 
         Flux::modal('catalog.product.edit')->show();
+    }
+
+    public function createCategory(): void
+    {
+        $name = trim($this->categorySearch);
+        $businessId = Auth::user()?->current_business_id;
+
+        if ($businessId === null || mb_strlen($name) < 2) {
+            throw ValidationException::withMessages([
+                'form.category_id' => __('general.business_required'),
+            ]);
+        }
+
+        $base = Str::slug($name) ?: 'category';
+        $slug = $base;
+        $suffix = 1;
+
+        while (
+            ProductCategory::withTrashed()
+                ->where('business_id', $businessId)
+                ->where('slug', $slug)
+                ->exists()
+        ) {
+            $slug = $base.'-'.$suffix;
+            $suffix++;
+        }
+
+        $category = ProductCategory::create([
+            'business_id' => $businessId,
+            'name' => $name,
+            'slug' => $slug,
+            'is_active' => true,
+            'sort_order' => 0,
+        ]);
+
+        $this->form->category_id = $category->id;
+        $this->categorySearch = '';
+        unset($this->categories);
+    }
+
+    public function createBrand(): void
+    {
+        $name = trim($this->brandSearch);
+        $businessId = Auth::user()?->current_business_id;
+
+        if ($businessId === null || mb_strlen($name) < 2) {
+            throw ValidationException::withMessages([
+                'form.brand_id' => __('general.business_required'),
+            ]);
+        }
+
+        $base = Str::slug($name) ?: 'brand';
+        $slug = $base;
+        $suffix = 1;
+
+        while (
+            Brand::withTrashed()
+                ->where('business_id', $businessId)
+                ->where('slug', $slug)
+                ->exists()
+        ) {
+            $slug = $base.'-'.$suffix;
+            $suffix++;
+        }
+
+        $brand = Brand::create([
+            'business_id' => $businessId,
+            'name' => $name,
+            'slug' => $slug,
+            'is_active' => true,
+        ]);
+
+        $this->form->brand_id = $brand->id;
+        $this->brandSearch = '';
+        unset($this->brands);
     }
 
     public function save(): void
@@ -101,7 +184,7 @@ new class extends Component
         <flux:field>
             <flux:label>{{ __('general.product_type') }}</flux:label>
             <flux:select wire:model.live="form.type" searchable variant="listbox">
-                @foreach (ProductType::cases() as $type)
+                @foreach (ProductType::sorted() as $type)
                     <flux:select.option value="{{ $type->value }}" wire:key="edit-product-type-{{ $type->value }}">
                         {{ $type->label() }}
                     </flux:select.option>
@@ -139,26 +222,36 @@ new class extends Component
         <div class="grid gap-4 sm:grid-cols-2">
             <flux:field>
                 <flux:label>{{ __('general.category') }}</flux:label>
-                <flux:select wire:model="form.category_id" searchable variant="listbox" clearable>
-                    <flux:select.option value="">{{ __('general.select_category') }}</flux:select.option>
+                <flux:select wire:model="form.category_id" variant="combobox" clearable placeholder="{{ __('general.select_category') }}">
+                    <x-slot name="input">
+                        <flux:select.input wire:model="categorySearch" placeholder="{{ __('general.select_category') }}" />
+                    </x-slot>
                     @foreach ($this->categories as $category)
                         <flux:select.option value="{{ $category->id }}" wire:key="edit-product-category-{{ $category->id }}">
                             {{ $category->name }}
                         </flux:select.option>
                     @endforeach
+                    <flux:select.option.create wire:click="createCategory" min-length="2">
+                        {{ __('general.create_category_option') }} "<span wire:text="categorySearch"></span>"
+                    </flux:select.option.create>
                 </flux:select>
                 <flux:error name="form.category_id" />
             </flux:field>
 
             <flux:field>
                 <flux:label>{{ __('general.brand') }}</flux:label>
-                <flux:select wire:model="form.brand_id" searchable variant="listbox" clearable>
-                    <flux:select.option value="">{{ __('general.select_brand') }}</flux:select.option>
+                <flux:select wire:model="form.brand_id" variant="combobox" clearable placeholder="{{ __('general.select_brand') }}">
+                    <x-slot name="input">
+                        <flux:select.input wire:model="brandSearch" placeholder="{{ __('general.select_brand') }}" />
+                    </x-slot>
                     @foreach ($this->brands as $brand)
                         <flux:select.option value="{{ $brand->id }}" wire:key="edit-product-brand-{{ $brand->id }}">
                             {{ $brand->name }}
                         </flux:select.option>
                     @endforeach
+                    <flux:select.option.create wire:click="createBrand" min-length="2">
+                        {{ __('general.create_brand_option') }} "<span wire:text="brandSearch"></span>"
+                    </flux:select.option.create>
                 </flux:select>
                 <flux:error name="form.brand_id" />
             </flux:field>
@@ -219,7 +312,10 @@ new class extends Component
         <div class="space-y-3">
             <flux:field variant="inline">
                 <flux:label>{{ __('general.track_inventory') }}</flux:label>
-                <flux:switch wire:model.live="form.track_inventory" :disabled="$form->type === 'service'" />
+                <flux:switch
+                    wire:model.live="form.track_inventory"
+                    :disabled="in_array($form->type, [ProductType::Service->value, ProductType::Digital->value], true)"
+                />
                 <flux:error name="form.track_inventory" />
             </flux:field>
 

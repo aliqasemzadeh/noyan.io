@@ -95,4 +95,12 @@ class CatalogSchemaTest extends TestCase
         $this->assertFalse($product->track_inventory);
         $this->assertSame(ProductUnit::Hour, $product->unit);
     }
+
+    public function test_digital_products_do_not_track_inventory_by_default_in_factory(): void
+    {
+        $product = Product::factory()->digital()->create();
+
+        $this->assertSame(ProductType::Digital, $product->type);
+        $this->assertFalse($product->track_inventory);
+    }
 }
