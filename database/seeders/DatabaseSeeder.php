@@ -18,7 +18,7 @@ class DatabaseSeeder extends Seeder
         $this->call(CurrencySeeder::class);
         $this->call(CategorySeeder::class);
 
-        User::factory()->create([
+        User::query()->firstOrCreate([
             'mobile' => '09123456789',
         ]);
     }
