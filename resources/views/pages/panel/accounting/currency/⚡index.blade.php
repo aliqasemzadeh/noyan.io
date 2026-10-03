@@ -52,10 +52,10 @@ new class extends Component
 };
 ?>
 
-<div class="space-y-6">
-    <x-slot name="title">{{ __('general.business_currencies') }} - {{ __('general.app_name') }}</x-slot>
+<x-slot name="title">{{ __('general.business_currencies') }} - {{ __('general.app_name') }}</x-slot>
 
-    <div>
+<div class="space-y-6">
+<div>
         <flux:breadcrumbs>
             <flux:breadcrumbs.item :href="route('accounting.dashboard')" wire:navigate>
                 {{ __('general.dashboard') }}

@@ -34,10 +34,10 @@ new class extends Component
 };
 ?>
 
-<div class="space-y-6">
-    <x-slot name="title">{{ __('general.edit_business') }} - {{ __('general.app_name') }}</x-slot>
+<x-slot name="title">{{ __('general.edit_business') }} - {{ __('general.app_name') }}</x-slot>
 
-    <div>
+<div class="space-y-6">
+<div>
         <flux:breadcrumbs>
             <flux:breadcrumbs.item :href="route('user.dashboard')" wire:navigate>
                 {{ __('general.dashboard') }}

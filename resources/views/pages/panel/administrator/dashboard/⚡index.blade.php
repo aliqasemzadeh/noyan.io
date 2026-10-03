@@ -8,10 +8,10 @@ new class extends Component
 };
 ?>
 
-<div class="space-y-6">
-    <x-slot name="title">{{ __('general.system_management') }} - {{ __('general.app_name') }}</x-slot>
+<x-slot name="title">{{ __('general.system_management') }} - {{ __('general.app_name') }}</x-slot>
 
-    <div>
+<div class="space-y-6">
+<div>
         <flux:heading size="xl" level="1">
             {{ __('general.system_management') }}
         </flux:heading>
