@@ -47,7 +47,7 @@ class UsersIndexTest extends TestCase
         ]);
 
         Livewire::actingAs($viewer)
-            ->test('pages::user.index')
+            ->test('pages::panel.administrator.user.index')
             ->set('search', '0917')
             ->assertSee($match->mobile)
             ->assertDontSee($other->mobile);
@@ -58,7 +58,7 @@ class UsersIndexTest extends TestCase
         $viewer = User::factory()->create();
 
         Livewire::actingAs($viewer)
-            ->test('pages::user.index')
+            ->test('pages::panel.administrator.user.index')
             ->set('prompt', '')
             ->call('sendPrompt')
             ->assertHasErrors(['prompt']);
@@ -75,7 +75,7 @@ class UsersIndexTest extends TestCase
         ]);
 
         Livewire::actingAs($viewer)
-            ->test('pages::user.index')
+            ->test('pages::panel.administrator.user.index')
             ->set('prompt', 'یک کاربر با شماره موبایل 09171234567 اضافه کن')
             ->call('sendPrompt')
             ->assertHasNoErrors()
@@ -106,7 +106,7 @@ class UsersIndexTest extends TestCase
         );
 
         Livewire::actingAs($viewer)
-            ->test('pages::user.index')
+            ->test('pages::panel.administrator.user.index')
             ->set('audio', $audio)
             ->call('sendPrompt')
             ->assertHasNoErrors()
