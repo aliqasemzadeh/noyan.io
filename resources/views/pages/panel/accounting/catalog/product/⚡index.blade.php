@@ -200,7 +200,7 @@ new class extends Component
 
             <flux:select wire:model.live="typeFilter" searchable variant="listbox" placeholder="{{ __('general.all_product_types') }}">
                 <flux:select.option value="">{{ __('general.all_product_types') }}</flux:select.option>
-                @foreach (ProductType::cases() as $type)
+                @foreach (ProductType::sorted() as $type)
                     <flux:select.option value="{{ $type->value }}" wire:key="filter-product-type-{{ $type->value }}">
                         {{ $type->label() }}
                     </flux:select.option>
@@ -257,7 +257,7 @@ new class extends Component
                             <span dir="ltr">{{ $product->sku }}</span>
                         </flux:table.cell>
                         <flux:table.cell>
-                            <flux:badge size="sm" :color="$product->type === ProductType::Goods ? 'teal' : 'violet'">
+                            <flux:badge size="sm" :color="$product->type->badgeColor()">
                                 {{ $product->type->label() }}
                             </flux:badge>
                         </flux:table.cell>

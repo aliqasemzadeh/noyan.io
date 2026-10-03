@@ -59,4 +59,15 @@ class ProductFactory extends Factory
             'reserved_quantity' => '0',
         ]);
     }
+
+    public function digital(): static
+    {
+        return $this->state(fn (): array => [
+            'type' => ProductType::Digital,
+            'track_inventory' => false,
+            'unit' => ProductUnit::Piece,
+            'stock_quantity' => '0',
+            'reserved_quantity' => '0',
+        ]);
+    }
 }

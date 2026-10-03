@@ -74,7 +74,13 @@ new class extends Component
                 {{ __('general.dashboard') }}
             </flux:sidebar.item>
 
-            <flux:sidebar.group expandable icon="users" heading="{{ __('general.parties') }}" class="grid">
+            <flux:sidebar.group
+                expandable
+                :expanded="request()->routeIs('accounting.parties.*')"
+                icon="users"
+                heading="{{ __('general.parties') }}"
+                class="grid"
+            >
                 <flux:sidebar.item
                     :href="route('accounting.parties.index')"
                     wire:navigate
@@ -84,7 +90,13 @@ new class extends Component
                 </flux:sidebar.item>
             </flux:sidebar.group>
 
-            <flux:sidebar.group expandable icon="package" heading="{{ __('general.catalog') }}" class="grid">
+            <flux:sidebar.group
+                expandable
+                :expanded="request()->routeIs('accounting.catalog.*')"
+                icon="package"
+                heading="{{ __('general.catalog') }}"
+                class="grid"
+            >
                 <flux:sidebar.item
                     :href="route('accounting.catalog.products.index')"
                     wire:navigate
@@ -94,16 +106,14 @@ new class extends Component
                 </flux:sidebar.item>
 
                 <flux:sidebar.item
-                    icon="layers"
                     :href="route('accounting.catalog.categories.index')"
                     wire:navigate
                     :current="request()->routeIs('accounting.catalog.categories.*')"
                 >
-                    {{ __('general.product_categories') }}
+                    {{ __('general.categories') }}
                 </flux:sidebar.item>
 
                 <flux:sidebar.item
-                    icon="tags"
                     :href="route('accounting.catalog.brands.index')"
                     wire:navigate
                     :current="request()->routeIs('accounting.catalog.brands.*')"
@@ -112,7 +122,13 @@ new class extends Component
                 </flux:sidebar.item>
             </flux:sidebar.group>
 
-            <flux:sidebar.group expandable icon="wallet" heading="{{ __('general.treasury') }}" class="grid">
+            <flux:sidebar.group
+                expandable
+                :expanded="request()->routeIs('accounting.accounts.*') || request()->routeIs('accounting.currencies.*')"
+                icon="wallet"
+                heading="{{ __('general.treasury') }}"
+                class="grid"
+            >
                 <flux:sidebar.item
                     :href="route('accounting.accounts.index')"
                     wire:navigate
