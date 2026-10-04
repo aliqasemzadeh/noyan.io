@@ -16,6 +16,22 @@ class SystemCommandRunnerTest extends TestCase
         app(SystemCommandRunner::class)->assertAllowed('migrate:fresh');
     }
 
+    public function test_normalize_command_strips_artisan_prefix(): void
+    {
+        $runner = app(SystemCommandRunner::class);
+
+        $this->assertSame('cache:clear', $runner->normalizeCommand('php artisan cache:clear'));
+        $this->assertSame('queue:restart', $runner->normalizeCommand('artisan queue:restart'));
+        $this->assertSame('view:clear', $runner->normalizeCommand('  view:clear  '));
+    }
+
+    public function test_php_binary_prefers_configured_value(): void
+    {
+        config(['system-functions.php_binary' => 'C:\\php\\php.exe']);
+
+        $this->assertSame('C:\\php\\php.exe', app(SystemCommandRunner::class)->phpBinary());
+    }
+
     public function test_allowed_command_runs_through_process(): void
     {
         Process::fake([

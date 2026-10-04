@@ -12,6 +12,8 @@ new class extends Component
 {
     public string $output = '';
 
+    public string $commandLine = '';
+
     public bool $isRunning = false;
 
     /**
@@ -21,6 +23,23 @@ new class extends Component
     public function commands(): array
     {
         return app(SystemCommandRunner::class)->allowedCommands();
+    }
+
+    public function fillCommand(string $command): void
+    {
+        $this->commandLine = $command;
+    }
+
+    public function runTypedCommand(): void
+    {
+        $command = app(SystemCommandRunner::class)->normalizeCommand($this->commandLine);
+
+        if ($command === '') {
+            return;
+        }
+
+        $this->runCommand($command);
+        $this->commandLine = '';
     }
 
     public function runCommand(string $command): void
@@ -160,27 +179,28 @@ new class extends Component
     <flux:card>
         <flux:heading size="lg" class="mb-4">{{ __('general.maintenance_commands') }}</flux:heading>
 
-        <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div class="flex flex-wrap gap-2">
             @foreach ($this->commands as $command => $meta)
-                <flux:tooltip :content="$command">
-                    <flux:button
-                        variant="primary"
-                        :color="$meta['color']"
-                        :icon="$meta['icon']"
-                        class="w-full justify-start"
-                        wire:click="runCommand('{{ $command }}')"
-                        :disabled="$isRunning"
-                    >
-                        {{ __($meta['label']) }}
-                    </flux:button>
-                </flux:tooltip>
+                <flux:button
+                    size="sm"
+                    variant="primary"
+                    :color="$meta['color']"
+                    :icon="$meta['icon']"
+                    wire:click="fillCommand('{{ $command }}')"
+                    :disabled="$isRunning"
+                >
+                    {{ __($meta['label']) }}
+                </flux:button>
             @endforeach
         </div>
     </flux:card>
 
-    <flux:card>
-        <div class="mb-3 flex items-center justify-between gap-3">
-            <flux:heading size="lg">{{ __('general.command_output') }}</flux:heading>
+    <flux:card class="overflow-hidden p-0">
+        <div class="flex items-center justify-between gap-3 border-b border-zinc-800 bg-zinc-950 px-4 py-3">
+            <div class="flex items-center gap-2">
+                <flux:icon name="terminal" class="size-4 text-emerald-400" />
+                <flux:heading size="md" class="text-zinc-100">{{ __('general.command_output') }}</flux:heading>
+            </div>
 
             @if ($isRunning)
                 <flux:badge color="amber" size="sm">{{ __('general.command_running') }}</flux:badge>
@@ -191,8 +211,33 @@ new class extends Component
 
         <pre
             wire:stream.replace="command-output"
-            class="max-h-[28rem] min-h-48 overflow-auto rounded-lg bg-zinc-950 p-4 text-sm leading-relaxed text-zinc-100 whitespace-pre-wrap"
+            class="max-h-[28rem] min-h-56 overflow-auto bg-zinc-950 px-4 py-4 font-mono text-sm leading-relaxed text-emerald-300 whitespace-pre-wrap"
             dir="ltr"
         >{{ $output !== '' ? $output : __('general.command_output_placeholder') }}</pre>
+
+        <form wire:submit="runTypedCommand" class="border-t border-zinc-800 bg-zinc-900 px-3 py-3" dir="ltr">
+            <div class="flex items-center gap-2">
+                <span class="shrink-0 font-mono text-sm text-emerald-400">$</span>
+                <span class="hidden shrink-0 font-mono text-sm text-zinc-400 sm:inline">php artisan</span>
+                <div class="min-w-0 flex-1">
+                    <flux:input
+                        wire:model="commandLine"
+                        class="font-mono"
+                        placeholder="{{ __('general.command_prompt') }}"
+                        autocomplete="off"
+                        :disabled="$isRunning"
+                    />
+                </div>
+                <flux:button
+                    type="submit"
+                    variant="primary"
+                    color="teal"
+                    icon="play"
+                    :disabled="$isRunning"
+                >
+                    {{ __('general.command_run') }}
+                </flux:button>
+            </div>
+        </form>
     </flux:card>
 </div>

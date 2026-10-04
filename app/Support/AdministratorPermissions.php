@@ -46,6 +46,8 @@ class AdministratorPermissions
             'currency' => __('general.currencies'),
             'category' => __('general.system_categories'),
             'function' => __('general.system_functions'),
+            'backup' => __('general.system_backups'),
+            'setting' => __('general.system_settings'),
             default => ucfirst($group),
         };
     }
