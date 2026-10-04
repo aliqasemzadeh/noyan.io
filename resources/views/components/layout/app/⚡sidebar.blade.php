@@ -11,50 +11,87 @@ new class extends Component
 <div>
     <flux:sidebar.nav>
         @if (request()->routeIs('system.*'))
-            <flux:sidebar.item
-                icon="home"
-                :href="route('system.dashboard')"
-                wire:navigate
-                :current="request()->routeIs('system.dashboard')"
-            >
-                {{ __('general.dashboard') }}
-            </flux:sidebar.item>
+            @can('dashboard_view')
+                <flux:sidebar.item
+                    icon="home"
+                    :href="route('system.dashboard')"
+                    wire:navigate
+                    :current="request()->routeIs('system.dashboard')"
+                >
+                    {{ __('general.dashboard') }}
+                </flux:sidebar.item>
+            @endcan
 
-            <flux:sidebar.item
+            <flux:sidebar.group
+                expandable
+                :expanded="request()->routeIs('system.users.*') || request()->routeIs('system.roles.*') || request()->routeIs('system.permissions.*')"
                 icon="users"
-                :href="route('system.users.index')"
-                wire:navigate
-                :current="request()->routeIs('system.users.*')"
+                heading="{{ __('general.user_management') }}"
+                class="grid"
             >
-                {{ __('general.users') }}
-            </flux:sidebar.item>
+                @can('user_view')
+                    <flux:sidebar.item
+                        :href="route('system.users.index')"
+                        wire:navigate
+                        :current="request()->routeIs('system.users.*')"
+                    >
+                        {{ __('general.users') }}
+                    </flux:sidebar.item>
+                @endcan
 
-            <flux:sidebar.item
-                icon="building"
-                :href="route('system.businesses.index')"
-                wire:navigate
-                :current="request()->routeIs('system.businesses.*')"
-            >
-                {{ __('general.businesses') }}
-            </flux:sidebar.item>
+                @can('role_view')
+                    <flux:sidebar.item
+                        :href="route('system.roles.index')"
+                        wire:navigate
+                        :current="request()->routeIs('system.roles.*')"
+                    >
+                        {{ __('general.roles') }}
+                    </flux:sidebar.item>
+                @endcan
 
-            <flux:sidebar.item
-                icon="coins"
-                :href="route('system.currencies.index')"
-                wire:navigate
-                :current="request()->routeIs('system.currencies.*')"
-            >
-                {{ __('general.currencies') }}
-            </flux:sidebar.item>
+                @can('permission_view')
+                    <flux:sidebar.item
+                        :href="route('system.permissions.index')"
+                        wire:navigate
+                        :current="request()->routeIs('system.permissions.*')"
+                    >
+                        {{ __('general.permissions') }}
+                    </flux:sidebar.item>
+                @endcan
+            </flux:sidebar.group>
 
-            <flux:sidebar.item
-                icon="folder-tree"
-                :href="route('system.categories.index')"
-                wire:navigate
-                :current="request()->routeIs('system.categories.*')"
-            >
-                {{ __('general.system_categories') }}
-            </flux:sidebar.item>
+            @can('business_view')
+                <flux:sidebar.item
+                    icon="building"
+                    :href="route('system.businesses.index')"
+                    wire:navigate
+                    :current="request()->routeIs('system.businesses.*')"
+                >
+                    {{ __('general.businesses') }}
+                </flux:sidebar.item>
+            @endcan
+
+            @can('currency_view')
+                <flux:sidebar.item
+                    icon="coins"
+                    :href="route('system.currencies.index')"
+                    wire:navigate
+                    :current="request()->routeIs('system.currencies.*')"
+                >
+                    {{ __('general.currencies') }}
+                </flux:sidebar.item>
+            @endcan
+
+            @can('category_view')
+                <flux:sidebar.item
+                    icon="folder-tree"
+                    :href="route('system.categories.index')"
+                    wire:navigate
+                    :current="request()->routeIs('system.categories.*')"
+                >
+                    {{ __('general.system_categories') }}
+                </flux:sidebar.item>
+            @endcan
         @elseif (request()->routeIs('user.*'))
             <flux:sidebar.item
                 icon="home"

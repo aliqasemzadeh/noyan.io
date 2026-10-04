@@ -177,11 +177,13 @@ new class extends Component
                 {{ __('general.users') }}
             </flux:heading>
 
-            <flux:modal.trigger name="user.create">
-                <flux:button variant="primary" color="teal" icon="plus">
-                    {{ __('general.create_user') }}
-                </flux:button>
-            </flux:modal.trigger>
+            @can('user_create')
+                <flux:modal.trigger name="user.create">
+                    <flux:button variant="primary" color="teal" icon="plus">
+                        {{ __('general.create_user') }}
+                    </flux:button>
+                </flux:modal.trigger>
+            @endcan
         </div>
 
         <flux:text class="mt-2">
@@ -349,12 +351,31 @@ new class extends Component
                         <flux:table.cell>{{ $this->formatCreatedAt($user) }}</flux:table.cell>
                         <flux:table.cell align="end">
                             <div class="flex justify-end gap-2">
-                                <flux:tooltip content="{{ __('general.edit') }}">
-                                    <flux:button size="xs" variant="primary" color="blue" icon="pencil" icon:variant="outline" wire:click="$dispatch('panels.administrator.user.edit.assign-data', { user: {{ $user->id }} })" />
-                                </flux:tooltip>
-                                <flux:tooltip content="{{ __('general.delete') }}">
-                                    <flux:button size="xs" variant="danger" icon="trash" icon:variant="outline" wire:click="$dispatch('panels.administrator.user.delete.assign-data', { user: {{ $user->id }} })" />
-                                </flux:tooltip>
+                                @can('user_access')
+                                    <flux:tooltip content="{{ __('general.access') }}">
+                                        <flux:button
+                                            size="xs"
+                                            variant="primary"
+                                            color="teal"
+                                            icon="key-round"
+                                            icon:variant="outline"
+                                            :href="route('system.users.access', $user)"
+                                            wire:navigate
+                                        />
+                                    </flux:tooltip>
+                                @endcan
+
+                                @can('user_edit')
+                                    <flux:tooltip content="{{ __('general.edit') }}">
+                                        <flux:button size="xs" variant="primary" color="blue" icon="pencil" icon:variant="outline" wire:click="$dispatch('panels.administrator.user.edit.assign-data', { user: {{ $user->id }} })" />
+                                    </flux:tooltip>
+                                @endcan
+
+                                @can('user_delete')
+                                    <flux:tooltip content="{{ __('general.delete') }}">
+                                        <flux:button size="xs" variant="danger" icon="trash" icon:variant="outline" wire:click="$dispatch('panels.administrator.user.delete.assign-data', { user: {{ $user->id }} })" />
+                                    </flux:tooltip>
+                                @endcan
                             </div>
                         </flux:table.cell>
                     </flux:table.row>

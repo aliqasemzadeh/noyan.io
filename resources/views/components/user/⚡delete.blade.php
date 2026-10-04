@@ -12,6 +12,8 @@ new class extends Component
     #[On('panels.administrator.user.delete.assign-data')]
     public function assignData(User $user): void
     {
+        abort_unless(auth()->user()?->can('user_delete'), 403);
+
         $this->user = $user;
 
         Flux::modal('user.delete')->show();
@@ -19,6 +21,8 @@ new class extends Component
 
     public function delete(): void
     {
+        abort_unless(auth()->user()?->can('user_delete'), 403);
+
         if ($this->user) {
             $this->user->delete();
         }
