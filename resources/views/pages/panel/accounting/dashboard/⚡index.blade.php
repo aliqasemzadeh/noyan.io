@@ -200,6 +200,18 @@ new class extends Component
             </flux:card>
         </a>
 
+        <a href="{{ route('accounting.journal-entries.index') }}" wire:navigate class="block">
+            <flux:card class="h-full transition hover:border-teal-300 dark:hover:border-teal-700">
+                <div class="flex items-start gap-3">
+                    <flux:icon.book-open class="size-6 text-indigo-600 dark:text-indigo-400" />
+                    <div>
+                        <flux:heading size="lg">{{ __('general.journal_entries') }}</flux:heading>
+                        <flux:text class="mt-1">{{ __('general.journal_entries_page_hint') }}</flux:text>
+                    </div>
+                </div>
+            </flux:card>
+        </a>
+
         <a href="{{ route('accounting.accounts.index') }}" wire:navigate class="block">
             <flux:card class="h-full transition hover:border-teal-300 dark:hover:border-teal-700">
                 <div class="flex items-start gap-3">

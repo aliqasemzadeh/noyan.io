@@ -51,5 +51,12 @@ Route::middleware('auth')->group(function () {
         Route::livewire('/loans/{loan}', 'pages::panel.accounting.loan.show')->name('loans.show');
         Route::livewire('/cheques', 'pages::panel.accounting.cheque.index')->name('cheques.index');
         Route::livewire('/currencies', 'pages::panel.accounting.currency.index')->name('currencies.index');
+
+        Route::livewire('/journal-entries', 'pages::panel.accounting.journal-entry.index')->name('journal-entries.index');
+        Route::livewire('/journal-entries/create', 'pages::panel.accounting.journal-entry.form')->name('journal-entries.create');
+        Route::livewire('/journal-entries/{journalEntry}/edit', 'pages::panel.accounting.journal-entry.form')->name('journal-entries.edit');
+        Route::livewire('/fiscal-years', 'pages::panel.accounting.fiscal-year.index')->name('fiscal-years.index');
+        Route::livewire('/cost-centers', 'pages::panel.accounting.cost-center.index')->name('cost-centers.index');
+        Route::livewire('/projects', 'pages::panel.accounting.project.index')->name('projects.index');
     });
 });
