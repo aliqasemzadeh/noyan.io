@@ -237,11 +237,11 @@ new class extends Component
     @if ($this->fiscalYears->isEmpty())
         <flux:callout icon="calendar" variant="warning">
             {{ __('general.journal_needs_fiscal_year') }}
-            <x-slot name="actions">
+            <div class="mt-3">
                 <flux:button size="sm" variant="primary" color="teal" :href="route('accounting.fiscal-years.index')" wire:navigate>
                     {{ __('general.fiscal_years') }}
                 </flux:button>
-            </x-slot>
+            </div>
         </flux:callout>
     @endif
 
