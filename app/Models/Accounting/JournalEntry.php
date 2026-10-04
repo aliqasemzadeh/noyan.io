@@ -46,6 +46,23 @@ class JournalEntry extends Model
         return JournalEntryFactory::new();
     }
 
+    protected static function booted(): void
+    {
+        static::deleting(function (JournalEntry $entry): void {
+            if ($entry->isForceDeleting()) {
+                return;
+            }
+
+            $originalNumber = (string) $entry->voucher_number;
+
+            if (! str_contains($originalNumber, '__del_')) {
+                $entry->forceFill([
+                    'voucher_number' => $originalNumber.'__del_'.$entry->id,
+                ])->saveQuietly();
+            }
+        });
+    }
+
     /**
      * @return HasMany<JournalLine, $this>
      */

@@ -121,6 +121,46 @@ new class extends Component
 
             <flux:sidebar.group
                 expandable
+                :expanded="request()->routeIs('accounting.journal-entries.*') || request()->routeIs('accounting.fiscal-years.*') || request()->routeIs('accounting.cost-centers.*') || request()->routeIs('accounting.projects.*')"
+                icon="book-open"
+                heading="{{ __('general.general_ledger') }}"
+                class="grid"
+            >
+                <flux:sidebar.item
+                    :href="route('accounting.journal-entries.index')"
+                    wire:navigate
+                    :current="request()->routeIs('accounting.journal-entries.*')"
+                >
+                    {{ __('general.journal_entries') }}
+                </flux:sidebar.item>
+
+                <flux:sidebar.item
+                    :href="route('accounting.fiscal-years.index')"
+                    wire:navigate
+                    :current="request()->routeIs('accounting.fiscal-years.*')"
+                >
+                    {{ __('general.fiscal_years') }}
+                </flux:sidebar.item>
+
+                <flux:sidebar.item
+                    :href="route('accounting.cost-centers.index')"
+                    wire:navigate
+                    :current="request()->routeIs('accounting.cost-centers.*')"
+                >
+                    {{ __('general.cost_centers') }}
+                </flux:sidebar.item>
+
+                <flux:sidebar.item
+                    :href="route('accounting.projects.index')"
+                    wire:navigate
+                    :current="request()->routeIs('accounting.projects.*')"
+                >
+                    {{ __('general.projects') }}
+                </flux:sidebar.item>
+            </flux:sidebar.group>
+
+            <flux:sidebar.group
+                expandable
                 :expanded="request()->routeIs('accounting.parties.*')"
                 icon="users"
                 heading="{{ __('general.parties') }}"
