@@ -1,0 +1,32 @@
+<?php
+
+return [
+    'administrator' => [
+        'dashboard_view' => 'مشاهده داشبورد سیستم',
+        'user_view' => 'مشاهده کاربران',
+        'user_create' => 'ایجاد کاربر',
+        'user_edit' => 'ویرایش کاربر',
+        'user_delete' => 'حذف کاربر',
+        'user_access' => 'مدیریت دسترسی کاربر',
+        'role_view' => 'مشاهده نقش‌ها',
+        'role_create' => 'ایجاد نقش',
+        'role_edit' => 'ویرایش نقش',
+        'role_delete' => 'حذف نقش',
+        'role_access' => 'مدیریت دسترسی نقش',
+        'permission_view' => 'مشاهده مجوزها',
+        'permission_access' => 'اختصاص مجوز به کاربران',
+        'business_view' => 'مشاهده کسب‌وکارها',
+        'business_create' => 'ایجاد کسب‌وکار',
+        'business_edit' => 'ویرایش کسب‌وکار',
+        'business_delete' => 'حذف کسب‌وکار',
+        'business_user_manage' => 'مدیریت کاربران کسب‌وکار',
+        'currency_view' => 'مشاهده ارزها',
+        'currency_create' => 'ایجاد ارز',
+        'currency_edit' => 'ویرایش ارز',
+        'currency_delete' => 'حذف ارز',
+        'category_view' => 'مشاهده دسته‌بندی‌های سیستم',
+        'category_create' => 'ایجاد دسته‌بندی سیستم',
+        'category_edit' => 'ویرایش دسته‌بندی سیستم',
+        'category_delete' => 'حذف دسته‌بندی سیستم',
+    ],
+];

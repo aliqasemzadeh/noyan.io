@@ -2,7 +2,6 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
@@ -17,9 +16,6 @@ class DatabaseSeeder extends Seeder
     {
         $this->call(CurrencySeeder::class);
         $this->call(CategorySeeder::class);
-
-        User::query()->firstOrCreate([
-            'mobile' => '09123456789',
-        ]);
+        $this->call(PermissionSeeder::class);
     }
 }
