@@ -71,6 +71,17 @@ class AccountingDashboardChequeAlertsTest extends TestCase
             ->assertDontSee(__('general.cheque_alerts'));
     }
 
+    public function test_dashboard_shows_accounting_ai_intro(): void
+    {
+        [$user] = $this->prepareContext();
+
+        Livewire::actingAs($user)
+            ->test('pages::panel.accounting.dashboard.index')
+            ->assertSee(__('general.accounting_ai_title'))
+            ->assertSee(__('general.accounting_ai_description'))
+            ->assertSee(__('general.accounting_ai_footer'));
+    }
+
     /**
      * @return array{0: User, 1: Account, 2: Party}
      */

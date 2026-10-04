@@ -107,6 +107,8 @@ new class extends Component
         </div>
     </div>
 
+    <livewire:accounting.ai-intro :key="'accounting-ai-intro'" />
+
     @php($alerts = $this->chequeAlerts)
 
     @if ($alerts['overdue_count'] > 0 || $alerts['upcoming_count'] > 0)
