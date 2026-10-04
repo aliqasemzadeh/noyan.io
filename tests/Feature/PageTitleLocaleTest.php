@@ -22,7 +22,7 @@ class PageTitleLocaleTest extends TestCase
         $this->actingAs($user)
             ->get(route('system.dashboard'))
             ->assertOk()
-            ->assertSee('<title>مدیریت سیستم - نویان</title>', false);
+            ->assertSee('<title>سیستم مدیریت - نویان</title>', false);
     }
 
     public function test_system_dashboard_title_uses_english_page_and_site_name(): void

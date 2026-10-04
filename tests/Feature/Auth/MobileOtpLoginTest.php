@@ -119,7 +119,7 @@ class MobileOtpLoginTest extends TestCase
 
         $this->actingAs($user)
             ->get(route('dashboard'))
-            ->assertRedirect('/system');
+            ->assertRedirect('/user');
 
         $this->actingAs($user)
             ->get('/system')

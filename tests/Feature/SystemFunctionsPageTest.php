@@ -41,7 +41,8 @@ class SystemFunctionsPageTest extends TestCase
             ->assertSee(__('general.system_functions'))
             ->assertSee(__('general.quick_update'))
             ->assertSee(__('general.full_update'))
-            ->assertSee(__('general.cmd_cache_clear'));
+            ->assertSee(__('general.cmd_cache_clear'))
+            ->assertSee(__('general.cmd_permissions_sync'));
     }
 
     public function test_run_command_rejects_disallowed_artisan_command(): void

@@ -21,7 +21,7 @@ Route::middleware('guest')->group(function () {
 });
 
 Route::middleware('auth')->group(function () {
-    Route::redirect('/dashboard', '/system')->name('dashboard');
+    Route::redirect('/dashboard', '/user')->name('dashboard');
 
     Route::prefix('system')->name('system.')->group(function () {
         Route::livewire('/', 'pages::panel.administrator.dashboard.index')

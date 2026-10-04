@@ -801,4 +801,5 @@ return [
     'cmd_view_cache' => 'Cache views',
     'cmd_queue_restart' => 'Restart queue',
     'cmd_storage_link' => 'Link storage',
+    'cmd_permissions_sync' => 'Sync administrator permissions',
 ];
