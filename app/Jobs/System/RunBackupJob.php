@@ -2,9 +2,9 @@
 
 namespace App\Jobs\System;
 
+use App\Services\System\SystemBackupService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
-use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
@@ -18,59 +18,46 @@ class RunBackupJob implements ShouldQueue
     public int $timeout = 3600;
 
     /**
-     * @param  string  $type  What to backup: "both", "database" or "files".
-     * @param  string  $destination  Where to store the backup: "local" or "remote".
+     * Backups are database-only and local for this product phase.
      */
     public function __construct(
-        public string $type = 'both',
+        public string $type = 'database',
         public string $destination = 'local',
     ) {}
 
-    public function handle(): void
+    public function handle(SystemBackupService $backups): void
     {
         Log::info('Backup job started.', [
-            'type' => $this->type,
-            'destination' => $this->destination,
+            'type' => 'database',
+            'destination' => 'local',
         ]);
 
-        $options = [
-            '--disable-notifications' => true,
-            '--only-to-disk' => $this->destination === 'remote' ? 'backup_remote' : 'local',
-        ];
-
-        if ($this->type === 'database') {
-            $options['--only-db'] = true;
-        }
-
-        if ($this->type === 'files') {
-            $options['--only-files'] = true;
-        }
-
-        $exitCode = Artisan::call('backup:run', $options);
-
-        $output = trim(Artisan::output());
+        $exitCode = $backups->runDatabaseBackup();
+        $output = $backups->output();
 
         if ($exitCode === 0) {
             Log::info('Backup job finished successfully.', [
-                'type' => $this->type,
-                'destination' => $this->destination,
+                'type' => 'database',
+                'destination' => 'local',
                 'output' => $output,
             ]);
-        } else {
-            Log::error('Backup job finished with errors.', [
-                'type' => $this->type,
-                'destination' => $this->destination,
-                'exit_code' => $exitCode,
-                'output' => $output,
-            ]);
+
+            return;
         }
+
+        Log::error('Backup job finished with errors.', [
+            'type' => 'database',
+            'destination' => 'local',
+            'exit_code' => $exitCode,
+            'output' => $output,
+        ]);
     }
 
     public function failed(?Throwable $exception): void
     {
         Log::error('Backup job failed.', [
-            'type' => $this->type,
-            'destination' => $this->destination,
+            'type' => 'database',
+            'destination' => 'local',
             'exception' => $exception?->getMessage(),
         ]);
     }

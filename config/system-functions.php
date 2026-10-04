@@ -4,6 +4,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | PHP CLI binary for spawned Artisan processes
+    |--------------------------------------------------------------------------
+    |
+    | When the app runs under CGI/FPM, PHP_BINARY is not usable for Artisan.
+    | Set SYSTEM_PHP_BINARY to a CLI php executable when auto-detection fails.
+    |
+    */
+
+    'php_binary' => env('SYSTEM_PHP_BINARY'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Whitelisted Artisan commands
     |--------------------------------------------------------------------------
     |

@@ -38,8 +38,8 @@ class ProjectUpdater
             }
         }
 
-        $migrateExit = $this->runner->runProcess(
-            [PHP_BINARY, base_path('artisan'), 'migrate', '--force'],
+        $migrateExit = $this->runner->artisan(
+            ['migrate', '--force'],
             $onOutput,
             'php artisan migrate --force',
         );
@@ -51,8 +51,8 @@ class ProjectUpdater
         }
 
         foreach (['cache:clear', 'route:clear', 'view:clear', 'config:clear'] as $command) {
-            $exitCode = $this->runner->runProcess(
-                [PHP_BINARY, base_path('artisan'), $command],
+            $exitCode = $this->runner->artisan(
+                [$command],
                 $onOutput,
                 'php artisan '.$command,
             );
@@ -78,8 +78,8 @@ class ProjectUpdater
             }
         }
 
-        $queueExit = $this->runner->runProcess(
-            [PHP_BINARY, base_path('artisan'), 'queue:restart'],
+        $queueExit = $this->runner->artisan(
+            ['queue:restart'],
             $onOutput,
             'php artisan queue:restart',
         );
