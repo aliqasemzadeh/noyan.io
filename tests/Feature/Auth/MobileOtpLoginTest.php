@@ -117,8 +117,12 @@ class MobileOtpLoginTest extends TestCase
 
         $this->actingAs($user)
             ->get(route('dashboard'))
+            ->assertRedirect('/system');
+
+        $this->actingAs($user)
+            ->get('/system')
             ->assertOk()
-            ->assertSeeLivewire('pages::dashboard.index');
+            ->assertSeeLivewire('pages::panel.administrator.dashboard.index');
     }
 
     public function test_otp_step_displays_masked_mobile_number(): void
