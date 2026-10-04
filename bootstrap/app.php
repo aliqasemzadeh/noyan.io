@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\EnsureBusinessIsSelectedMiddleware;
+use App\Http\Middleware\SetLocale;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -18,6 +19,9 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->trustProxies(at: '*');
         $middleware->redirectGuestsTo(fn () => route('login'));
         $middleware->redirectUsersTo(fn () => route('dashboard'));
+        $middleware->web(append: [
+            SetLocale::class,
+        ]);
         $middleware->alias([
             'business.selected' => EnsureBusinessIsSelectedMiddleware::class,
         ]);
