@@ -15,6 +15,8 @@ new class extends Component
     #[On('panels.administrator.user.edit.assign-data')]
     public function assignData(User $user): void
     {
+        abort_unless(auth()->user()?->can('user_edit'), 403);
+
         $this->user = $user;
         $this->form->setModel($user);
         $this->resetValidation();
@@ -24,6 +26,8 @@ new class extends Component
 
     public function save(): void
     {
+        abort_unless(auth()->user()?->can('user_edit'), 403);
+
         $this->form->update();
 
         $this->dispatch('panels.administrator.user.index.table');

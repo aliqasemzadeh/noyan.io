@@ -10,6 +10,8 @@ new class extends Component
 
     public function save(): void
     {
+        abort_unless(auth()->user()?->can('user_create'), 403);
+
         $user = $this->form->store();
 
         $this->dispatch('panels.administrator.user.index.table');
