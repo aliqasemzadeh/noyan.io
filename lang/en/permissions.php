@@ -29,5 +29,7 @@ return [
         'category_edit' => 'Edit system category',
         'category_delete' => 'Delete system category',
         'function_view' => 'Manage system functions',
+        'backup_view' => 'Manage system backups',
+        'setting_view' => 'View system settings',
     ],
 ];
