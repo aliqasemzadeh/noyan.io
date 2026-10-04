@@ -28,5 +28,6 @@ return [
         'category_create' => 'Create system category',
         'category_edit' => 'Edit system category',
         'category_delete' => 'Delete system category',
+        'function_view' => 'Manage system functions',
     ],
 ];

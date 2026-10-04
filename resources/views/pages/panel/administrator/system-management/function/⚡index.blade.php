@@ -43,14 +43,11 @@ new class extends Component
             if ($exitCode === 0) {
                 Flux::toast(__('general.artisan_command_succeeded', ['command' => $command]));
             } else {
-                Flux::toast(
-                    variant: 'danger',
-                    text: __('general.artisan_command_failed', ['command' => $command]),
-                );
+                Flux::toast(__('general.artisan_command_failed', ['command' => $command]), variant: 'danger');
             }
         } catch (DisallowedArtisanCommandException $exception) {
             $this->appendOutput($exception->getMessage().PHP_EOL);
-            Flux::toast(variant: 'danger', text: $exception->getMessage());
+            Flux::toast($exception->getMessage(), variant: 'danger');
         } finally {
             $this->isRunning = false;
         }
@@ -86,7 +83,7 @@ new class extends Component
             if ($exitCode === 0) {
                 Flux::toast(__('general.system_update_finished'));
             } else {
-                Flux::toast(variant: 'danger', text: __('general.system_update_failed'));
+                Flux::toast(__('general.system_update_failed'), variant: 'danger');
             }
         } finally {
             $this->isRunning = false;

@@ -63,6 +63,10 @@ Route::middleware('auth')->group(function () {
         Route::livewire('/categories', 'pages::panel.administrator.category.index')
             ->middleware('permission:category_view')
             ->name('categories.index');
+
+        Route::livewire('/functions', 'pages::panel.administrator.system-management.function.index')
+            ->middleware('permission:function_view')
+            ->name('functions.index');
     });
 
     Route::prefix('user')->name('user.')->group(function () {

@@ -4,7 +4,6 @@ namespace App\Services\System;
 
 use App\Exceptions\System\DisallowedArtisanCommandException;
 use Closure;
-use Illuminate\Process\InvokedProcess;
 use Illuminate\Support\Facades\Process;
 
 class SystemCommandRunner
@@ -66,7 +65,7 @@ class SystemCommandRunner
     /**
      * @param  Closure(string): void  $onOutput
      */
-    protected function drain(InvokedProcess $process, Closure $onOutput): int
+    protected function drain(object $process, Closure $onOutput): int
     {
         while ($process->running()) {
             $this->flushLatest($process, $onOutput);
@@ -85,7 +84,7 @@ class SystemCommandRunner
     /**
      * @param  Closure(string): void  $onOutput
      */
-    protected function flushLatest(InvokedProcess $process, Closure $onOutput): void
+    protected function flushLatest(object $process, Closure $onOutput): void
     {
         $output = $process->latestOutput();
         $error = $process->latestErrorOutput();

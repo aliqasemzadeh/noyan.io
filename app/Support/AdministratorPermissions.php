@@ -45,6 +45,7 @@ class AdministratorPermissions
             'business' => __('general.businesses'),
             'currency' => __('general.currencies'),
             'category' => __('general.system_categories'),
+            'function' => __('general.system_functions'),
             default => ucfirst($group),
         };
     }
