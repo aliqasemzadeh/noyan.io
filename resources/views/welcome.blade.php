@@ -100,8 +100,42 @@
                         @endif
                     </flux:navbar>
 
-                    {{-- Mobile overflow menu --}}
-                    <div class="sm:hidden">
+                    {{-- Mobile: theme + overflow menu --}}
+                    <div
+                        class="flex items-center gap-1 sm:hidden"
+                        x-data="{
+                            dark: document.documentElement.classList.contains('dark'),
+                            toggle() {
+                                this.dark = ! this.dark;
+                                window.Flux.applyAppearance(this.dark ? 'dark' : 'light');
+                            },
+                        }"
+                        x-init="
+                            dark = document.documentElement.classList.contains('dark');
+                            new MutationObserver(() => { dark = document.documentElement.classList.contains('dark') }).observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+                        "
+                    >
+                        <flux:tooltip content="{{ __('general.toggle_theme') }}">
+                            <flux:button
+                                size="sm"
+                                variant="ghost"
+                                class="relative"
+                                x-on:click="toggle()"
+                                x-bind:aria-label="dark ? '{{ __('general.theme_light') }}' : '{{ __('general.theme_dark') }}'"
+                            >
+                                <span class="relative block size-5">
+                                    <flux:icon.sun
+                                        class="absolute inset-0 size-5 transition-opacity duration-300"
+                                        x-bind:class="dark ? 'opacity-0' : 'opacity-100'"
+                                    />
+                                    <flux:icon.moon
+                                        class="absolute inset-0 size-5 transition-opacity duration-300"
+                                        x-bind:class="dark ? 'opacity-100' : 'opacity-0'"
+                                    />
+                                </span>
+                            </flux:button>
+                        </flux:tooltip>
+
                         <flux:dropdown>
                             <flux:button size="sm" variant="ghost" icon="bars-3" />
                             <flux:menu>
