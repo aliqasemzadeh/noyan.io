@@ -158,15 +158,18 @@ class extends Component
         <form wire:submit="sendCode" class="space-y-4">
             <flux:field>
                 <flux:label>{{ __('general.mobile') }}</flux:label>
-                <flux:input
-                    wire:model="mobile"
-                    type="tel"
-                    inputmode="numeric"
-                    maxlength="11"
-                    placeholder="{{ __('general.mobile_placeholder') }}"
-                    clearable
-                    autocomplete="tel"
-                />
+                <div dir="rtl">
+                    <flux:input
+                        wire:model="mobile"
+                        type="tel"
+                        inputmode="numeric"
+                        maxlength="11"
+                        placeholder="{{ __('general.mobile_placeholder') }}"
+                        clearable
+                        dir="ltr"
+                        autocomplete="tel"
+                    />
+                </div>
                 <flux:error name="mobile" />
             </flux:field>
 
@@ -229,7 +232,7 @@ class extends Component
             <div class="space-y-2 text-center">
                 <flux:text>{{ __('general.otp_hint') }}</flux:text>
                 <div class="flex items-center justify-center gap-2">
-                    <flux:text class="font-medium tracking-wider">{{ $this->maskedMobile }}</flux:text>
+                    <flux:text class="font-medium tracking-wider" dir="ltr">{{ $this->maskedMobile }}</flux:text>
                     <flux:tooltip content="{{ __('general.edit') }}">
                         <flux:button
                             type="button"
@@ -246,6 +249,7 @@ class extends Component
             <flux:otp
                 wire:model="code"
                 length="6"
+                dir="ltr"
                 label="{{ __('general.otp_code') }}"
                 label:sr-only
                 :error:icon="false"

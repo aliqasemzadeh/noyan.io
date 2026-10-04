@@ -28,5 +28,6 @@ return [
         'category_create' => 'ایجاد دسته‌بندی سیستم',
         'category_edit' => 'ویرایش دسته‌بندی سیستم',
         'category_delete' => 'حذف دسته‌بندی سیستم',
+        'function_view' => 'مدیریت توابع سیستم',
     ],
 ];

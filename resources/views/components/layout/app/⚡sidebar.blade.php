@@ -92,6 +92,25 @@ new class extends Component
                     {{ __('general.system_categories') }}
                 </flux:sidebar.item>
             @endcan
+
+            @can('function_view')
+                <flux:sidebar.group
+                    expandable
+                    :expanded="request()->routeIs('system.functions.*')"
+                    icon="wrench"
+                    heading="{{ __('general.system_tools') }}"
+                    class="grid"
+                >
+                    <flux:sidebar.item
+                        icon="terminal"
+                        :href="route('system.functions.index')"
+                        wire:navigate
+                        :current="request()->routeIs('system.functions.*')"
+                    >
+                        {{ __('general.system_functions') }}
+                    </flux:sidebar.item>
+                </flux:sidebar.group>
+            @endcan
         @elseif (request()->routeIs('user.*'))
             <flux:sidebar.item
                 icon="home"
