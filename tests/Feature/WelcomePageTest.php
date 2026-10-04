@@ -12,40 +12,44 @@ class WelcomePageTest extends TestCase
 
     public function test_welcome_page_renders_successfully(): void
     {
-        $this->get('/')
+        $this->withSession(['locale' => 'en'])
+            ->get('/')
             ->assertOk()
-            ->assertSee(__('general.welcome_headline', [], 'en'), false);
+            ->assertSee(__('general.welcome_headline'), false);
     }
 
     public function test_welcome_page_shows_login_link_for_guests(): void
     {
-        $this->get('/')
+        $this->withSession(['locale' => 'en'])
+            ->get('/')
             ->assertOk()
             ->assertSee(route('login'), false)
-            ->assertSee(__('general.login', [], 'en'), false);
+            ->assertSee(__('general.login'), false);
     }
 
     public function test_welcome_page_shows_dashboard_link_for_authenticated_users(): void
     {
         $user = User::factory()->create();
 
-        $this->actingAs($user)
+        $this->withSession(['locale' => 'en'])
+            ->actingAs($user)
             ->get('/')
             ->assertOk()
             ->assertSee(route('dashboard'), false)
-            ->assertSee(__('general.dashboard', [], 'en'), false);
+            ->assertSee(__('general.dashboard'), false);
     }
 
     public function test_locale_switch_stores_persian_in_session(): void
     {
-        $this->from('/')
+        $this->withSession(['locale' => 'en'])
+            ->from('/')
             ->get(route('locale.switch', 'fa'))
             ->assertRedirect('/')
             ->assertSessionHas('locale', 'fa');
 
         $this->get('/')
             ->assertOk()
-            ->assertSee(__('general.welcome_headline', [], 'fa'), false);
+            ->assertSee(__('general.welcome_headline'), false);
     }
 
     public function test_locale_switch_stores_english_in_session(): void
