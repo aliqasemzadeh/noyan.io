@@ -67,6 +67,14 @@ Route::middleware('auth')->group(function () {
         Route::livewire('/functions', 'pages::panel.administrator.system-management.function.index')
             ->middleware('permission:function_view')
             ->name('functions.index');
+
+        Route::livewire('/backups', 'pages::panel.administrator.system-management.backup.index')
+            ->middleware('permission:backup_view')
+            ->name('backups.index');
+
+        Route::livewire('/settings', 'pages::panel.administrator.system-management.setting.index')
+            ->middleware('permission:setting_view')
+            ->name('settings.index');
     });
 
     Route::prefix('user')->name('user.')->group(function () {

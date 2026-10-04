@@ -29,5 +29,7 @@ return [
         'category_edit' => 'ویرایش دسته‌بندی سیستم',
         'category_delete' => 'حذف دسته‌بندی سیستم',
         'function_view' => 'مدیریت توابع سیستم',
+        'backup_view' => 'مدیریت پشتیبان‌گیری',
+        'setting_view' => 'مشاهده تنظیمات سیستم',
     ],
 ];
