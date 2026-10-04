@@ -29,7 +29,6 @@ return new class extends Migration
 
             $table->index('code');
             $table->index('type');
-            $table->index('business_id');
             $table->index(['is_system', 'is_active']);
             $table->unique(['business_id', 'code']);
         });
