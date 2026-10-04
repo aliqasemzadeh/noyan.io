@@ -14,7 +14,7 @@
         <flux:sidebar sticky collapsible class="bg-zinc-50 dark:bg-zinc-900">
             <flux:sidebar.header>
                 <flux:sidebar.brand
-                    :href="route('system.dashboard')"
+                    :href="route('dashboard')"
                     wire:navigate
                     :name="__('general.app_name')"
                 />

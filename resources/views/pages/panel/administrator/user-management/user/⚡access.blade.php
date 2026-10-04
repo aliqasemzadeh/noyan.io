@@ -114,7 +114,7 @@ new class extends Component
 <div class="space-y-6">
     <div>
         <flux:breadcrumbs>
-            <flux:breadcrumbs.item :href="route('dashboard')" wire:navigate>
+            <flux:breadcrumbs.item :href="route('system.dashboard')" wire:navigate>
                 {{ __('general.dashboard') }}
             </flux:breadcrumbs.item>
             <flux:breadcrumbs.item>

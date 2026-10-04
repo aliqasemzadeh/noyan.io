@@ -73,6 +73,11 @@ return [
             'icon' => 'link',
             'color' => 'teal',
         ],
+        'permissions:sync' => [
+            'label' => 'general.cmd_permissions_sync',
+            'icon' => 'shield-check',
+            'color' => 'emerald',
+        ],
     ],
 
 ];

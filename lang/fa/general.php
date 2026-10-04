@@ -86,10 +86,10 @@ return [
     'access_role_users' => 'کاربران دارای این نقش',
     'access_permission_users' => 'کاربران دارای این مجوز',
     'panels' => 'پنل‌ها',
-    'system_management' => 'مدیریت سیستم',
+    'system_management' => 'سیستم مدیریت',
     'user_settings' => 'تنظیمات کاربری',
     'accounting' => 'حسابداری',
-    'system_dashboard_placeholder' => 'داشبورد مدیریت سیستم. مدیریت کاربران، کسب‌وکارها و تنظیمات کلی به‌زودی اینجا فعال می‌شود.',
+    'system_dashboard_placeholder' => 'داشبورد سیستم مدیریت. مدیریت کاربران، کسب‌وکارها و تنظیمات کلی به‌زودی اینجا فعال می‌شود.',
     'user_dashboard_placeholder' => 'داشبورد تنظیمات کاربری. تنظیمات امنیتی و پروفایل به‌زودی اینجا فعال می‌شود.',
     'accounting_dashboard_placeholder' => 'داشبورد حسابداری. عملیات حسابداری هر کسب‌وکار به‌زودی اینجا فعال می‌شود.',
     'accounting_ai_title' => 'دستیار هوشمند حسابداری',
@@ -801,4 +801,5 @@ return [
     'cmd_view_cache' => 'کش ویوها',
     'cmd_queue_restart' => 'ریستارت صف',
     'cmd_storage_link' => 'لینک استوریج',
+    'cmd_permissions_sync' => 'به‌روزرسانی مجوزهای مدیر',
 ];
