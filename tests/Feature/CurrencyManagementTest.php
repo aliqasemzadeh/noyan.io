@@ -7,10 +7,12 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
+use Tests\Concerns\GrantsAdministratorAccess;
 use Tests\TestCase;
 
 class CurrencyManagementTest extends TestCase
 {
+    use GrantsAdministratorAccess;
     use RefreshDatabase;
 
     public function test_admin_can_create_currency(): void
@@ -76,7 +78,7 @@ class CurrencyManagementTest extends TestCase
 
     public function test_currencies_index_page_is_accessible(): void
     {
-        $admin = User::factory()->create();
+        $admin = $this->grantAdministratorAccess(User::factory()->create());
         Currency::factory()->create(['code' => 'IRR', 'name' => 'Iranian Rial']);
 
         $this->actingAs($admin)

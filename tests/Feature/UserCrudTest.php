@@ -5,15 +5,17 @@ namespace Tests\Feature;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
+use Tests\Concerns\GrantsAdministratorAccess;
 use Tests\TestCase;
 
 class UserCrudTest extends TestCase
 {
+    use GrantsAdministratorAccess;
     use RefreshDatabase;
 
     public function test_user_can_be_created_via_create_component(): void
     {
-        $viewer = User::factory()->create();
+        $viewer = $this->grantAdministratorAccess(User::factory()->create());
 
         Livewire::actingAs($viewer)
             ->test('user.create')
@@ -29,7 +31,7 @@ class UserCrudTest extends TestCase
 
     public function test_create_user_validates_mobile_format(): void
     {
-        $viewer = User::factory()->create();
+        $viewer = $this->grantAdministratorAccess(User::factory()->create());
 
         Livewire::actingAs($viewer)
             ->test('user.create')
@@ -40,7 +42,7 @@ class UserCrudTest extends TestCase
 
     public function test_create_user_validates_unique_mobile(): void
     {
-        $viewer = User::factory()->create();
+        $viewer = $this->grantAdministratorAccess(User::factory()->create());
         User::factory()->create(['mobile' => '09123456789']);
 
         Livewire::actingAs($viewer)
@@ -52,7 +54,7 @@ class UserCrudTest extends TestCase
 
     public function test_user_can_be_edited_via_edit_component(): void
     {
-        $viewer = User::factory()->create();
+        $viewer = $this->grantAdministratorAccess(User::factory()->create());
         $targetUser = User::factory()->create(['mobile' => '09121111111']);
 
         Livewire::actingAs($viewer)
@@ -72,7 +74,7 @@ class UserCrudTest extends TestCase
 
     public function test_edit_user_allows_keeping_same_mobile(): void
     {
-        $viewer = User::factory()->create();
+        $viewer = $this->grantAdministratorAccess(User::factory()->create());
         $targetUser = User::factory()->create(['mobile' => '09121111111']);
 
         Livewire::actingAs($viewer)
@@ -90,7 +92,7 @@ class UserCrudTest extends TestCase
 
     public function test_edit_user_validates_unique_mobile_against_other_users(): void
     {
-        $viewer = User::factory()->create();
+        $viewer = $this->grantAdministratorAccess(User::factory()->create());
         $userA = User::factory()->create(['mobile' => '09121111111']);
         User::factory()->create(['mobile' => '09122222222']);
 
@@ -104,7 +106,7 @@ class UserCrudTest extends TestCase
 
     public function test_user_can_be_deleted_via_delete_component(): void
     {
-        $viewer = User::factory()->create();
+        $viewer = $this->grantAdministratorAccess(User::factory()->create());
         $targetUser = User::factory()->create(['mobile' => '09123333333']);
 
         Livewire::actingAs($viewer)
@@ -121,7 +123,7 @@ class UserCrudTest extends TestCase
 
     public function test_users_index_page_contains_crud_elements(): void
     {
-        $viewer = User::factory()->create(['mobile' => '09121111111']);
+        $viewer = $this->grantAdministratorAccess(User::factory()->create(['mobile' => '09121111111']));
         $listed = User::factory()->create(['mobile' => '09171234567']);
 
         $this->actingAs($viewer)

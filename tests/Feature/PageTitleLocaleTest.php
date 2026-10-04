@@ -5,17 +5,19 @@ namespace Tests\Feature;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\App;
+use Tests\Concerns\GrantsAdministratorAccess;
 use Tests\TestCase;
 
 class PageTitleLocaleTest extends TestCase
 {
+    use GrantsAdministratorAccess;
     use RefreshDatabase;
 
     public function test_system_dashboard_title_uses_persian_page_and_site_name(): void
     {
         App::setLocale('fa');
 
-        $user = User::factory()->create();
+        $user = $this->grantAdministratorAccess(User::factory()->create());
 
         $this->actingAs($user)
             ->get(route('system.dashboard'))
@@ -27,7 +29,7 @@ class PageTitleLocaleTest extends TestCase
     {
         App::setLocale('en');
 
-        $user = User::factory()->create();
+        $user = $this->grantAdministratorAccess(User::factory()->create());
 
         $this->actingAs($user)
             ->get(route('system.dashboard'))

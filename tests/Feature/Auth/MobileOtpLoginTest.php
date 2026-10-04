@@ -7,10 +7,12 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
 use Livewire\Livewire;
+use Tests\Concerns\GrantsAdministratorAccess;
 use Tests\TestCase;
 
 class MobileOtpLoginTest extends TestCase
 {
+    use GrantsAdministratorAccess;
     use RefreshDatabase;
 
     public function test_login_page_renders(): void
@@ -113,7 +115,7 @@ class MobileOtpLoginTest extends TestCase
 
     public function test_authenticated_user_can_view_dashboard(): void
     {
-        $user = User::factory()->create();
+        $user = $this->grantAdministratorAccess(User::factory()->create());
 
         $this->actingAs($user)
             ->get(route('dashboard'))
