@@ -15,6 +15,16 @@ class LocaleDate
         return ($locale ?? app()->getLocale()) === 'fa';
     }
 
+    public static function isRtl(?string $locale = null): bool
+    {
+        return ($locale ?? app()->getLocale()) === 'fa';
+    }
+
+    public static function direction(?string $locale = null): string
+    {
+        return self::isRtl($locale) ? 'rtl' : 'ltr';
+    }
+
     public static function formatDate(DateTimeInterface|string|null $date, ?string $locale = null): string
     {
         if ($date === null || $date === '') {
