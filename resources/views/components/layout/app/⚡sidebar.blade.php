@@ -22,6 +22,49 @@ new class extends Component
                 </flux:sidebar.item>
             @endcan
 
+            @if (auth()->user()?->can('function_view') || auth()->user()?->can('backup_view') || auth()->user()?->can('setting_view'))
+                <flux:sidebar.group
+                    expandable
+                    :expanded="request()->routeIs('system.functions.*') || request()->routeIs('system.backups.*') || request()->routeIs('system.settings.*')"
+                    icon="wrench"
+                    heading="{{ __('general.system_tools') }}"
+                    class="grid"
+                >
+                    @can('function_view')
+                        <flux:sidebar.item
+                            icon="terminal"
+                            :href="route('system.functions.index')"
+                            wire:navigate
+                            :current="request()->routeIs('system.functions.*')"
+                        >
+                            {{ __('general.system_functions') }}
+                        </flux:sidebar.item>
+                    @endcan
+
+                    @can('backup_view')
+                        <flux:sidebar.item
+                            icon="database"
+                            :href="route('system.backups.index')"
+                            wire:navigate
+                            :current="request()->routeIs('system.backups.*')"
+                        >
+                            {{ __('general.system_backups') }}
+                        </flux:sidebar.item>
+                    @endcan
+
+                    @can('setting_view')
+                        <flux:sidebar.item
+                            icon="settings"
+                            :href="route('system.settings.index')"
+                            wire:navigate
+                            :current="request()->routeIs('system.settings.*')"
+                        >
+                            {{ __('general.system_settings') }}
+                        </flux:sidebar.item>
+                    @endcan
+                </flux:sidebar.group>
+            @endif
+
             <flux:sidebar.group
                 expandable
                 :expanded="request()->routeIs('system.users.*') || request()->routeIs('system.roles.*') || request()->routeIs('system.permissions.*')"
@@ -91,25 +134,6 @@ new class extends Component
                 >
                     {{ __('general.system_categories') }}
                 </flux:sidebar.item>
-            @endcan
-
-            @can('function_view')
-                <flux:sidebar.group
-                    expandable
-                    :expanded="request()->routeIs('system.functions.*')"
-                    icon="wrench"
-                    heading="{{ __('general.system_tools') }}"
-                    class="grid"
-                >
-                    <flux:sidebar.item
-                        icon="terminal"
-                        :href="route('system.functions.index')"
-                        wire:navigate
-                        :current="request()->routeIs('system.functions.*')"
-                    >
-                        {{ __('general.system_functions') }}
-                    </flux:sidebar.item>
-                </flux:sidebar.group>
             @endcan
         @elseif (request()->routeIs('user.*'))
             <flux:sidebar.item

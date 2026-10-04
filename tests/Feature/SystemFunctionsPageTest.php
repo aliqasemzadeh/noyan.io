@@ -41,8 +41,8 @@ class SystemFunctionsPageTest extends TestCase
             ->assertSee(__('general.system_functions'))
             ->assertSee(__('general.quick_update'))
             ->assertSee(__('general.full_update'))
-            ->assertSee(__('general.cmd_cache_clear'))
-            ->assertSee(__('general.cmd_permissions_sync'));
+            ->assertSee(__('general.command_run'))
+            ->assertSee(__('general.cmd_cache_clear'));
     }
 
     public function test_run_command_rejects_disallowed_artisan_command(): void
@@ -54,6 +54,27 @@ class SystemFunctionsPageTest extends TestCase
             ->call('runCommand', 'migrate:fresh')
             ->assertSet('isRunning', false)
             ->assertSee(__('general.artisan_command_not_allowed', ['command' => 'migrate:fresh']));
+    }
+
+    public function test_typed_command_executes_whitelisted_artisan_command(): void
+    {
+        Process::fake([
+            '*' => Process::result(output: 'Application cache cleared successfully.'),
+        ]);
+
+        $user = $this->grantAdministratorAccess(User::factory()->create());
+
+        Livewire::actingAs($user)
+            ->test('pages::panel.administrator.system-management.function.index')
+            ->set('commandLine', 'php artisan cache:clear')
+            ->call('runTypedCommand')
+            ->assertSet('isRunning', false)
+            ->assertSet('commandLine', '')
+            ->assertSee('cache:clear');
+
+        Process::assertRan(function ($process): bool {
+            return collect($process->command)->contains('cache:clear');
+        });
     }
 
     public function test_run_command_executes_whitelisted_artisan_command(): void
