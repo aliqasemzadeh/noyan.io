@@ -24,12 +24,45 @@ Route::middleware('auth')->group(function () {
     Route::redirect('/dashboard', '/system')->name('dashboard');
 
     Route::prefix('system')->name('system.')->group(function () {
-        Route::livewire('/', 'pages::panel.administrator.dashboard.index')->name('dashboard');
-        Route::livewire('/users', 'pages::panel.administrator.user.index')->name('users.index');
-        Route::livewire('/businesses', 'pages::panel.administrator.business.index')->name('businesses.index');
-        Route::livewire('/businesses/{business}/users', 'pages::panel.administrator.business.users')->name('businesses.users');
-        Route::livewire('/currencies', 'pages::panel.administrator.currency.index')->name('currencies.index');
-        Route::livewire('/categories', 'pages::panel.administrator.category.index')->name('categories.index');
+        Route::livewire('/', 'pages::panel.administrator.dashboard.index')
+            ->middleware('permission:dashboard_view')
+            ->name('dashboard');
+
+        Route::livewire('/users', 'pages::panel.administrator.user-management.user.index')
+            ->middleware('permission:user_view')
+            ->name('users.index');
+        Route::livewire('/users/{user}/access', 'pages::panel.administrator.user-management.user.access')
+            ->middleware('permission:user_access')
+            ->name('users.access');
+
+        Route::livewire('/roles', 'pages::panel.administrator.user-management.role.index')
+            ->middleware('permission:role_view')
+            ->name('roles.index');
+        Route::livewire('/roles/{role}/access', 'pages::panel.administrator.user-management.role.access')
+            ->middleware('permission:role_access')
+            ->name('roles.access');
+
+        Route::livewire('/permissions', 'pages::panel.administrator.user-management.permission.index')
+            ->middleware('permission:permission_view')
+            ->name('permissions.index');
+        Route::livewire('/permissions/{permission}/users', 'pages::panel.administrator.user-management.permission.users')
+            ->middleware('permission:permission_access')
+            ->name('permissions.users');
+
+        Route::livewire('/businesses', 'pages::panel.administrator.business.index')
+            ->middleware('permission:business_view')
+            ->name('businesses.index');
+        Route::livewire('/businesses/{business}/users', 'pages::panel.administrator.business.users')
+            ->middleware('permission:business_user_manage')
+            ->name('businesses.users');
+
+        Route::livewire('/currencies', 'pages::panel.administrator.currency.index')
+            ->middleware('permission:currency_view')
+            ->name('currencies.index');
+
+        Route::livewire('/categories', 'pages::panel.administrator.category.index')
+            ->middleware('permission:category_view')
+            ->name('categories.index');
     });
 
     Route::prefix('user')->name('user.')->group(function () {

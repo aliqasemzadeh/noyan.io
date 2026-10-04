@@ -1,0 +1,32 @@
+<?php
+
+return [
+    'administrator' => [
+        'dashboard_view' => 'View system dashboard',
+        'user_view' => 'View users',
+        'user_create' => 'Create user',
+        'user_edit' => 'Edit user',
+        'user_delete' => 'Delete user',
+        'user_access' => 'Manage user access',
+        'role_view' => 'View roles',
+        'role_create' => 'Create role',
+        'role_edit' => 'Edit role',
+        'role_delete' => 'Delete role',
+        'role_access' => 'Manage role access',
+        'permission_view' => 'View permissions',
+        'permission_access' => 'Assign permission to users',
+        'business_view' => 'View businesses',
+        'business_create' => 'Create business',
+        'business_edit' => 'Edit business',
+        'business_delete' => 'Delete business',
+        'business_user_manage' => 'Manage business users',
+        'currency_view' => 'View currencies',
+        'currency_create' => 'Create currency',
+        'currency_edit' => 'Edit currency',
+        'currency_delete' => 'Delete currency',
+        'category_view' => 'View system categories',
+        'category_create' => 'Create system category',
+        'category_edit' => 'Edit system category',
+        'category_delete' => 'Delete system category',
+    ],
+];
