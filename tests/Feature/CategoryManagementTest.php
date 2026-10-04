@@ -8,10 +8,12 @@ use App\Models\Category;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
+use Tests\Concerns\GrantsAdministratorAccess;
 use Tests\TestCase;
 
 class CategoryManagementTest extends TestCase
 {
+    use GrantsAdministratorAccess;
     use RefreshDatabase;
 
     public function test_admin_can_create_system_category(): void
@@ -154,7 +156,7 @@ class CategoryManagementTest extends TestCase
 
     public function test_system_categories_index_is_accessible(): void
     {
-        $admin = User::factory()->create();
+        $admin = $this->grantAdministratorAccess(User::factory()->create());
         Category::factory()->system()->expense()->create([
             'code' => 'rent',
             'name' => 'اجاره',

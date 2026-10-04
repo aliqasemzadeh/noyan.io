@@ -10,17 +10,19 @@ use Illuminate\Http\UploadedFile;
 use Laravel\Ai\Tools\Request;
 use Laravel\Ai\Transcription;
 use Livewire\Livewire;
+use Tests\Concerns\GrantsAdministratorAccess;
 use Tests\TestCase;
 
 class UsersIndexTest extends TestCase
 {
+    use GrantsAdministratorAccess;
     use RefreshDatabase;
 
     public function test_authenticated_user_can_view_users_page_with_list(): void
     {
-        $viewer = User::factory()->create([
+        $viewer = $this->grantAdministratorAccess(User::factory()->create([
             'mobile' => '09121111111',
-        ]);
+        ]));
         $listed = User::factory()->create([
             'mobile' => '09171234567',
         ]);
@@ -36,9 +38,9 @@ class UsersIndexTest extends TestCase
 
     public function test_users_list_can_be_searched_by_mobile(): void
     {
-        $viewer = User::factory()->create([
+        $viewer = $this->grantAdministratorAccess(User::factory()->create([
             'mobile' => '09121111111',
-        ]);
+        ]));
         $match = User::factory()->create([
             'mobile' => '09171234567',
         ]);
@@ -47,7 +49,7 @@ class UsersIndexTest extends TestCase
         ]);
 
         Livewire::actingAs($viewer)
-            ->test('pages::panel.administrator.user.index')
+            ->test('pages::panel.administrator.user-management.user.index')
             ->set('search', '0917')
             ->assertSee($match->mobile)
             ->assertDontSee($other->mobile);
@@ -55,10 +57,10 @@ class UsersIndexTest extends TestCase
 
     public function test_empty_prompt_is_rejected(): void
     {
-        $viewer = User::factory()->create();
+        $viewer = $this->grantAdministratorAccess(User::factory()->create());
 
         Livewire::actingAs($viewer)
-            ->test('pages::panel.administrator.user.index')
+            ->test('pages::panel.administrator.user-management.user.index')
             ->set('prompt', '')
             ->call('sendPrompt')
             ->assertHasErrors(['prompt']);
@@ -70,12 +72,12 @@ class UsersIndexTest extends TestCase
             __('general.user_created', ['mobile' => '09171234567']),
         ]);
 
-        $viewer = User::factory()->create([
+        $viewer = $this->grantAdministratorAccess(User::factory()->create([
             'mobile' => '09121111111',
-        ]);
+        ]));
 
         Livewire::actingAs($viewer)
-            ->test('pages::panel.administrator.user.index')
+            ->test('pages::panel.administrator.user-management.user.index')
             ->set('prompt', 'یک کاربر با شماره موبایل 09171234567 اضافه کن')
             ->call('sendPrompt')
             ->assertHasNoErrors()
@@ -95,9 +97,9 @@ class UsersIndexTest extends TestCase
             __('general.user_created', ['mobile' => '09171234567']),
         ]);
 
-        $viewer = User::factory()->create([
+        $viewer = $this->grantAdministratorAccess(User::factory()->create([
             'mobile' => '09121111111',
-        ]);
+        ]));
 
         $audio = UploadedFile::fake()->createWithContent(
             'voice.webm',
@@ -106,7 +108,7 @@ class UsersIndexTest extends TestCase
         );
 
         Livewire::actingAs($viewer)
-            ->test('pages::panel.administrator.user.index')
+            ->test('pages::panel.administrator.user-management.user.index')
             ->set('audio', $audio)
             ->call('sendPrompt')
             ->assertHasNoErrors()

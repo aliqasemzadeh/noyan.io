@@ -5,10 +5,12 @@ namespace Tests\Feature;
 use App\Models\Business;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\GrantsAdministratorAccess;
 use Tests\TestCase;
 
 class AuthenticatedLayoutTest extends TestCase
 {
+    use GrantsAdministratorAccess;
     use RefreshDatabase;
 
     public function test_guest_is_redirected_from_dashboard_to_login(): void
@@ -25,7 +27,7 @@ class AuthenticatedLayoutTest extends TestCase
 
     public function test_authenticated_user_can_view_dashboard_layout(): void
     {
-        $user = User::factory()->create();
+        $user = $this->grantAdministratorAccess(User::factory()->create());
 
         $this->actingAs($user)
             ->get(route('system.dashboard'))
@@ -38,7 +40,7 @@ class AuthenticatedLayoutTest extends TestCase
 
     public function test_authenticated_user_can_view_users_shell(): void
     {
-        $user = User::factory()->create();
+        $user = $this->grantAdministratorAccess(User::factory()->create());
 
         $this->actingAs($user)
             ->get(route('system.users.index'))
@@ -49,7 +51,7 @@ class AuthenticatedLayoutTest extends TestCase
 
     public function test_dashboard_shows_current_business_name(): void
     {
-        $user = User::factory()->create();
+        $user = $this->grantAdministratorAccess(User::factory()->create());
         $business = Business::factory()->for($user, 'owner')->create([
             'name' => 'Noyan Shop',
         ]);
