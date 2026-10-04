@@ -6,6 +6,16 @@ Route::get('/', function () {
     return view('welcome');
 });
 
+Route::get('/locale/{locale}', function (string $locale) {
+    if (! in_array($locale, ['en', 'fa'], true)) {
+        abort(404);
+    }
+
+    session(['locale' => $locale]);
+
+    return redirect()->back();
+})->name('locale.switch');
+
 Route::middleware('guest')->group(function () {
     Route::livewire('/login', 'pages::auth.login')->name('login');
 });
