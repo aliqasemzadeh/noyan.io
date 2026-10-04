@@ -208,6 +208,13 @@
                     </div>
                 </section>
 
+                {{-- Accounting AI intro --}}
+                <section class="border-t border-zinc-200/70 px-4 py-12 sm:px-6 sm:py-16">
+                    <div class="mx-auto w-full max-w-3xl">
+                        <livewire:accounting.ai-intro :key="'accounting-ai-intro'" />
+                    </div>
+                </section>
+
                 {{-- Feature pillars --}}
                 <section class="border-t border-zinc-200/70 bg-white/40 px-4 py-16 dark:border-zinc-800/70 dark:bg-zinc-950/40 sm:px-6">
                     <div class="mx-auto grid max-w-6xl gap-10 md:grid-cols-3 md:gap-8">

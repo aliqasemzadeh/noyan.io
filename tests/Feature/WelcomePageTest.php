@@ -18,6 +18,16 @@ class WelcomePageTest extends TestCase
             ->assertSee(__('general.welcome_headline'), false);
     }
 
+    public function test_welcome_page_shows_accounting_ai_intro(): void
+    {
+        $this->withSession(['locale' => 'en'])
+            ->get('/')
+            ->assertOk()
+            ->assertSee(__('general.accounting_ai_title'), false)
+            ->assertSee(__('general.accounting_ai_description'), false)
+            ->assertSee(__('general.accounting_ai_footer'), false);
+    }
+
     public function test_welcome_page_shows_login_link_for_guests(): void
     {
         $this->withSession(['locale' => 'en'])
