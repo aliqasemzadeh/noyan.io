@@ -26,6 +26,8 @@ new class extends Component
 
     public string $search = '';
 
+    public bool $isTranscribing = false;
+
     /** @var TemporaryUploadedFile|null */
     public $audio = null;
 
@@ -34,57 +36,68 @@ new class extends Component
         $this->resetPage();
     }
 
-    public function removeAudio(): void
+    public function updatedAudio(): void
     {
+        if ($this->audio === null) {
+            return;
+        }
+
+        $this->validate([
+            'audio' => [
+                'required',
+                'file',
+                'max:10240',
+                'mimes:mp3,mpeg,wav,webm,ogg,oga,m4a,mp4,aac',
+            ],
+        ], attributes: [
+            'audio' => __('general.ai_voice'),
+        ]);
+
+        $this->isTranscribing = true;
+
+        try {
+            $transcript = trim((string) Transcription::of(
+                Base64Audio::fromUpload($this->audio, $this->resolveAudioMimeType($this->audio)),
+            )
+                ->language('fa')
+                ->timeout(120)
+                ->generate(Lab::Gemini, 'gemini-3.1-flash-lite'));
+        } catch (\Throwable $exception) {
+            report($exception);
+
+            $this->isTranscribing = false;
+            $this->reset('audio');
+
+            Flux::toast(__('general.ai_voice_error'), variant: 'danger');
+
+            return;
+        }
+
+        $this->isTranscribing = false;
         $this->reset('audio');
+
+        if ($transcript === '') {
+            Flux::toast(__('general.ai_voice_empty'), variant: 'warning');
+
+            return;
+        }
+
+        $this->prompt = trim($this->prompt) !== ''
+            ? trim($this->prompt)."\n".$transcript
+            : $transcript;
+
+        Flux::toast(__('general.ai_voice_ready'));
     }
 
     public function sendPrompt(): void
     {
         $this->validate([
-            'prompt' => ['nullable', 'string', 'max:500', 'required_without:audio'],
-            'audio' => [
-                'nullable',
-                'file',
-                'max:10240',
-                'required_without:prompt',
-                'mimes:mp3,mpeg,wav,webm,ogg,oga,m4a,mp4,aac',
-            ],
+            'prompt' => ['required', 'string', 'max:500'],
         ], attributes: [
             'prompt' => __('general.ai_prompt'),
-            'audio' => __('general.ai_voice'),
         ]);
 
         $promptText = trim($this->prompt);
-
-        if ($this->audio !== null) {
-            try {
-                $transcript = trim((string) Transcription::of(
-                    Base64Audio::fromUpload($this->audio, $this->resolveAudioMimeType($this->audio)),
-                )
-                    ->language('fa')
-                    ->timeout(120)
-                    ->generate(Lab::Gemini, 'gemini-3.1-flash-lite'));
-            } catch (\Throwable $exception) {
-                report($exception);
-
-                Flux::toast(__('general.ai_voice_error'), variant: 'danger');
-
-                return;
-            }
-
-            if ($transcript === '') {
-                Flux::toast(__('general.ai_voice_empty'), variant: 'warning');
-
-                return;
-            }
-
-            $promptText = $promptText !== ''
-                ? $promptText."\n".$transcript
-                : $transcript;
-
-            $this->prompt = $promptText;
-        }
 
         try {
             $response = (new UserAssistant)->prompt($promptText);
@@ -198,130 +211,172 @@ new class extends Component
     <flux:separator variant="subtle" />
 
     <flux:card>
-        <form wire:submit="sendPrompt" class="space-y-4">
-            <flux:field>
-                <flux:label>{{ __('general.ai_prompt') }}</flux:label>
-                <flux:textarea
-                    wire:model="prompt"
-                    rows="3"
-                    placeholder="{{ __('general.ai_prompt_placeholder') }}"
-                />
-                <flux:error name="prompt" />
-            </flux:field>
+        <form
+            wire:submit="sendPrompt"
+            x-data="{
+                uploading: false,
+                progress: 0,
+                recording: false,
+                recorder: null,
+                chunks: [],
+                mimeType: 'audio/webm',
+                extension: 'webm',
+                pickMime() {
+                    const options = [
+                        { mime: 'audio/webm;codecs=opus', ext: 'webm' },
+                        { mime: 'audio/webm', ext: 'webm' },
+                        { mime: 'audio/ogg', ext: 'ogg' },
+                        { mime: 'audio/mp4', ext: 'm4a' },
+                    ]
 
-            <div
-                class="space-y-3"
-                x-data="{
-                    recording: false,
-                    recorder: null,
-                    chunks: [],
-                    mimeType: 'audio/webm',
-                    extension: 'webm',
-                    pickMime() {
-                        const options = [
-                            { mime: 'audio/webm;codecs=opus', ext: 'webm' },
-                            { mime: 'audio/webm', ext: 'webm' },
-                            { mime: 'audio/ogg', ext: 'ogg' },
-                            { mime: 'audio/mp4', ext: 'm4a' },
-                        ]
-
-                        for (const option of options) {
-                            if (window.MediaRecorder && MediaRecorder.isTypeSupported(option.mime)) {
-                                this.mimeType = option.mime
-                                this.extension = option.ext
-                                return
-                            }
-                        }
-                    },
-                    async toggle() {
-                        if (this.recording) {
-                            this.recorder?.stop()
-                            this.recording = false
+                    for (const option of options) {
+                        if (window.MediaRecorder && MediaRecorder.isTypeSupported(option.mime)) {
+                            this.mimeType = option.mime
+                            this.extension = option.ext
                             return
                         }
-
-                        try {
-                            this.pickMime()
-                            const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-                            this.chunks = []
-                            this.recorder = new MediaRecorder(stream, { mimeType: this.mimeType })
-
-                            this.recorder.ondataavailable = (event) => {
-                                if (event.data.size > 0) {
-                                    this.chunks.push(event.data)
-                                }
-                            }
-
-                            this.recorder.onstop = () => {
-                                stream.getTracks().forEach((track) => track.stop())
-                                const type = this.mimeType.split(';')[0]
-                                const blob = new Blob(this.chunks, { type })
-                                const file = new File([blob], `voice.${this.extension}`, { type })
-                                $wire.upload('audio', file)
-                            }
-
-                            this.recorder.start()
-                            this.recording = true
-                        } catch (error) {
-                            console.error(error)
-                        }
                     }
-                }"
+                },
+                async toggle() {
+                    if (this.recording) {
+                        this.recorder?.stop()
+                        this.recording = false
+                        return
+                    }
+
+                    try {
+                        this.pickMime()
+                        const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+                        this.chunks = []
+                        this.recorder = new MediaRecorder(stream, { mimeType: this.mimeType })
+
+                        this.recorder.ondataavailable = (event) => {
+                            if (event.data.size > 0) {
+                                this.chunks.push(event.data)
+                            }
+                        }
+
+                        this.recorder.onstop = () => {
+                            stream.getTracks().forEach((track) => track.stop())
+                            const type = this.mimeType.split(';')[0]
+                            const blob = new Blob(this.chunks, { type })
+                            const file = new File([blob], `voice.${this.extension}`, { type })
+
+                            this.uploading = true
+                            this.progress = 0
+
+                            $wire.upload(
+                                'audio',
+                                file,
+                                () => {
+                                    this.uploading = false
+                                    this.progress = 0
+                                },
+                                () => {
+                                    this.uploading = false
+                                    this.progress = 0
+                                },
+                                (event) => {
+                                    this.progress = event.detail.progress
+                                },
+                                () => {
+                                    this.uploading = false
+                                    this.progress = 0
+                                },
+                            )
+                        }
+
+                        this.recorder.start()
+                        this.recording = true
+                    } catch (error) {
+                        console.error(error)
+                    }
+                }
+            }"
+        >
+            <flux:composer
+                wire:model="prompt"
+                :label="__('general.ai_prompt')"
+                :description="__('general.ai_voice_hint')"
+                :placeholder="__('general.ai_prompt_placeholder')"
+                rows="3"
             >
-                <flux:field>
-                    <flux:label>{{ __('general.ai_voice') }}</flux:label>
-                    <flux:input
-                        type="file"
-                        wire:model="audio"
-                        accept="audio/*,.mp3,.wav,.webm,.ogg,.m4a"
-                    />
-                    <flux:description>{{ __('general.ai_voice_hint') }}</flux:description>
-                    <flux:error name="audio" />
-                </flux:field>
-
-                <div class="flex flex-wrap items-center gap-2">
-                    <flux:button
-                        type="button"
-                        variant="primary"
-                        color="rose"
-                        icon="mic"
-                        x-on:click="toggle"
-                        x-bind:aria-pressed="recording.toString()"
+                <x-slot name="header">
+                    <div
+                        x-show="uploading || $wire.isTranscribing"
+                        x-cloak
+                        class="space-y-1 px-1 pb-2"
                     >
-                        <span x-show="! recording">{{ __('general.ai_voice_record') }}</span>
-                        <span x-show="recording" x-cloak>{{ __('general.ai_voice_stop') }}</span>
-                    </flux:button>
+                        <flux:progress
+                            x-bind:value="uploading ? progress : 100"
+                            color="teal"
+                            class="h-1.5"
+                        />
+                        <flux:text class="text-xs">
+                            <span x-show="uploading">{{ __('general.ai_voice_uploading') }}</span>
+                            <span x-show="! uploading && $wire.isTranscribing">{{ __('general.ai_voice_transcribing') }}</span>
+                        </flux:text>
+                    </div>
+                </x-slot>
 
-                    @if ($audio)
-                        <flux:badge color="teal" size="sm">{{ $audio->getClientOriginalName() }}</flux:badge>
+                <x-slot name="actionsLeading">
+                    <input
+                        type="file"
+                        class="sr-only"
+                        x-ref="audioInput"
+                        accept="audio/*,.mp3,.wav,.webm,.ogg,.m4a"
+                        wire:model="audio"
+                        x-on:livewire-upload-start="uploading = true; progress = 0"
+                        x-on:livewire-upload-finish="uploading = false; progress = 0"
+                        x-on:livewire-upload-cancel="uploading = false; progress = 0"
+                        x-on:livewire-upload-error="uploading = false; progress = 0"
+                        x-on:livewire-upload-progress="progress = $event.detail.progress"
+                    />
+
+                    <flux:tooltip content="{{ __('general.ai_voice') }}">
                         <flux:button
                             type="button"
                             size="sm"
-                            variant="ghost"
-                            wire:click="removeAudio"
-                        >
-                            {{ __('general.ai_voice_remove') }}
-                        </flux:button>
-                    @endif
+                            variant="subtle"
+                            icon="paperclip"
+                            x-on:click="$refs.audioInput.click()"
+                            x-bind:disabled="uploading || recording || $wire.isTranscribing"
+                        />
+                    </flux:tooltip>
 
-                    <div wire:loading wire:target="audio">
-                        <flux:text class="text-sm">{{ __('general.ai_voice_uploading') }}</flux:text>
-                    </div>
-                </div>
-            </div>
+                    <flux:tooltip content="{{ __('general.ai_voice_record') }}">
+                        <flux:button
+                            type="button"
+                            size="sm"
+                            variant="subtle"
+                            icon="mic"
+                            x-on:click="toggle"
+                            x-bind:aria-pressed="recording.toString()"
+                            x-bind:disabled="uploading || $wire.isTranscribing"
+                            x-bind:class="recording ? 'text-rose-600!' : ''"
+                        />
+                    </flux:tooltip>
+                </x-slot>
 
-            <flux:button
-                type="submit"
-                variant="primary"
-                color="teal"
-                class="w-full"
-                icon="send"
-                wire:loading.attr="disabled"
-                wire:target="sendPrompt"
-            >
-                <span wire:loading.remove wire:target="sendPrompt">{{ __('general.send') }}</span>
-                <span wire:loading wire:target="sendPrompt">{{ __('general.ai_thinking') }}</span>
-            </flux:button>
+                <x-slot name="actionsTrailing">
+                    <flux:button
+                        type="submit"
+                        size="sm"
+                        variant="primary"
+                        color="teal"
+                        icon="send"
+                        wire:loading.attr="disabled"
+                        wire:target="sendPrompt"
+                        x-bind:disabled="uploading || recording || $wire.isTranscribing"
+                    >
+                        <span wire:loading.remove wire:target="sendPrompt">{{ __('general.send') }}</span>
+                        <span wire:loading wire:target="sendPrompt">{{ __('general.ai_thinking') }}</span>
+                    </flux:button>
+                </x-slot>
+            </flux:composer>
+
+            <flux:error name="prompt" />
+            <flux:error name="audio" />
         </form>
 
         @if ($assistantReply !== '')
