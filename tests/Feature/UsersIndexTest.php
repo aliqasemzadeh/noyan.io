@@ -87,7 +87,7 @@ class UsersIndexTest extends TestCase
         UserAssistant::assertPrompted('یک کاربر با شماره موبایل 09171234567 اضافه کن');
     }
 
-    public function test_send_prompt_with_audio_transcribes_then_prompts_agent(): void
+    public function test_audio_upload_transcribes_into_prompt_without_running_agent(): void
     {
         Transcription::fake([
             'یک کاربر با شماره موبایل 09171234567 اضافه کن',
@@ -110,17 +110,17 @@ class UsersIndexTest extends TestCase
         Livewire::actingAs($viewer)
             ->test('pages::panel.administrator.user-management.user.index')
             ->set('audio', $audio)
-            ->call('sendPrompt')
             ->assertHasNoErrors()
-            ->assertSet('assistantReply', __('general.user_created', ['mobile' => '09171234567']))
-            ->assertSet('prompt', '')
-            ->assertSet('audio', null);
+            ->assertSet('prompt', 'یک کاربر با شماره موبایل 09171234567 اضافه کن')
+            ->assertSet('audio', null)
+            ->assertSet('assistantReply', '')
+            ->assertSet('isTranscribing', false);
 
-        UserAssistant::assertPrompted('یک کاربر با شماره موبایل 09171234567 اضافه کن');
         Transcription::assertGenerated(fn () => true);
+        UserAssistant::assertNeverPrompted();
     }
 
-    public function test_send_prompt_accepts_recorded_m4a_audio(): void
+    public function test_recorded_m4a_transcribes_then_send_runs_agent(): void
     {
         Transcription::fake([
             'یک کاربر با شماره موبایل 09171234567 اضافه کن',
@@ -143,11 +143,13 @@ class UsersIndexTest extends TestCase
         Livewire::actingAs($viewer)
             ->test('pages::panel.administrator.user-management.user.index')
             ->set('audio', $audio)
+            ->assertHasNoErrors()
+            ->assertSet('prompt', 'یک کاربر با شماره موبایل 09171234567 اضافه کن')
+            ->assertSet('audio', null)
             ->call('sendPrompt')
             ->assertHasNoErrors()
             ->assertSet('assistantReply', __('general.user_created', ['mobile' => '09171234567']))
-            ->assertSet('prompt', '')
-            ->assertSet('audio', null);
+            ->assertSet('prompt', '');
 
         UserAssistant::assertPrompted('یک کاربر با شماره موبایل 09171234567 اضافه کن');
         Transcription::assertGenerated(fn () => true);

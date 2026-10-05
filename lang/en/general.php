@@ -146,6 +146,8 @@ return [
     'ai_voice_stop' => 'Stop recording',
     'ai_voice_remove' => 'Remove audio',
     'ai_voice_uploading' => 'Uploading audio...',
+    'ai_voice_transcribing' => 'Transcribing audio...',
+    'ai_voice_ready' => 'Audio transcribed. Edit if needed, then send.',
     'ai_voice_error' => 'Could not transcribe the audio.',
     'ai_voice_empty' => 'No text was detected from the audio.',
     'user_created' => 'User with mobile :mobile was created.',

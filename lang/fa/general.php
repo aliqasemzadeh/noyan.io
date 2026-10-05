@@ -146,6 +146,8 @@ return [
     'ai_voice_stop' => 'توقف ضبط',
     'ai_voice_remove' => 'حذف صوت',
     'ai_voice_uploading' => 'در حال آپلود صوت...',
+    'ai_voice_transcribing' => 'در حال تبدیل صوت به متن...',
+    'ai_voice_ready' => 'صوت به متن تبدیل شد؛ در صورت نیاز ویرایش کنید و ارسال کنید.',
     'ai_voice_error' => 'تبدیل صوت به متن ناموفق بود.',
     'ai_voice_empty' => 'از صوت متنی تشخیص داده نشد.',
     'user_created' => 'کاربر با شماره :mobile ثبت شد.',
