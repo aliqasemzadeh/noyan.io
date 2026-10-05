@@ -147,6 +147,8 @@ return [
     'ai_voice_remove' => 'Remove audio',
     'ai_voice_uploading' => 'Uploading audio...',
     'ai_voice_uploaded' => 'Audio file uploaded.',
+    'ai_voice_cancelled' => 'Audio file selection was cancelled.',
+    'ai_voice_mic_denied' => 'Microphone access is not available.',
     'ai_voice_transcribing' => 'Transcribing audio...',
     'ai_voice_ready' => 'Audio transcribed. Edit if needed, then send.',
     'ai_voice_error' => 'Could not transcribe the audio.',

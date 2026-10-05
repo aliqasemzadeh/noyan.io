@@ -82,10 +82,6 @@ new class extends Component
     <flux:separator variant="subtle" />
 
     <flux:card>
-        <livewire:ai.composer context="users" :key="'ai-composer-users'" />
-    </flux:card>
-
-    <flux:card>
         <div class="mb-4">
             <flux:input
                 wire:model.live.debounce.300ms="search"
