@@ -48,7 +48,7 @@ new class extends Component
                 'file',
                 'max:10240',
                 'required_without:prompt',
-                'mimetypes:audio/mpeg,audio/mp3,audio/wav,audio/x-wav,audio/webm,audio/ogg,audio/mp4,audio/x-m4a,audio/aac,video/webm,application/octet-stream',
+                'mimes:mp3,mpeg,wav,webm,ogg,oga,m4a,mp4,aac',
             ],
         ], attributes: [
             'prompt' => __('general.ai_prompt'),
@@ -131,8 +131,12 @@ new class extends Component
     {
         $clientMime = strtolower((string) $file->getClientMimeType());
 
-        if ($clientMime === 'video/webm') {
+        if (in_array($clientMime, ['video/webm'], true)) {
             return 'audio/webm';
+        }
+
+        if (in_array($clientMime, ['video/mp4', 'audio/m4a', 'audio/x-m4a'], true)) {
+            return 'audio/mp4';
         }
 
         if (
@@ -215,10 +219,10 @@ new class extends Component
                     extension: 'webm',
                     pickMime() {
                         const options = [
-                            { mime: 'audio/mp4', ext: 'm4a' },
-                            { mime: 'audio/ogg', ext: 'ogg' },
                             { mime: 'audio/webm;codecs=opus', ext: 'webm' },
                             { mime: 'audio/webm', ext: 'webm' },
+                            { mime: 'audio/ogg', ext: 'ogg' },
+                            { mime: 'audio/mp4', ext: 'm4a' },
                         ]
 
                         for (const option of options) {

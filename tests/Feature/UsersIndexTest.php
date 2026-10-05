@@ -120,6 +120,39 @@ class UsersIndexTest extends TestCase
         Transcription::assertGenerated(fn () => true);
     }
 
+    public function test_send_prompt_accepts_recorded_m4a_audio(): void
+    {
+        Transcription::fake([
+            'یک کاربر با شماره موبایل 09171234567 اضافه کن',
+        ]);
+
+        UserAssistant::fake([
+            __('general.user_created', ['mobile' => '09171234567']),
+        ]);
+
+        $viewer = $this->grantAdministratorAccess(User::factory()->create([
+            'mobile' => '09121111111',
+        ]));
+
+        $audio = UploadedFile::fake()->createWithContent(
+            'voice.m4a',
+            str_repeat('audio', 256),
+            'audio/mp4',
+        );
+
+        Livewire::actingAs($viewer)
+            ->test('pages::panel.administrator.user-management.user.index')
+            ->set('audio', $audio)
+            ->call('sendPrompt')
+            ->assertHasNoErrors()
+            ->assertSet('assistantReply', __('general.user_created', ['mobile' => '09171234567']))
+            ->assertSet('prompt', '')
+            ->assertSet('audio', null);
+
+        UserAssistant::assertPrompted('یک کاربر با شماره موبایل 09171234567 اضافه کن');
+        Transcription::assertGenerated(fn () => true);
+    }
+
     public function test_create_user_tool_creates_user_by_mobile(): void
     {
         $result = (string) (new CreateUser)->handle(new Request([
