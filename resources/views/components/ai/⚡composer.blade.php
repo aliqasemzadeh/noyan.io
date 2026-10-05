@@ -25,12 +25,21 @@ new class extends Component
 
     public bool $isTranscribing = false;
 
+    public bool $isRecording = false;
+
     /** @var TemporaryUploadedFile|null */
     public $audio = null;
 
     public function mount(string $context = 'accounting'): void
     {
         $this->context = $context;
+    }
+
+    public function notifyMicDenied(): void
+    {
+        $this->isRecording = false;
+
+        Flux::toast(__('general.ai_voice_mic_denied'), variant: 'danger');
     }
 
     public function updatedAudio(): void
@@ -55,7 +64,7 @@ new class extends Component
 
             Flux::toast($exception->validator->errors()->first('audio') ?: __('general.ai_voice_error'), variant: 'danger');
 
-            throw $exception;
+            return;
         }
 
         Flux::toast(__('general.ai_voice_uploaded'));
@@ -122,6 +131,7 @@ new class extends Component
 
         $this->assistantReply = $response->text ?: __('general.ai_reply_empty');
         $this->reset(['prompt', 'audio']);
+        $this->isRecording = false;
 
         if ($this->context === 'users') {
             $this->dispatch('panels.administrator.user.index.table');
@@ -175,11 +185,13 @@ new class extends Component
     x-data="{
         uploading: false,
         progress: 0,
-        recording: false,
         recorder: null,
+        mediaStream: null,
         chunks: [],
         mimeType: 'audio/webm',
         extension: 'webm',
+        recorderActive: false,
+        isRecording: @entangle('isRecording').live,
         pickMime() {
             const options = [
                 { mime: 'audio/webm;codecs=opus', ext: 'webm' },
@@ -196,41 +208,43 @@ new class extends Component
                 }
             }
         },
-        async pickAudio() {
-            if (this.uploading || this.recording || $wire.isTranscribing) {
+        pickAudioFile() {
+            if (this.uploading || this.recorderActive || $wire.isTranscribing) {
                 return
             }
 
-            this.uploading = true
-            this.progress = 0
-
-            try {
-                await $wire.$upload('audio', {
-                    accept: 'audio/*,.mp3,.wav,.webm,.ogg,.m4a',
-                })
-            } catch (error) {
-                console.error(error)
-            } finally {
-                this.uploading = false
-                this.progress = 0
-            }
+            this.$refs.audioInput?.click()
         },
-        async toggle() {
-            if (this.recording) {
-                this.recorder?.stop()
-                this.recording = false
+        queueAudioFile(file) {
+            const input = this.$refs.audioInput
+
+            if (! input || ! file) {
                 return
             }
 
-            if (this.uploading || $wire.isTranscribing) {
+            const dataTransfer = new DataTransfer()
+            dataTransfer.items.add(file)
+            input.files = dataTransfer.files
+            input.dispatchEvent(new Event('change', { bubbles: true }))
+        },
+        async startRecording() {
+            if (this.recorderActive || this.uploading || $wire.isTranscribing) {
                 return
             }
 
             try {
                 this.pickMime()
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+                this.mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true })
+
+                if (! this.isRecording) {
+                    this.mediaStream.getTracks().forEach((track) => track.stop())
+                    this.mediaStream = null
+
+                    return
+                }
+
                 this.chunks = []
-                this.recorder = new MediaRecorder(stream, { mimeType: this.mimeType })
+                this.recorder = new MediaRecorder(this.mediaStream, { mimeType: this.mimeType })
 
                 this.recorder.ondataavailable = (event) => {
                     if (event.data.size > 0) {
@@ -238,41 +252,65 @@ new class extends Component
                     }
                 }
 
-                this.recorder.onstop = async () => {
-                    stream.getTracks().forEach((track) => track.stop())
+                this.recorder.onstop = () => {
+                    this.mediaStream?.getTracks().forEach((track) => track.stop())
+                    this.mediaStream = null
+                    this.recorderActive = false
+
                     const type = this.mimeType.split(';')[0]
                     const blob = new Blob(this.chunks, { type })
                     const file = new File([blob], `voice.${this.extension}`, { type })
 
-                    this.uploading = true
-                    this.progress = 0
-
-                    try {
-                        await $wire.$upload('audio', file)
-                    } catch (error) {
-                        console.error(error)
-                    } finally {
-                        this.uploading = false
-                        this.progress = 0
-                    }
+                    this.queueAudioFile(file)
                 }
 
                 this.recorder.start()
-                this.recording = true
+                this.recorderActive = true
             } catch (error) {
                 console.error(error)
+                this.isRecording = false
+                $wire.notifyMicDenied()
             }
-        }
+        },
+        stopRecording() {
+            if (! this.recorderActive || ! this.recorder) {
+                return
+            }
+
+            this.recorder.stop()
+        },
+        syncRecording(enabled) {
+            if (enabled) {
+                this.startRecording()
+            } else {
+                this.stopRecording()
+            }
+        },
     }"
+    x-effect="syncRecording(isRecording)"
     class="space-y-3"
 >
+    <input
+        type="file"
+        class="hidden"
+        x-ref="audioInput"
+        wire:model="audio"
+        accept="audio/*,.mp3,.wav,.webm,.ogg,.m4a"
+        x-on:livewire-upload-start="uploading = true; progress = 0"
+        x-on:livewire-upload-progress="progress = $event.detail.progress"
+        x-on:livewire-upload-finish="uploading = false; progress = 0"
+        x-on:livewire-upload-cancel="uploading = false; progress = 0"
+        x-on:livewire-upload-error="uploading = false; progress = 0"
+    />
+
     <form wire:submit="sendPrompt">
         <flux:composer
             wire:model="prompt"
             :label="__('general.ai_prompt')"
             label:sr-only
             :placeholder="$this->placeholderText()"
-            rows="2"
+            rows="1"
+            inline
         >
             <x-slot name="header">
                 <div
@@ -297,27 +335,25 @@ new class extends Component
                     <flux:button
                         type="button"
                         size="sm"
-                        variant="subtle"
-                        icon="paperclip"
-                        x-on:click="pickAudio"
-                        x-bind:disabled="uploading || recording || $wire.isTranscribing"
+                        variant="ghost"
+                        icon="plus"
+                        x-on:click="pickAudioFile()"
+                        x-bind:disabled="uploading || recorderActive || isRecording || $wire.isTranscribing"
                     />
                 </flux:tooltip>
             </x-slot>
 
             <x-slot name="actionsTrailing">
-                <flux:tooltip content="{{ __('general.ai_voice_record') }}">
-                    <flux:button
-                        type="button"
-                        size="sm"
-                        variant="filled"
-                        icon="mic"
-                        x-on:click="toggle"
-                        x-bind:aria-pressed="recording.toString()"
-                        x-bind:disabled="uploading || $wire.isTranscribing"
-                        x-bind:class="recording ? 'text-rose-600!' : ''"
-                    />
-                </flux:tooltip>
+                <flux:toggle
+                    wire:model.live="isRecording"
+                    color="rose"
+                    size="sm"
+                    variant="filled"
+                    :tooltip="__('general.ai_voice_record')"
+                    x-bind:disabled="uploading || $wire.isTranscribing"
+                >
+                    <flux:icon icon="mic" variant="outline" class="size-4" />
+                </flux:toggle>
 
                 <flux:button
                     type="submit"
@@ -327,7 +363,7 @@ new class extends Component
                     icon="send"
                     wire:loading.attr="disabled"
                     wire:target="sendPrompt"
-                    x-bind:disabled="uploading || recording || $wire.isTranscribing"
+                    x-bind:disabled="uploading || recorderActive || isRecording || $wire.isTranscribing"
                 />
             </x-slot>
         </flux:composer>

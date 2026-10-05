@@ -147,6 +147,8 @@ return [
     'ai_voice_remove' => 'حذف صوت',
     'ai_voice_uploading' => 'در حال آپلود صوت...',
     'ai_voice_uploaded' => 'فایل صوتی آپلود شد.',
+    'ai_voice_cancelled' => 'انتخاب فایل صوتی لغو شد.',
+    'ai_voice_mic_denied' => 'دسترسی به میکروفون ممکن نیست.',
     'ai_voice_transcribing' => 'در حال تبدیل صوت به متن...',
     'ai_voice_ready' => 'صوت به متن تبدیل شد؛ در صورت نیاز ویرایش کنید و ارسال کنید.',
     'ai_voice_error' => 'تبدیل صوت به متن ناموفق بود.',
