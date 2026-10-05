@@ -41,6 +41,14 @@
 
         <flux:main inset class="lg:ms-0">
             {{ $slot }}
+
+            @if (request()->routeIs('accounting.*'))
+                <div class="sticky bottom-0 z-20 -mx-6 mt-6 border-t border-zinc-200 bg-white/95 px-6 py-3 backdrop-blur dark:border-zinc-700 dark:bg-zinc-900/95">
+                    <div class="mx-auto max-w-3xl">
+                        <livewire:ai.composer context="accounting" :key="'ai-composer-accounting'" />
+                    </div>
+                </div>
+            @endif
         </flux:main>
 
         @livewireScripts
