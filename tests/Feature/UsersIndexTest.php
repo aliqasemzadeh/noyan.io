@@ -60,7 +60,7 @@ class UsersIndexTest extends TestCase
         $viewer = $this->grantAdministratorAccess(User::factory()->create());
 
         Livewire::actingAs($viewer)
-            ->test('pages::panel.administrator.user-management.user.index')
+            ->test('ai.composer', ['context' => 'users'])
             ->set('prompt', '')
             ->call('sendPrompt')
             ->assertHasErrors(['prompt']);
@@ -77,12 +77,13 @@ class UsersIndexTest extends TestCase
         ]));
 
         Livewire::actingAs($viewer)
-            ->test('pages::panel.administrator.user-management.user.index')
+            ->test('ai.composer', ['context' => 'users'])
             ->set('prompt', 'یک کاربر با شماره موبایل 09171234567 اضافه کن')
             ->call('sendPrompt')
             ->assertHasNoErrors()
             ->assertSet('assistantReply', __('general.user_created', ['mobile' => '09171234567']))
-            ->assertSet('prompt', '');
+            ->assertSet('prompt', '')
+            ->assertDispatched('panels.administrator.user.index.table');
 
         UserAssistant::assertPrompted('یک کاربر با شماره موبایل 09171234567 اضافه کن');
     }
@@ -108,7 +109,7 @@ class UsersIndexTest extends TestCase
         );
 
         Livewire::actingAs($viewer)
-            ->test('pages::panel.administrator.user-management.user.index')
+            ->test('ai.composer', ['context' => 'users'])
             ->set('audio', $audio)
             ->assertHasNoErrors()
             ->assertSet('prompt', 'یک کاربر با شماره موبایل 09171234567 اضافه کن')
@@ -141,7 +142,7 @@ class UsersIndexTest extends TestCase
         );
 
         Livewire::actingAs($viewer)
-            ->test('pages::panel.administrator.user-management.user.index')
+            ->test('ai.composer', ['context' => 'users'])
             ->set('audio', $audio)
             ->assertHasNoErrors()
             ->assertSet('prompt', 'یک کاربر با شماره موبایل 09171234567 اضافه کن')
