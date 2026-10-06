@@ -388,18 +388,27 @@ new class extends Component
                 <flux:select.option value="out">{{ __('general.direction_out') }}</flux:select.option>
             </flux:select>
 
-            <flux:input
-                :type="$this->dateFilterInputType()"
-                wire:model.live="dateFrom"
-                placeholder="{{ __('general.date_from') }} ({{ $this->dateFilterPlaceholder() }})"
-                clearable
-            />
-            <flux:input
-                :type="$this->dateFilterInputType()"
-                wire:model.live="dateTo"
-                placeholder="{{ __('general.date_to') }} ({{ $this->dateFilterPlaceholder() }})"
-                clearable
-            />
+            @if (\App\Support\LocaleDate::usesJalali())
+                <x-jalali-date-range
+                    wire:model.start="dateFrom"
+                    wire:model.end="dateTo"
+                    :label="false"
+                    :placeholder="__('general.date_range_placeholder')"
+                />
+            @else
+                <flux:input
+                    type="date"
+                    wire:model.live="dateFrom"
+                    placeholder="{{ __('general.date_from') }}"
+                    clearable
+                />
+                <flux:input
+                    type="date"
+                    wire:model.live="dateTo"
+                    placeholder="{{ __('general.date_to') }}"
+                    clearable
+                />
+            @endif
         </div>
 
         <flux:table :paginate="$this->ledgerTransactions">
