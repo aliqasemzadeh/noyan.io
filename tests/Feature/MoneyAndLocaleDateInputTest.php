@@ -30,6 +30,16 @@ class MoneyAndLocaleDateInputTest extends TestCase
         $this->assertSame('', Money::normalize('   '));
     }
 
+    public function test_money_format_adds_thousand_separators_and_decimals(): void
+    {
+        $this->assertSame('1,234,567', Money::format('1234567'));
+        $this->assertSame('1,234,567.50', Money::format('1234567.5', 2));
+        $this->assertSame('1,234', Money::format('۱,۲۳۴'));
+        $this->assertSame('-2,500.00', Money::format('-2500', 2));
+        $this->assertSame('0', Money::format(null));
+        $this->assertSame('0.00', Money::format('', 2));
+    }
+
     public function test_locale_date_format_input_and_storage_roundtrip(): void
     {
         App::setLocale('fa');

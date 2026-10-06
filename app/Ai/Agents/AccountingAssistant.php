@@ -38,10 +38,12 @@ class AccountingAssistant implements Agent, HasTools, RemembersConversationsCont
 
 {$accounts}
 
-## تشخیص قصد (الزامی)
-اولویت با ثبت تراکنش است وقتی پیامک بانکی «برداشت» یا «واریز» دارد.
+## وظایف و تشخیص قصد
+1) پاسخ به استعلام‌ها و سؤالات (مانند موجودی/مانده، تعداد حساب‌ها، اطلاعات حساب‌ها):
+- اگر کاربر درباره مانده/موجودی یک یا چند حساب، تعداد حساب‌ها، یا مشخصات آنها پرسید، مستقیماً از بخش «حساب‌های بانکی/موجود این کسب‌وکار» پاسخ بده.
+- مانده هر حساب و در صورت نیاز ارز/واحد پول را به زیبایی و با فرمت تفکیک‌شده (سه رقم سه رقم) یا دقیق گزارش کن.
 
-1) ثبت تراکنش (create_transaction) — اگر هر کدام درست بود:
+2) ثبت تراکنش (create_transaction) — اولویت با ثبت تراکنش است وقتی پیامک بانکی «برداشت» یا «واریز» دارد:
 - متن شامل «برداشت» یا «واریز» است، یا
 - کاربر گفته تراکنش ثبت کن، یا
 - شماره حساب پیامک در لیست حساب‌های موجود بالاست.
@@ -54,7 +56,7 @@ class AccountingAssistant implements Agent, HasTools, RemembersConversationsCont
 - تاریخ را از پیامک بگیر؛ اگر نبود امروز.
 - اگر شماره حساب در لیست نبود، فقط بپرس کدام حساب موجود است؛ حساب جدید نساز.
 
-2) ساخت حساب بانکی (create_bank_account) — فقط وقتی:
+3) ساخت حساب بانکی (create_bank_account) — فقط وقتی:
 - کاربر صریحاً ساخت حساب خواسته («حساب بساز»، «حساب کن») و
 - پیامک «برداشت/واریز» برای ثبت تراکنش نیست، و
 - شماره حساب هنوز در لیست موجود نیست.
@@ -64,7 +66,7 @@ class AccountingAssistant implements Agent, HasTools, RemembersConversationsCont
 - مبلغ برداشت/واریز را نادیده بگیر؛ تراکنش نساز.
 - مانده = opening/current balance.
 
-خروجی فارسی ابزار را عیناً به کاربر بده. اگر هیچ‌کدام نبود، مختصر پاسخ بده.
+خروجی فارسی ابزار را عیناً به کاربر بده. اگر هیچ ابزاری نیاز نبود، مختصر و دقیق به فارسی پاسخ بده.
 PROMPT;
     }
 
@@ -90,10 +92,11 @@ PROMPT;
         }
 
         $accounts = Account::query()
+            ->with('currency')
             ->where('business_id', $businessId)
             ->where('is_active', true)
             ->orderBy('name')
-            ->get(['name', 'account_number', 'bank_name']);
+            ->get(['name', 'account_number', 'bank_name', 'current_balance', 'currency_id']);
 
         if ($accounts->isEmpty()) {
             return 'حساب‌های موجود: هیچ.';
@@ -102,10 +105,13 @@ PROMPT;
         $lines = $accounts->map(function (Account $account): string {
             $number = $account->account_number ?: '—';
             $bank = $account->bank_name ?: '—';
+            $currency = $account->currency?->name ?: ($account->currency?->code ?: '');
+            $balance = number_format((float) ($account->current_balance ?? 0), 0, '.', ',');
+            $balanceStr = $currency !== '' ? "{$balance} {$currency}" : $balance;
 
-            return "- {$account->name} | بانک: {$bank} | شماره: {$number}";
+            return "- {$account->name} | بانک: {$bank} | شماره: {$number} | مانده/موجودی: {$balanceStr}";
         })->implode("\n");
 
-        return "حساب‌های بانکی/موجود این کسب‌وکار (فقط از همین‌ها برای تراکنش استفاده کن):\n{$lines}";
+        return "حساب‌های بانکی/موجود این کسب‌وکار (هم برای پاسخ به استعلام مانده/مشخصات حساب و هم فقط از همین‌ها برای ثبت تراکنش استفاده کن):\n{$lines}";
     }
 }
