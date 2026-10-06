@@ -202,10 +202,6 @@
                 this.month = initMonth;
                 this.getNoOfDays();
 
-                if (this.startModel && this.$wire) {
-                    this.$watch('start', (value) => this.$wire.set(this.startModel, value ?? '', false));
-                    this.$watch('end', (value) => this.$wire.set(this.endModel, value ?? '', false));
-                }
             },
 
             syncToWire() {
@@ -213,8 +209,8 @@
                     return;
                 }
 
-                this.$wire.set(this.startModel, this.start || '', false);
-                this.$wire.set(this.endModel, this.end || '', false);
+                this.$wire.set(this.startModel, this.start || '');
+                this.$wire.set(this.endModel, this.end || '');
             },
 
             selectDay(date) {

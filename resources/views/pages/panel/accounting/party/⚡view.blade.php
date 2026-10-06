@@ -581,19 +581,30 @@ new class extends Component
                         </flux:select.option>
                     @endforeach
                 </flux:select>
-                <div class="grid grid-cols-2 gap-2 md:col-span-4 lg:col-span-1 lg:grid-cols-1">
-                    <flux:input
-                        :type="$this->dateFilterInputType()"
-                        wire:model.live="transactionDateFrom"
-                        placeholder="{{ __('general.date_from') }} ({{ $this->dateFilterPlaceholder() }})"
-                        clearable
-                    />
-                    <flux:input
-                        :type="$this->dateFilterInputType()"
-                        wire:model.live="transactionDateTo"
-                        placeholder="{{ __('general.date_to') }} ({{ $this->dateFilterPlaceholder() }})"
-                        clearable
-                    />
+                <div class="md:col-span-4 lg:col-span-1">
+                    @if (\App\Support\LocaleDate::usesJalali())
+                        <x-jalali-date-range
+                            wire:model.start="transactionDateFrom"
+                            wire:model.end="transactionDateTo"
+                            :label="false"
+                            :placeholder="__('general.date_range_placeholder')"
+                        />
+                    @else
+                        <div class="grid grid-cols-2 gap-2">
+                            <flux:input
+                                type="date"
+                                wire:model.live="transactionDateFrom"
+                                placeholder="{{ __('general.date_from') }}"
+                                clearable
+                            />
+                            <flux:input
+                                type="date"
+                                wire:model.live="transactionDateTo"
+                                placeholder="{{ __('general.date_to') }}"
+                                clearable
+                            />
+                        </div>
+                    @endif
                 </div>
             </div>
 
@@ -662,18 +673,28 @@ new class extends Component
                         </flux:select.option>
                     @endforeach
                 </flux:select>
-                <flux:input
-                    :type="$this->dateFilterInputType()"
-                    wire:model.live="invoiceDateFrom"
-                    placeholder="{{ __('general.date_from') }} ({{ $this->dateFilterPlaceholder() }})"
-                    clearable
-                />
-                <flux:input
-                    :type="$this->dateFilterInputType()"
-                    wire:model.live="invoiceDateTo"
-                    placeholder="{{ __('general.date_to') }} ({{ $this->dateFilterPlaceholder() }})"
-                    clearable
-                />
+                @if (\App\Support\LocaleDate::usesJalali())
+                    <x-jalali-date-range
+                        wire:model.start="invoiceDateFrom"
+                        wire:model.end="invoiceDateTo"
+                        :label="false"
+                        :placeholder="__('general.date_range_placeholder')"
+                        class="md:col-span-2"
+                    />
+                @else
+                    <flux:input
+                        type="date"
+                        wire:model.live="invoiceDateFrom"
+                        placeholder="{{ __('general.date_from') }}"
+                        clearable
+                    />
+                    <flux:input
+                        type="date"
+                        wire:model.live="invoiceDateTo"
+                        placeholder="{{ __('general.date_to') }}"
+                        clearable
+                    />
+                @endif
             </div>
 
             <flux:table :paginate="$this->ledgerInvoices">
