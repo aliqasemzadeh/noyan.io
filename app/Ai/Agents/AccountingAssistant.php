@@ -4,6 +4,7 @@ namespace App\Ai\Agents;
 
 use App\Ai\Tools\CreateBankAccount;
 use App\Ai\Tools\CreateTransaction;
+use App\Ai\Tools\GetDailyExpenses;
 use App\Models\Accounting\Account;
 use Illuminate\Support\Facades\Auth;
 use Laravel\Ai\Attributes\MaxSteps;
@@ -43,7 +44,12 @@ class AccountingAssistant implements Agent, HasTools, RemembersConversationsCont
 - اگر کاربر درباره مانده/موجودی یک یا چند حساب، تعداد حساب‌ها، یا مشخصات آنها پرسید، مستقیماً از بخش «حساب‌های بانکی/موجود این کسب‌وکار» پاسخ بده.
 - مانده هر حساب و در صورت نیاز ارز/واحد پول را به زیبایی و با فرمت تفکیک‌شده (سه رقم سه رقم) یا دقیق گزارش کن.
 
-2) ثبت تراکنش (create_transaction) — اولویت با ثبت تراکنش است وقتی پیامک بانکی «برداشت» یا «واریز» دارد:
+2) گزارش هزینه‌های روز (get_daily_expenses) — وقتی کاربر هزینه/خرج امروز یا یک تاریخ مشخص را خواست:
+- فوراً get_daily_expenses را صدا بزن (برای امروز date را خالی بگذار؛ برای تاریخ دیگر date را بفرست).
+- خروجی فارسی ابزار را عیناً به کاربر بده؛ عددسازی یا حدس نزن.
+- این کار ثبت تراکنش نیست؛ create_transaction را صدا نزن.
+
+3) ثبت تراکنش (create_transaction) — اولویت با ثبت تراکنش است وقتی پیامک بانکی «برداشت» یا «واریز» دارد:
 - متن شامل «برداشت» یا «واریز» است، یا
 - کاربر گفته تراکنش ثبت کن، یا
 - شماره حساب پیامک در لیست حساب‌های موجود بالاست.
@@ -56,7 +62,7 @@ class AccountingAssistant implements Agent, HasTools, RemembersConversationsCont
 - تاریخ را از پیامک بگیر؛ اگر نبود امروز.
 - اگر شماره حساب در لیست نبود، فقط بپرس کدام حساب موجود است؛ حساب جدید نساز.
 
-3) ساخت حساب بانکی (create_bank_account) — فقط وقتی:
+4) ساخت حساب بانکی (create_bank_account) — فقط وقتی:
 - کاربر صریحاً ساخت حساب خواسته («حساب بساز»، «حساب کن») و
 - پیامک «برداشت/واریز» برای ثبت تراکنش نیست، و
 - شماره حساب هنوز در لیست موجود نیست.
@@ -80,6 +86,7 @@ PROMPT;
         return [
             new CreateBankAccount,
             new CreateTransaction,
+            new GetDailyExpenses,
         ];
     }
 

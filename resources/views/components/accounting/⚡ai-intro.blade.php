@@ -13,6 +13,7 @@ new class extends Component
             __('general.accounting_ai_prompt_1'),
             __('general.accounting_ai_prompt_2'),
             __('general.accounting_ai_prompt_3'),
+            __('general.accounting_ai_prompt_4'),
         ];
     }
 
@@ -36,6 +37,11 @@ new class extends Component
                 'label' => __('general.accounting_ai_capability_balances'),
                 'icon' => 'wallet',
                 'color' => 'sky',
+            ],
+            [
+                'label' => __('general.accounting_ai_capability_expenses'),
+                'icon' => 'banknote',
+                'color' => 'rose',
             ],
             [
                 'label' => __('general.accounting_ai_capability_parties'),
