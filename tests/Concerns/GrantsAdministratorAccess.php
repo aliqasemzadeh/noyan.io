@@ -18,6 +18,8 @@ trait GrantsAdministratorAccess
             Permission::findOrCreate($name, 'web');
         }
 
+        app()[PermissionRegistrar::class]->forgetCachedPermissions();
+
         $role = Role::findOrCreate('administrator', 'web');
         $role->syncPermissions(AdministratorPermissions::names());
     }

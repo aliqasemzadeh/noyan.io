@@ -6,12 +6,10 @@ use App\Enums\AccountSubType;
 use App\Enums\AccountType;
 use App\Models\Accounting\Account;
 use App\Models\Currency;
+use App\Support\AccountValidationRules;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Livewire\Form;
-use Sadegh19b\LaravelPersianValidation\Rules\IranianBankCardNumber;
-use Sadegh19b\LaravelPersianValidation\Rules\IranianIban;
 
 class AccountForm extends Form
 {
@@ -57,39 +55,12 @@ class AccountForm extends Form
      */
     public function rules(): array
     {
-        $decimalPlaces = $this->selectedCurrency()?->decimal_places ?? 18;
-        $allowedCurrencyIds = $this->allowedCurrencyIds();
-
-        $openingBalanceRule = $decimalPlaces === 0
-            ? ['required', 'string', 'regex:/^-?\d+$/']
-            : ['required', 'string', 'regex:/^-?\d+(\.\d{1,'.$decimalPlaces.'})?$/'];
-
-        $cardRules = ['nullable', 'string', 'max:32'];
-        if ($this->card_number !== '') {
-            $cardRules[] = new IranianBankCardNumber;
-        }
-
-        $ibanRules = ['nullable', 'string', 'max:34'];
-        if ($this->iban !== '') {
-            $ibanRules[] = new IranianIban;
-        }
-
-        return [
-            'name' => ['required', 'string', 'max:255'],
-            'currency_id' => [
-                'required',
-                'integer',
-                Rule::in($allowedCurrencyIds),
-            ],
-            'sub_type' => ['required', Rule::enum(AccountSubType::class)],
-            'bank_name' => ['nullable', 'string', 'max:255'],
-            'account_number' => ['nullable', 'string', 'max:255'],
-            'card_number' => $cardRules,
-            'iban' => $ibanRules,
-            'note' => ['nullable', 'string', 'max:2000'],
-            'opening_balance' => $openingBalanceRule,
-            'is_active' => ['boolean'],
-        ];
+        return AccountValidationRules::rules(
+            $this->allowedCurrencyIds(),
+            $this->selectedCurrency(),
+            $this->card_number,
+            $this->iban,
+        );
     }
 
     /**
@@ -136,15 +107,10 @@ class AccountForm extends Form
         }
 
         $validated = $this->validate();
-        $validated['business_id'] = $businessId;
-        $validated['type'] = AccountType::Asset;
         $validated = $this->normalizeOptionalStrings($validated);
-        $validated['opening_balance'] = $this->normalizeBalance((string) $validated['opening_balance']);
-        $validated['current_balance'] = $validated['opening_balance'];
+        $validated['opening_balance'] = AccountValidationRules::normalizeBalance((string) $validated['opening_balance']);
 
-        $account = Account::create($validated);
-
-        Account::forgetOptionsCache($businessId);
+        $account = Account::createForBusiness((int) $businessId, $validated);
 
         $this->reset();
         $this->sub_type = AccountSubType::Cash->value;
@@ -159,11 +125,11 @@ class AccountForm extends Form
         $validated = $this->validate();
         $validated['type'] = AccountType::Asset;
         $validated = $this->normalizeOptionalStrings($validated);
-        $validated['opening_balance'] = $this->normalizeBalance((string) $validated['opening_balance']);
+        $validated['opening_balance'] = AccountValidationRules::normalizeBalance((string) $validated['opening_balance']);
 
-        $previousOpening = $this->normalizeBalance((string) $this->account->opening_balance);
+        $previousOpening = AccountValidationRules::normalizeBalance((string) $this->account->opening_balance);
         $openingDelta = bcsub($validated['opening_balance'], $previousOpening, 18);
-        $validated['current_balance'] = $this->normalizeBalance(
+        $validated['current_balance'] = AccountValidationRules::normalizeBalance(
             bcadd((string) $this->account->current_balance, $openingDelta, 18)
         );
 
@@ -218,14 +184,5 @@ class AccountForm extends Form
         }
 
         return Currency::query()->find($this->currency_id);
-    }
-
-    protected function normalizeBalance(string $amount): string
-    {
-        if (! str_contains($amount, '.')) {
-            return $amount;
-        }
-
-        return rtrim(rtrim($amount, '0'), '.') ?: '0';
     }
 }

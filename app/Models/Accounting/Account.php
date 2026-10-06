@@ -81,6 +81,24 @@ class Account extends Model
             ?: $this->card_number;
     }
 
+    /**
+     * @param  array<string, mixed>  $validated
+     */
+    public static function createForBusiness(int $businessId, array $validated): self
+    {
+        $validated['business_id'] = $businessId;
+        $validated['type'] = AccountType::Asset;
+        $validated['opening_balance'] = (string) $validated['opening_balance'];
+        $validated['current_balance'] = $validated['opening_balance'];
+        $validated['is_active'] = (bool) ($validated['is_active'] ?? true);
+
+        $account = static::query()->create($validated);
+
+        self::forgetOptionsCache($businessId);
+
+        return $account;
+    }
+
     public static function balanceCacheKey(int $businessId, int $accountId): string
     {
         return "account_balance.{$businessId}.{$accountId}";

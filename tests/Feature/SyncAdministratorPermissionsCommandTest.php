@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Support\AdministratorPermissions;
+use App\Support\SyncAdministratorPermissions;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
@@ -52,6 +54,21 @@ class SyncAdministratorPermissionsCommandTest extends TestCase
         $role->refresh();
 
         $this->assertFalse($role->hasPermissionTo('legacy_permission'));
+        $this->assertSame(
+            count(AdministratorPermissions::names()),
+            $role->permissions()->count(),
+        );
+    }
+
+    public function test_sync_works_when_eloquent_model_events_are_disabled(): void
+    {
+        Model::withoutEvents(function (): void {
+            app(SyncAdministratorPermissions::class)->handle();
+        });
+
+        $role = Role::query()->where('name', 'administrator')->first();
+
+        $this->assertNotNull($role);
         $this->assertSame(
             count(AdministratorPermissions::names()),
             $role->permissions()->count(),
