@@ -9,6 +9,7 @@ use App\Models\Accounting\FiscalYear;
 use App\Models\Accounting\Party;
 use App\Models\Accounting\Project;
 use App\Models\Category;
+use App\Support\Money;
 use Illuminate\Validation\ValidationException;
 
 trait ValidatesJournalLines
@@ -224,7 +225,7 @@ trait ValidatesJournalLines
 
     protected function normalizeAmount(string $value): string
     {
-        $value = trim(str_replace(',', '', $value));
+        $value = Money::normalize($value);
 
         if ($value === '' || ! is_numeric($value)) {
             return '0';
