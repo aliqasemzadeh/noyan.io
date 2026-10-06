@@ -155,7 +155,7 @@ new class extends Component
 
         <flux:field>
             <flux:label>{{ __('general.amount') }}</flux:label>
-            <flux:input wire:model.blur="form.amount" placeholder="0" dir="ltr" />
+            <flux:input wire:model.blur="form.amount" mask:dynamic="$money($input)" placeholder="0" dir="ltr" />
             <flux:error name="form.amount" />
         </flux:field>
 
@@ -164,17 +164,22 @@ new class extends Component
         </flux:callout>
 
         <div class="grid gap-4 sm:grid-cols-2">
-            <flux:field>
-                <flux:label>{{ __('general.issue_date') }}</flux:label>
-                <flux:input type="date" wire:model="form.issue_date" />
-                <flux:error name="form.issue_date" />
-            </flux:field>
+            @if (\App\Support\LocaleDate::usesJalali())
+                <x-date-picker wire:model="form.issue_date" name="form.issue_date" :label="__('general.issue_date')" required />
+                <x-date-picker wire:model="form.due_date" name="form.due_date" :label="__('general.due_date')" required />
+            @else
+                <flux:field>
+                    <flux:label>{{ __('general.issue_date') }}</flux:label>
+                    <flux:input type="date" wire:model="form.issue_date" />
+                    <flux:error name="form.issue_date" />
+                </flux:field>
 
-            <flux:field>
-                <flux:label>{{ __('general.due_date') }}</flux:label>
-                <flux:input type="date" wire:model="form.due_date" />
-                <flux:error name="form.due_date" />
-            </flux:field>
+                <flux:field>
+                    <flux:label>{{ __('general.due_date') }}</flux:label>
+                    <flux:input type="date" wire:model="form.due_date" />
+                    <flux:error name="form.due_date" />
+                </flux:field>
+            @endif
         </div>
 
         <flux:field>

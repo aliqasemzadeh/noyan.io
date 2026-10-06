@@ -56,8 +56,10 @@ class AccountValidationRules
 
     public static function normalizeBalance(string $amount): string
     {
-        if (! str_contains($amount, '.')) {
-            return $amount;
+        $amount = Money::normalize($amount);
+
+        if ($amount === '' || ! str_contains($amount, '.')) {
+            return $amount === '' ? '0' : $amount;
         }
 
         return rtrim(rtrim($amount, '0'), '.') ?: '0';

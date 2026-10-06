@@ -126,6 +126,7 @@ new class extends Component
             <flux:label>{{ __('general.opening_balance') }}</flux:label>
             <flux:input
                 wire:model="form.opening_balance"
+                mask:dynamic="$money($input)"
                 placeholder="0"
                 dir="ltr"
             />

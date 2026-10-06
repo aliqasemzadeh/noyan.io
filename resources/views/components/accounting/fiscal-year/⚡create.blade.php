@@ -33,17 +33,22 @@ new class extends Component
             <flux:error name="form.name" />
         </flux:field>
 
-        <flux:field>
-            <flux:label>{{ __('general.fiscal_year_start_date') }}</flux:label>
-            <flux:input type="date" wire:model="form.start_date" dir="ltr" />
-            <flux:error name="form.start_date" />
-        </flux:field>
+        @if (\App\Support\LocaleDate::usesJalali())
+            <x-date-picker wire:model="form.start_date" name="form.start_date" :label="__('general.fiscal_year_start_date')" required />
+            <x-date-picker wire:model="form.end_date" name="form.end_date" :label="__('general.fiscal_year_end_date')" required />
+        @else
+            <flux:field>
+                <flux:label>{{ __('general.fiscal_year_start_date') }}</flux:label>
+                <flux:input type="date" wire:model="form.start_date" dir="ltr" />
+                <flux:error name="form.start_date" />
+            </flux:field>
 
-        <flux:field>
-            <flux:label>{{ __('general.fiscal_year_end_date') }}</flux:label>
-            <flux:input type="date" wire:model="form.end_date" dir="ltr" />
-            <flux:error name="form.end_date" />
-        </flux:field>
+            <flux:field>
+                <flux:label>{{ __('general.fiscal_year_end_date') }}</flux:label>
+                <flux:input type="date" wire:model="form.end_date" dir="ltr" />
+                <flux:error name="form.end_date" />
+            </flux:field>
+        @endif
 
         <flux:field variant="inline">
             <flux:label>{{ __('general.fiscal_year_is_closed') }}</flux:label>

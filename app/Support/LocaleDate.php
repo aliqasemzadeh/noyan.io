@@ -93,4 +93,26 @@ class LocaleDate
     {
         return self::usesJalali($locale) ? 'text' : 'date';
     }
+
+    public static function formatInput(DateTimeInterface|string|null $date, ?string $locale = null): string
+    {
+        if ($date === null || $date === '') {
+            return '';
+        }
+
+        $carbon = $date instanceof DateTimeInterface
+            ? Carbon::instance(\DateTimeImmutable::createFromInterface($date))
+            : Carbon::parse($date);
+
+        if (self::usesJalali($locale)) {
+            return Jalalian::fromDateTime($carbon)->format('Y/m/d');
+        }
+
+        return $carbon->format('Y-m-d');
+    }
+
+    public static function toStorageDate(?string $value, ?string $locale = null): ?string
+    {
+        return self::parseFilterDate($value, $locale)?->toDateString();
+    }
 }

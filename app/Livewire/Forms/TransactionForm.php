@@ -8,6 +8,8 @@ use App\Models\Accounting\Account;
 use App\Models\Accounting\BusinessCurrency;
 use App\Models\Accounting\Transaction;
 use App\Models\Category;
+use App\Support\Concerns\NormalizesLocaleFormValues;
+use App\Support\LocaleDate;
 use Closure;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
@@ -16,6 +18,8 @@ use Livewire\Form;
 
 class TransactionForm extends Form
 {
+    use NormalizesLocaleFormValues;
+
     public string $type = TransactionType::Income->value;
 
     public ?int $account_id = null;
@@ -36,14 +40,14 @@ class TransactionForm extends Form
 
     public function mount(): void
     {
-        $this->transaction_date = now()->toDateString();
+        $this->transaction_date = $this->todayInput();
     }
 
     public function resetForm(): void
     {
         $this->reset();
         $this->type = TransactionType::Income->value;
-        $this->transaction_date = now()->toDateString();
+        $this->transaction_date = $this->todayInput();
     }
 
     /**
@@ -100,7 +104,7 @@ class TransactionForm extends Form
                 },
             ],
             'amount' => ['required', 'string', 'regex:/^\d+(\.\d{1,18})?$/', 'gt:0'],
-            'transaction_date' => ['required', 'date'],
+            'transaction_date' => $this->localeDateRules(),
             'reference_number' => ['nullable', 'string', 'max:100'],
             'note' => ['nullable', 'string', 'max:2000'],
         ];
@@ -146,6 +150,9 @@ class TransactionForm extends Form
             ]);
         }
 
+        $this->normalizeMoneyFields('amount');
+        $this->normalizeDateFields('transaction_date');
+
         $validated = $this->validate();
 
         $account = Account::query()
@@ -165,7 +172,7 @@ class TransactionForm extends Form
             'destination_account_id' => $validated['destination_account_id'] ?? null,
             'party_id' => $validated['party_id'] ?? null,
             'category_id' => $validated['category_id'] ?? null,
-            'transaction_date' => $validated['transaction_date'],
+            'transaction_date' => LocaleDate::toStorageDate($validated['transaction_date']) ?? $validated['transaction_date'],
             'currency' => $account->currency?->code ?? 'IRR',
             'exchange_rate' => (string) $exchangeRate,
             'amount' => $validated['amount'],

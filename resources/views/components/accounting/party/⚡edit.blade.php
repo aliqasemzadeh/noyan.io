@@ -174,6 +174,7 @@ new class extends Component
                 <flux:label>{{ __('general.credit_limit') }}</flux:label>
                 <flux:input
                     wire:model="form.credit_limit"
+                    mask:dynamic="$money($input)"
                     placeholder="0"
                     dir="ltr"
                 />

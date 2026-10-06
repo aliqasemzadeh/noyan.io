@@ -4,6 +4,7 @@ namespace App\Livewire\Forms;
 
 use App\Enums\PartyType;
 use App\Models\Accounting\Party;
+use App\Support\Money;
 use Closure;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
@@ -162,6 +163,7 @@ class PartyForm extends Form
             ]);
         }
 
+        $this->credit_limit = Money::normalize($this->credit_limit);
         $validated = $this->validate();
 
         $validated['business_id'] = $businessId;
@@ -180,6 +182,7 @@ class PartyForm extends Form
 
     public function update(): void
     {
+        $this->credit_limit = Money::normalize($this->credit_limit);
         $validated = $this->validate();
 
         $validated = $this->normalizeOptionalStrings($validated);
@@ -207,8 +210,10 @@ class PartyForm extends Form
 
     protected function normalizeAmount(string $amount): string
     {
-        if (! str_contains($amount, '.')) {
-            return $amount;
+        $amount = Money::normalize($amount);
+
+        if ($amount === '' || ! str_contains($amount, '.')) {
+            return $amount === '' ? '0' : $amount;
         }
 
         return rtrim(rtrim($amount, '0'), '.') ?: '0';

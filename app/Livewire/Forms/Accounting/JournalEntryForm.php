@@ -7,6 +7,9 @@ use App\Actions\Ledger\PostJournalEntryAction;
 use App\Actions\Ledger\UpdateJournalEntryAction;
 use App\Enums\Accounting\JournalEntryStatus;
 use App\Models\Accounting\JournalEntry;
+use App\Support\Concerns\NormalizesLocaleFormValues;
+use App\Support\LocaleDate;
+use App\Support\Money;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -15,6 +18,8 @@ use Livewire\Form;
 
 class JournalEntryForm extends Form
 {
+    use NormalizesLocaleFormValues;
+
     public ?JournalEntry $journalEntry = null;
 
     public ?int $fiscal_year_id = null;
@@ -30,7 +35,7 @@ class JournalEntryForm extends Form
     {
         $this->journalEntry = $entry;
         $this->fiscal_year_id = $entry->fiscal_year_id;
-        $this->entry_date = $entry->entry_date?->format('Y-m-d') ?? '';
+        $this->entry_date = LocaleDate::formatInput($entry->entry_date);
         $this->description = (string) $entry->description;
         $this->lines = $entry->lines
             ->map(fn ($line): array => [
@@ -57,7 +62,7 @@ class JournalEntryForm extends Form
     public function initializeDefaults(?int $fiscalYearId = null): void
     {
         $this->fiscal_year_id = $fiscalYearId;
-        $this->entry_date = now()->toDateString();
+        $this->entry_date = $this->todayInput();
         $this->description = '';
         $this->lines = [];
         $this->addLine();
@@ -135,7 +140,7 @@ class JournalEntryForm extends Form
                 Rule::exists('fiscal_years', 'id')
                     ->where(fn ($query) => $query->where('business_id', $businessId)->whereNull('deleted_at')),
             ],
-            'entry_date' => ['required', 'date'],
+            'entry_date' => $this->localeDateRules(),
             'description' => ['required', 'string', 'max:5000'],
             'lines' => ['required', 'array', 'min:2'],
             'lines.*.category_id' => ['nullable', 'integer'],
@@ -164,6 +169,13 @@ class JournalEntryForm extends Form
 
     public function saveAsDraft(CreateJournalEntryAction $createAction, UpdateJournalEntryAction $updateAction): JournalEntry
     {
+        $this->normalizeDateFields('entry_date');
+
+        foreach ($this->lines as $index => $line) {
+            $this->lines[$index]['debit'] = Money::normalize((string) ($line['debit'] ?? '0'));
+            $this->lines[$index]['credit'] = Money::normalize((string) ($line['credit'] ?? '0'));
+        }
+
         $this->validate();
 
         if (! $this->isBalanced()) {
@@ -210,7 +222,7 @@ class JournalEntryForm extends Form
     {
         return [
             'fiscal_year_id' => (int) $this->fiscal_year_id,
-            'entry_date' => $this->entry_date,
+            'entry_date' => LocaleDate::toStorageDate($this->entry_date) ?? $this->entry_date,
             'description' => trim($this->description),
         ];
     }
@@ -241,7 +253,7 @@ class JournalEntryForm extends Form
 
     protected function normalizeAmount(string $value): string
     {
-        $value = trim(str_replace(',', '', $value));
+        $value = Money::normalize($value);
 
         if ($value === '' || ! is_numeric($value)) {
             return '0';

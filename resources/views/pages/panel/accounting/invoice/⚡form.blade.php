@@ -289,17 +289,22 @@ new class extends Component
                 </flux:field>
 
                 <div class="grid gap-4 sm:grid-cols-2">
-                    <flux:field>
-                        <flux:label>{{ __('general.issue_date') }}</flux:label>
-                        <flux:input type="date" wire:model="form.issue_date" />
-                        <flux:error name="form.issue_date" />
-                    </flux:field>
+                    @if (\App\Support\LocaleDate::usesJalali())
+                        <x-date-picker wire:model="form.issue_date" name="form.issue_date" :label="__('general.issue_date')" required />
+                        <x-date-picker wire:model="form.due_date" name="form.due_date" :label="__('general.due_date')" />
+                    @else
+                        <flux:field>
+                            <flux:label>{{ __('general.issue_date') }}</flux:label>
+                            <flux:input type="date" wire:model="form.issue_date" />
+                            <flux:error name="form.issue_date" />
+                        </flux:field>
 
-                    <flux:field>
-                        <flux:label>{{ __('general.due_date') }}</flux:label>
-                        <flux:input type="date" wire:model="form.due_date" />
-                        <flux:error name="form.due_date" />
-                    </flux:field>
+                        <flux:field>
+                            <flux:label>{{ __('general.due_date') }}</flux:label>
+                            <flux:input type="date" wire:model="form.due_date" />
+                            <flux:error name="form.due_date" />
+                        </flux:field>
+                    @endif
                 </div>
             </div>
 
@@ -381,13 +386,13 @@ new class extends Component
                                     <flux:input type="number" step="any" wire:model.live="form.items.{{ $index }}.quantity" />
                                 </td>
                                 <td class="px-2 py-2 align-top" wire:sort:ignore>
-                                    <flux:input type="number" step="any" wire:model.live="form.items.{{ $index }}.unit_price" />
+                                    <flux:input wire:model.live="form.items.{{ $index }}.unit_price" mask:dynamic="$money($input)" dir="ltr" />
                                 </td>
                                 <td class="px-2 py-2 align-top" wire:sort:ignore>
-                                    <flux:input type="number" step="any" wire:model.live="form.items.{{ $index }}.discount_amount" />
+                                    <flux:input wire:model.live="form.items.{{ $index }}.discount_amount" mask:dynamic="$money($input)" dir="ltr" />
                                 </td>
                                 <td class="px-2 py-2 align-top" wire:sort:ignore>
-                                    <flux:input type="number" step="any" wire:model.live="form.items.{{ $index }}.tax_amount" />
+                                    <flux:input wire:model.live="form.items.{{ $index }}.tax_amount" mask:dynamic="$money($input)" dir="ltr" />
                                 </td>
                                 <td class="px-2 py-2 align-top">
                                     <flux:input readonly :value="$item['total']" dir="ltr" />
@@ -416,13 +421,13 @@ new class extends Component
             <div class="grid gap-4 md:grid-cols-3">
                 <flux:field>
                     <flux:label>{{ __('general.global_discount') }}</flux:label>
-                    <flux:input type="number" step="any" wire:model.live="form.global_discount" />
+                    <flux:input wire:model.live="form.global_discount" mask:dynamic="$money($input)" dir="ltr" />
                     <flux:error name="form.global_discount" />
                 </flux:field>
 
                 <flux:field>
                     <flux:label>{{ __('general.global_tax') }}</flux:label>
-                    <flux:input type="number" step="any" wire:model.live="form.global_tax" />
+                    <flux:input wire:model.live="form.global_tax" mask:dynamic="$money($input)" dir="ltr" />
                     <flux:error name="form.global_tax" />
                 </flux:field>
 
