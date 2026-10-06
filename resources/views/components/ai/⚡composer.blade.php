@@ -19,6 +19,9 @@ new class extends Component
     #[Locked]
     public string $context = 'accounting';
 
+    #[Locked]
+    public ?string $conversationId = null;
+
     public string $prompt = '';
 
     public string $assistantReply = '';
@@ -108,7 +111,7 @@ new class extends Component
     public function sendPrompt(): void
     {
         $this->validate([
-            'prompt' => ['required', 'string', 'max:500'],
+            'prompt' => ['required', 'string', 'max:2000'],
         ], attributes: [
             'prompt' => __('general.ai_prompt'),
         ]);
@@ -116,10 +119,21 @@ new class extends Component
         $promptText = trim($this->prompt);
 
         try {
-            $response = match ($this->context) {
-                'users' => (new UserAssistant)->prompt($promptText),
-                default => (new AccountingAssistant)->prompt($promptText),
-            };
+            if ($this->context === 'users') {
+                $response = (new UserAssistant)->prompt($promptText);
+            } else {
+                $user = auth()->user();
+
+                if ($user === null) {
+                    Flux::toast(__('general.ai_error'), variant: 'danger');
+
+                    return;
+                }
+
+                $response = (new AccountingAssistant)
+                    ->continueOrStart($this->conversationId, $user)
+                    ->prompt($promptText);
+            }
         } catch (\Throwable $exception) {
             report($exception);
 
@@ -130,11 +144,16 @@ new class extends Component
         }
 
         $this->assistantReply = $response->text ?: __('general.ai_reply_empty');
+        $this->conversationId = $response->conversationId ?? $this->conversationId;
         $this->reset(['prompt', 'audio']);
         $this->isRecording = false;
 
         if ($this->context === 'users') {
             $this->dispatch('panels.administrator.user.index.table');
+        }
+
+        if ($this->context === 'accounting') {
+            $this->dispatch('panels.accounting.account.index.table');
         }
 
         Flux::toast(__('general.ai_prompt_sent'));
