@@ -21,7 +21,7 @@ class CreateBankAccount implements Tool
      */
     public function description(): Stringable|string
     {
-        return 'ایجاد حساب بانکی از روی پیامک یا صورتحساب بانکی. فقط وقتی name و bank_name مشخص هستند فراخوانی شود.';
+        return 'ایجاد حساب بانکی جدید فقط وقتی کاربر صریحاً ساخت حساب خواسته و شماره حساب هنوز وجود ندارد. اگر پیامک برداشت/واریز دارد یا شماره حساب موجود است، به‌جای این ابزار از create_transaction استفاده کن.';
     }
 
     /**

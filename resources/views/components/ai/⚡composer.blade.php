@@ -179,7 +179,7 @@ new class extends Component
     {
         return match ($this->context) {
             'users' => __('general.ai_prompt_placeholder'),
-            default => __('general.accounting_ai_prompt_1'),
+            default => __('general.accounting_ai_prompt_placeholder'),
         };
     }
 
@@ -374,64 +374,60 @@ new class extends Component
         @endforelse
     </div>
 
+    <div
+        x-show="uploading || $wire.isTranscribing"
+        x-cloak
+        class="shrink-0 space-y-1"
+    >
+        <flux:progress
+            x-bind:value="uploading ? progress : 100"
+            color="teal"
+            class="h-1.5"
+        />
+        <flux:text class="text-xs">
+            <span x-show="uploading">{{ __('general.ai_voice_uploading') }}</span>
+            <span x-show="! uploading && $wire.isTranscribing">{{ __('general.ai_voice_transcribing') }}</span>
+        </flux:text>
+    </div>
+
     <form wire:submit="sendPrompt" class="shrink-0">
         <flux:composer
             wire:model="prompt"
+            rows="1"
+            inline
             :label="__('general.ai_prompt')"
             label:sr-only
             :placeholder="$this->placeholderText()"
-            rows="1"
-            inline
+            submit="enter"
         >
-            <x-slot name="header">
-                <div
-                    x-show="uploading || $wire.isTranscribing"
-                    x-cloak
-                    class="space-y-1 px-1 pb-2"
-                >
-                    <flux:progress
-                        x-bind:value="uploading ? progress : 100"
-                        color="teal"
-                        class="h-1.5"
-                    />
-                    <flux:text class="text-xs">
-                        <span x-show="uploading">{{ __('general.ai_voice_uploading') }}</span>
-                        <span x-show="! uploading && $wire.isTranscribing">{{ __('general.ai_voice_transcribing') }}</span>
-                    </flux:text>
-                </div>
-            </x-slot>
-
             <x-slot name="actionsLeading">
-                <flux:tooltip content="{{ __('general.ai_voice') }}">
-                    <flux:button
-                        type="button"
-                        size="sm"
-                        variant="ghost"
-                        icon="plus"
-                        x-on:click="pickAudioFile()"
-                        x-bind:disabled="uploading || recorderActive || isRecording || $wire.isTranscribing"
-                    />
-                </flux:tooltip>
+                <flux:button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    icon="plus"
+                    x-on:click="pickAudioFile()"
+                    x-bind:disabled="uploading || recorderActive || isRecording || $wire.isTranscribing"
+                />
             </x-slot>
 
             <x-slot name="actionsTrailing">
-                <flux:toggle
-                    wire:model.live="isRecording"
-                    color="rose"
+                <flux:button
+                    type="button"
                     size="sm"
                     variant="filled"
-                    :tooltip="__('general.ai_voice_record')"
+                    icon="microphone"
+                    x-bind:class="isRecording && 'text-rose-600!'"
+                    x-on:click="isRecording = ! isRecording"
                     x-bind:disabled="uploading || $wire.isTranscribing"
-                >
-                    <flux:icon icon="mic" variant="outline" class="size-4" />
-                </flux:toggle>
+                    :aria-label="__('general.ai_voice_record')"
+                />
 
                 <flux:button
                     type="submit"
                     size="sm"
                     variant="primary"
-                    color="teal"
-                    icon="send"
+                    icon="paper-airplane"
                     wire:loading.attr="disabled"
                     wire:target="sendPrompt"
                     x-bind:disabled="uploading || recorderActive || isRecording || $wire.isTranscribing"

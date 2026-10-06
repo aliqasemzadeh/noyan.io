@@ -266,6 +266,25 @@ class AccountingAiBankAccountTest extends TestCase
         $this->assertTrue(RememberConversation::appliesTo($assistant));
     }
 
+    public function test_accounting_assistant_lists_existing_accounts_in_instructions(): void
+    {
+        [$user, $business, $currency] = $this->actingBusinessOwnerWithCurrency();
+
+        Account::factory()->bank()->create([
+            'business_id' => $business->id,
+            'currency_id' => $currency->id,
+            'name' => 'حساب جاری ملت',
+            'bank_name' => 'ملت',
+            'account_number' => '5199858647',
+        ]);
+
+        $instructions = (string) (new AccountingAssistant)->instructions();
+
+        $this->assertStringContainsString('5199858647', $instructions);
+        $this->assertStringContainsString('حساب جاری ملت', $instructions);
+        $this->assertStringContainsString('create_transaction', $instructions);
+    }
+
     public function test_empty_prompt_rejected_for_accounting_context(): void
     {
         [$user] = $this->actingBusinessOwnerWithCurrency();
