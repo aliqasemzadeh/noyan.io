@@ -428,6 +428,7 @@ new class extends Component
                     size="sm"
                     variant="primary"
                     icon="paper-airplane"
+                    class="rtl:[&_[data-flux-icon]]:rotate-180"
                     wire:loading.attr="disabled"
                     wire:target="sendPrompt"
                     x-bind:disabled="uploading || recorderActive || isRecording || $wire.isTranscribing"
