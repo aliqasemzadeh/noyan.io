@@ -37,7 +37,7 @@ return [
     'change_mobile' => 'تغییر شماره موبایل',
     'login_success' => 'با موفقیت وارد شدید.',
     'welcome_user' => 'خوش آمدید',
-    'otp_sms_message' => "کد ورود شما: :code\nلغو11",
+    'otp_sms_message' => "کد: :code\n*نویان*\n@noyan.io #:code\n\nلغو11",
     'save' => 'ذخیره',
     'edit' => 'ویرایش',
     'delete' => 'حذف',
