@@ -51,7 +51,7 @@ class AccountingAiBankAccountTest extends TestCase
             'current_balance' => '644031211',
         ]);
 
-        $this->assertDatabaseCount('accounting_transactions', 0);
+        $this->assertDatabaseCount('transactions', 0);
     }
 
     public function test_tool_strips_commas_and_persian_digits(): void
