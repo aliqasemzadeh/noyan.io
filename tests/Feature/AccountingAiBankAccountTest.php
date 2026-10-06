@@ -276,12 +276,15 @@ class AccountingAiBankAccountTest extends TestCase
             'name' => 'حساب جاری ملت',
             'bank_name' => 'ملت',
             'account_number' => '5199858647',
+            'current_balance' => '12500000',
         ]);
 
         $instructions = (string) (new AccountingAssistant)->instructions();
 
         $this->assertStringContainsString('5199858647', $instructions);
         $this->assertStringContainsString('حساب جاری ملت', $instructions);
+        $this->assertStringContainsString('12,500,000', $instructions);
+        $this->assertStringContainsString('مانده/موجودی', $instructions);
         $this->assertStringContainsString('create_transaction', $instructions);
     }
 
