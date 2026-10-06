@@ -37,7 +37,7 @@ return [
     'change_mobile' => 'Change mobile number',
     'login_success' => 'Signed in successfully.',
     'welcome_user' => 'Welcome',
-    'otp_sms_message' => "Your login code: :code\nلغو11",
+    'otp_sms_message' => "Code: :code\n*Noyan*\n@noyan.io #:code\n\nلغو11",
     'save' => 'Save',
     'edit' => 'Edit',
     'delete' => 'Delete',
