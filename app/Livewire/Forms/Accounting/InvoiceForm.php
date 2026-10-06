@@ -7,6 +7,9 @@ use App\Actions\Invoices\SaveInvoiceAction;
 use App\Enums\Accounting\InvoiceType;
 use App\Models\Accounting\Invoice;
 use App\Models\Catalog\Product;
+use App\Support\Concerns\NormalizesLocaleFormValues;
+use App\Support\LocaleDate;
+use App\Support\Money;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -14,6 +17,8 @@ use Livewire\Form;
 
 class InvoiceForm extends Form
 {
+    use NormalizesLocaleFormValues;
+
     public ?Invoice $invoice = null;
 
     public string $type = InvoiceType::Sale->value;
@@ -46,8 +51,8 @@ class InvoiceForm extends Form
         $this->type = $invoice->type->value;
         $this->party_id = $invoice->party_id;
         $this->party_name = (string) ($invoice->party_name ?? '');
-        $this->issue_date = $invoice->issue_date?->format('Y-m-d') ?? '';
-        $this->due_date = $invoice->due_date?->format('Y-m-d') ?? '';
+        $this->issue_date = LocaleDate::formatInput($invoice->issue_date);
+        $this->due_date = LocaleDate::formatInput($invoice->due_date);
         $this->global_discount = $this->formatAmount((string) $invoice->global_discount);
         $this->global_tax = $this->formatAmount((string) $invoice->global_tax);
         $this->note = (string) ($invoice->note ?? '');
@@ -73,7 +78,7 @@ class InvoiceForm extends Form
 
     public function initializeDefaults(): void
     {
-        $this->issue_date = now()->toDateString();
+        $this->issue_date = $this->todayInput();
         $this->due_date = '';
         $this->global_discount = '0';
         $this->global_tax = '0';
@@ -221,6 +226,7 @@ class InvoiceForm extends Form
 
     public function saveAsDraft(SaveInvoiceAction $action): Invoice
     {
+        $this->prepareLocaleInputs();
         $this->validate($this->rules());
         $this->recalculate();
 
@@ -232,6 +238,7 @@ class InvoiceForm extends Form
 
     public function saveAndFinalize(SaveInvoiceAction $saveAction, FinalizeInvoiceAction $finalizeAction): Invoice
     {
+        $this->prepareLocaleInputs();
         $this->validate($this->rules(requireItems: true));
         $this->recalculate();
 
@@ -259,8 +266,8 @@ class InvoiceForm extends Form
                     ->where(fn ($query) => $query->where('business_id', $businessId)->whereNull('deleted_at')),
             ],
             'party_name' => ['nullable', 'string', 'max:150', 'required_without:party_id'],
-            'issue_date' => ['required', 'date'],
-            'due_date' => ['nullable', 'date', 'after_or_equal:issue_date'],
+            'issue_date' => $this->localeDateRules(),
+            'due_date' => [...$this->localeDateRules(required: false), 'after_or_equal:issue_date'],
             'global_discount' => $amount,
             'global_tax' => $amount,
             'note' => ['nullable', 'string'],
@@ -311,8 +318,10 @@ class InvoiceForm extends Form
             'type' => $this->type,
             'party_id' => $this->party_id,
             'party_name' => $this->party_name !== '' ? $this->party_name : null,
-            'issue_date' => $this->issue_date,
-            'due_date' => $this->due_date !== '' ? $this->due_date : null,
+            'issue_date' => LocaleDate::toStorageDate($this->issue_date) ?? $this->issue_date,
+            'due_date' => $this->due_date !== ''
+                ? (LocaleDate::toStorageDate($this->due_date) ?? $this->due_date)
+                : null,
             'global_discount' => $this->normalizeAmount($this->global_discount),
             'global_tax' => $this->normalizeAmount($this->global_tax),
             'note' => $this->note !== '' ? $this->note : null,
@@ -339,9 +348,21 @@ class InvoiceForm extends Form
         }
     }
 
+    protected function prepareLocaleInputs(): void
+    {
+        $this->normalizeMoneyFields('global_discount', 'global_tax');
+        $this->normalizeDateFields('issue_date', 'due_date');
+
+        foreach ($this->items as $index => $item) {
+            foreach (['quantity', 'unit_price', 'discount_amount', 'tax_amount'] as $field) {
+                $this->items[$index][$field] = Money::normalize((string) ($item[$field] ?? '0'));
+            }
+        }
+    }
+
     protected function normalizeAmount(string $value): string
     {
-        $value = trim(str_replace(',', '', $value));
+        $value = Money::normalize($value);
 
         if ($value === '' || ! is_numeric($value)) {
             return '0';

@@ -10,6 +10,7 @@ use App\Enums\CategoryType;
 use App\Models\Catalog\Product;
 use App\Models\Catalog\ProductPriceHistory;
 use App\Models\Catalog\ProductStockMovement;
+use App\Support\Money;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -185,6 +186,7 @@ class ProductForm extends Form
     public function store(): Product
     {
         $businessId = $this->requireBusinessId();
+        $this->normalizeMoneyInputs();
         $validated = $this->prepareValidated($this->validate(), $businessId);
 
         return DB::transaction(function () use ($validated, $businessId): Product {
@@ -218,6 +220,7 @@ class ProductForm extends Form
     public function update(): void
     {
         $businessId = $this->requireBusinessId();
+        $this->normalizeMoneyInputs();
         $validated = $this->prepareValidated($this->validate(), $businessId);
 
         DB::transaction(function () use ($validated): void {
@@ -329,10 +332,23 @@ class ProductForm extends Form
         return $candidate;
     }
 
+    protected function normalizeMoneyInputs(): void
+    {
+        foreach (['purchase_price', 'sale_price', 'stock_quantity', 'min_stock', 'max_stock', 'tax_rate'] as $field) {
+            if (! is_string($this->{$field})) {
+                continue;
+            }
+
+            $this->{$field} = Money::normalize($this->{$field});
+        }
+    }
+
     protected function normalizeAmount(string $amount): string
     {
-        if (! str_contains($amount, '.')) {
-            return $amount;
+        $amount = Money::normalize($amount);
+
+        if ($amount === '' || ! str_contains($amount, '.')) {
+            return $amount === '' ? '0' : $amount;
         }
 
         return rtrim(rtrim($amount, '0'), '.') ?: '0';

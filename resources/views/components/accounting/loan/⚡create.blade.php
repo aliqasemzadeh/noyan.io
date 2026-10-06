@@ -135,13 +135,13 @@ new class extends Component
         <div class="grid gap-4 sm:grid-cols-2">
             <flux:field>
                 <flux:label>{{ __('general.principal_amount') }}</flux:label>
-                <flux:input wire:model.blur="form.principal_amount" placeholder="0" dir="ltr" />
+                <flux:input wire:model.blur="form.principal_amount" mask:dynamic="$money($input)" placeholder="0" dir="ltr" />
                 <flux:error name="form.principal_amount" />
             </flux:field>
 
             <flux:field>
                 <flux:label>{{ __('general.interest_amount') }}</flux:label>
-                <flux:input wire:model.blur="form.interest_amount" placeholder="0" dir="ltr" />
+                <flux:input wire:model.blur="form.interest_amount" mask:dynamic="$money($input)" placeholder="0" dir="ltr" />
                 <flux:error name="form.interest_amount" />
             </flux:field>
         </div>
@@ -160,23 +160,28 @@ new class extends Component
 
             <flux:field>
                 <flux:label>{{ __('general.installment_amount') }}</flux:label>
-                <flux:input wire:model="form.installment_amount" placeholder="0" dir="ltr" clearable />
+                <flux:input wire:model="form.installment_amount" mask:dynamic="$money($input)" placeholder="0" dir="ltr" clearable />
                 <flux:error name="form.installment_amount" />
             </flux:field>
         </div>
 
         <div class="grid gap-4 sm:grid-cols-2">
-            <flux:field>
-                <flux:label>{{ __('general.issue_date') }}</flux:label>
-                <flux:input type="date" wire:model="form.issue_date" />
-                <flux:error name="form.issue_date" />
-            </flux:field>
+            @if (\App\Support\LocaleDate::usesJalali())
+                <x-date-picker wire:model="form.issue_date" name="form.issue_date" :label="__('general.issue_date')" required />
+                <x-date-picker wire:model="form.first_installment_date" name="form.first_installment_date" :label="__('general.first_installment_date')" />
+            @else
+                <flux:field>
+                    <flux:label>{{ __('general.issue_date') }}</flux:label>
+                    <flux:input type="date" wire:model="form.issue_date" />
+                    <flux:error name="form.issue_date" />
+                </flux:field>
 
-            <flux:field>
-                <flux:label>{{ __('general.first_installment_date') }}</flux:label>
-                <flux:input type="date" wire:model="form.first_installment_date" />
-                <flux:error name="form.first_installment_date" />
-            </flux:field>
+                <flux:field>
+                    <flux:label>{{ __('general.first_installment_date') }}</flux:label>
+                    <flux:input type="date" wire:model="form.first_installment_date" />
+                    <flux:error name="form.first_installment_date" />
+                </flux:field>
+            @endif
         </div>
 
         <flux:field>

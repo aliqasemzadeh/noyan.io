@@ -82,7 +82,12 @@ new class extends Component
 
             <flux:field>
                 <flux:label>{{ __('general.issue_date') }}</flux:label>
-                <flux:input type="date" :value="$cheque->issue_date->toDateString()" readonly />
+                <flux:input
+                    type="{{ \App\Support\LocaleDate::usesJalali() ? 'text' : 'date' }}"
+                    :value="\App\Support\LocaleDate::formatInput($cheque->issue_date)"
+                    readonly
+                    dir="ltr"
+                />
             </flux:field>
 
             <div class="grid gap-4 sm:grid-cols-2">
@@ -113,11 +118,15 @@ new class extends Component
                 </flux:field>
             </div>
 
-            <flux:field>
-                <flux:label>{{ __('general.due_date') }}</flux:label>
-                <flux:input type="date" wire:model="form.due_date" />
-                <flux:error name="form.due_date" />
-            </flux:field>
+            @if (\App\Support\LocaleDate::usesJalali())
+                <x-date-picker wire:model="form.due_date" name="form.due_date" :label="__('general.due_date')" required />
+            @else
+                <flux:field>
+                    <flux:label>{{ __('general.due_date') }}</flux:label>
+                    <flux:input type="date" wire:model="form.due_date" />
+                    <flux:error name="form.due_date" />
+                </flux:field>
+            @endif
 
             <flux:field>
                 <flux:label>{{ __('general.account') }}</flux:label>

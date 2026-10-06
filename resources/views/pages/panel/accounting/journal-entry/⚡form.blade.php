@@ -263,11 +263,15 @@ new class extends Component
                     <flux:error name="form.fiscal_year_id" />
                 </flux:field>
 
-                <flux:field>
-                    <flux:label>{{ __('general.journal_entry_date') }}</flux:label>
-                    <flux:input type="date" wire:model="form.entry_date" />
-                    <flux:error name="form.entry_date" />
-                </flux:field>
+                @if (\App\Support\LocaleDate::usesJalali())
+                    <x-date-picker wire:model="form.entry_date" name="form.entry_date" :label="__('general.journal_entry_date')" required />
+                @else
+                    <flux:field>
+                        <flux:label>{{ __('general.journal_entry_date') }}</flux:label>
+                        <flux:input type="date" wire:model="form.entry_date" />
+                        <flux:error name="form.entry_date" />
+                    </flux:field>
+                @endif
 
                 <flux:field class="md:col-span-3">
                     <flux:label>{{ __('general.description') }}</flux:label>
@@ -393,12 +397,12 @@ new class extends Component
 
                             <flux:field>
                                 <flux:label>{{ __('general.debit') }}</flux:label>
-                                <flux:input wire:model.live.debounce.200ms="form.lines.{{ $index }}.debit" dir="ltr" />
+                                <flux:input wire:model.live.debounce.200ms="form.lines.{{ $index }}.debit" mask:dynamic="$money($input)" dir="ltr" />
                             </flux:field>
 
                             <flux:field>
                                 <flux:label>{{ __('general.credit') }}</flux:label>
-                                <flux:input wire:model.live.debounce.200ms="form.lines.{{ $index }}.credit" dir="ltr" />
+                                <flux:input wire:model.live.debounce.200ms="form.lines.{{ $index }}.credit" mask:dynamic="$money($input)" dir="ltr" />
                             </flux:field>
 
                             <flux:field class="md:col-span-2 xl:col-span-3">

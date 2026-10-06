@@ -6,6 +6,8 @@ use App\Actions\Cheques\RegisterChequeAction;
 use App\Actions\Cheques\UpdateChequeAction;
 use App\Enums\Accounting\ChequeType;
 use App\Models\Accounting\Cheque;
+use App\Support\Concerns\NormalizesLocaleFormValues;
+use App\Support\LocaleDate;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -13,6 +15,8 @@ use Livewire\Form;
 
 class ChequeForm extends Form
 {
+    use NormalizesLocaleFormValues;
+
     public ?Cheque $cheque = null;
 
     public string $type = ChequeType::Received->value;
@@ -41,8 +45,8 @@ class ChequeForm extends Form
 
     public function mount(): void
     {
-        $this->issue_date = now()->toDateString();
-        $this->due_date = now()->addDays(30)->toDateString();
+        $this->issue_date = $this->todayInput();
+        $this->due_date = LocaleDate::formatInput(now()->addDays(30));
     }
 
     public function setModel(Cheque $cheque): void
@@ -57,8 +61,8 @@ class ChequeForm extends Form
         $this->bank_name = $cheque->bank_name;
         $this->bank_branch = (string) ($cheque->bank_branch ?? '');
         $this->amount = (string) $cheque->amount;
-        $this->issue_date = $cheque->issue_date->toDateString();
-        $this->due_date = $cheque->due_date->toDateString();
+        $this->issue_date = LocaleDate::formatInput($cheque->issue_date);
+        $this->due_date = LocaleDate::formatInput($cheque->due_date);
         $this->note = (string) ($cheque->note ?? '');
     }
 
@@ -67,8 +71,8 @@ class ChequeForm extends Form
         $this->reset();
         $this->cheque = null;
         $this->type = ChequeType::Received->value;
-        $this->issue_date = now()->toDateString();
-        $this->due_date = now()->addDays(30)->toDateString();
+        $this->issue_date = $this->todayInput();
+        $this->due_date = LocaleDate::formatInput(now()->addDays(30));
     }
 
     /**
@@ -101,8 +105,8 @@ class ChequeForm extends Form
             'bank_name' => ['required', 'string', 'max:100'],
             'bank_branch' => ['nullable', 'string', 'max:100'],
             'amount' => [$isUpdate ? 'nullable' : 'required', 'string', 'regex:/^\d+(\.\d{1,18})?$/', 'gt:0'],
-            'issue_date' => [$isUpdate ? 'nullable' : 'required', 'date'],
-            'due_date' => ['required', 'date', 'after_or_equal:issue_date'],
+            'issue_date' => $isUpdate ? $this->localeDateRules(required: false) : $this->localeDateRules(),
+            'due_date' => [...$this->localeDateRules(), 'after_or_equal:issue_date'],
             'note' => ['nullable', 'string', 'max:2000'],
         ];
     }
@@ -138,6 +142,8 @@ class ChequeForm extends Form
             ]);
         }
 
+        $this->normalizeMoneyFields('amount');
+        $this->normalizeDateFields('issue_date', 'due_date');
         $validated = $this->validate();
 
         $cheque = app(RegisterChequeAction::class)->handle($user, [
@@ -150,8 +156,8 @@ class ChequeForm extends Form
             'bank_name' => $validated['bank_name'],
             'bank_branch' => ($validated['bank_branch'] ?? '') !== '' ? $validated['bank_branch'] : null,
             'amount' => $validated['amount'],
-            'issue_date' => $validated['issue_date'],
-            'due_date' => $validated['due_date'],
+            'issue_date' => LocaleDate::toStorageDate($validated['issue_date']) ?? $validated['issue_date'],
+            'due_date' => LocaleDate::toStorageDate($validated['due_date']) ?? $validated['due_date'],
             'note' => ($validated['note'] ?? '') !== '' ? $validated['note'] : null,
         ]);
 
@@ -170,6 +176,8 @@ class ChequeForm extends Form
             ]);
         }
 
+        $this->normalizeMoneyFields('amount');
+        $this->normalizeDateFields('issue_date', 'due_date');
         $validated = $this->validate();
 
         $cheque = app(UpdateChequeAction::class)->handle($user, $this->cheque, [
@@ -177,7 +185,7 @@ class ChequeForm extends Form
             'sayad_number' => ($validated['sayad_number'] ?? '') !== '' ? $validated['sayad_number'] : null,
             'bank_name' => $validated['bank_name'],
             'bank_branch' => ($validated['bank_branch'] ?? '') !== '' ? $validated['bank_branch'] : null,
-            'due_date' => $validated['due_date'],
+            'due_date' => LocaleDate::toStorageDate($validated['due_date']) ?? $validated['due_date'],
             'account_id' => $validated['account_id'] ?? null,
             'invoice_id' => $validated['invoice_id'] ?? null,
             'note' => ($validated['note'] ?? '') !== '' ? $validated['note'] : null,

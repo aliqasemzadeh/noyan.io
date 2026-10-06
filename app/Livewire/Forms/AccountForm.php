@@ -7,12 +7,15 @@ use App\Enums\AccountType;
 use App\Models\Accounting\Account;
 use App\Models\Currency;
 use App\Support\AccountValidationRules;
+use App\Support\Concerns\NormalizesLocaleFormValues;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
 use Livewire\Form;
 
 class AccountForm extends Form
 {
+    use NormalizesLocaleFormValues;
+
     public ?Account $account = null;
 
     public string $name = '';
@@ -106,6 +109,7 @@ class AccountForm extends Form
             ]);
         }
 
+        $this->normalizeMoneyFields('opening_balance');
         $validated = $this->validate();
         $validated = $this->normalizeOptionalStrings($validated);
         $validated['opening_balance'] = AccountValidationRules::normalizeBalance((string) $validated['opening_balance']);
@@ -122,6 +126,7 @@ class AccountForm extends Form
 
     public function update(): void
     {
+        $this->normalizeMoneyFields('opening_balance');
         $validated = $this->validate();
         $validated['type'] = AccountType::Asset;
         $validated = $this->normalizeOptionalStrings($validated);

@@ -282,13 +282,13 @@ new class extends Component
         <div class="grid gap-4 sm:grid-cols-2">
             <flux:field>
                 <flux:label>{{ __('general.purchase_price') }}</flux:label>
-                <flux:input wire:model="form.purchase_price" dir="ltr" />
+                <flux:input wire:model="form.purchase_price" mask:dynamic="$money($input)" dir="ltr" />
                 <flux:error name="form.purchase_price" />
             </flux:field>
 
             <flux:field>
                 <flux:label>{{ __('general.sale_price') }}</flux:label>
-                <flux:input wire:model="form.sale_price" dir="ltr" />
+                <flux:input wire:model="form.sale_price" mask:dynamic="$money($input)" dir="ltr" />
                 <flux:error name="form.sale_price" />
             </flux:field>
         </div>

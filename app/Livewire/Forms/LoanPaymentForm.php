@@ -4,6 +4,8 @@ namespace App\Livewire\Forms;
 
 use App\Actions\Loans\RecordLoanPaymentAction;
 use App\Models\Accounting\Loan;
+use App\Support\Concerns\NormalizesLocaleFormValues;
+use App\Support\LocaleDate;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -11,6 +13,8 @@ use Livewire\Form;
 
 class LoanPaymentForm extends Form
 {
+    use NormalizesLocaleFormValues;
+
     public ?Loan $loan = null;
 
     public string $amount = '';
@@ -28,7 +32,7 @@ class LoanPaymentForm extends Form
         $this->loan = $loan;
         $this->account_id = $loan->account_id;
         $this->amount = $loan->remainingAmount();
-        $this->transaction_date = now()->toDateString();
+        $this->transaction_date = $this->todayInput();
         $this->reference_number = '';
         $this->note = '';
     }
@@ -47,7 +51,7 @@ class LoanPaymentForm extends Form
 
         return [
             'amount' => ['required', 'string', 'regex:/^\d+(\.\d{1,18})?$/', 'gt:0'],
-            'transaction_date' => ['required', 'date'],
+            'transaction_date' => $this->localeDateRules(),
             'account_id' => [
                 'required',
                 'integer',
@@ -82,11 +86,13 @@ class LoanPaymentForm extends Form
             ]);
         }
 
+        $this->normalizeMoneyFields('amount');
+        $this->normalizeDateFields('transaction_date');
         $validated = $this->validate();
 
         $loan = app(RecordLoanPaymentAction::class)->handle($user, $this->loan, [
             'amount' => $validated['amount'],
-            'transaction_date' => $validated['transaction_date'],
+            'transaction_date' => LocaleDate::toStorageDate($validated['transaction_date']) ?? $validated['transaction_date'],
             'account_id' => (int) $validated['account_id'],
             'reference_number' => ($validated['reference_number'] ?? '') !== '' ? $validated['reference_number'] : null,
             'note' => ($validated['note'] ?? '') !== '' ? $validated['note'] : null,

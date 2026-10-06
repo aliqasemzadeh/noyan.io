@@ -5,6 +5,8 @@ namespace App\Livewire\Forms;
 use App\Actions\Loans\CreateLoanAction;
 use App\Enums\Accounting\LoanType;
 use App\Models\Accounting\Loan;
+use App\Support\Concerns\NormalizesLocaleFormValues;
+use App\Support\LocaleDate;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -12,6 +14,8 @@ use Livewire\Form;
 
 class LoanForm extends Form
 {
+    use NormalizesLocaleFormValues;
+
     public string $type = LoanType::Received->value;
 
     public ?int $party_id = null;
@@ -36,7 +40,7 @@ class LoanForm extends Form
 
     public function mount(): void
     {
-        $this->issue_date = now()->toDateString();
+        $this->issue_date = $this->todayInput();
     }
 
     public function resetForm(): void
@@ -44,7 +48,7 @@ class LoanForm extends Form
         $this->reset();
         $this->type = LoanType::Received->value;
         $this->interest_amount = '0';
-        $this->issue_date = now()->toDateString();
+        $this->issue_date = $this->todayInput();
     }
 
     /**
@@ -71,8 +75,8 @@ class LoanForm extends Form
             'interest_amount' => ['nullable', 'string', 'regex:/^\d+(\.\d{1,18})?$/'],
             'installments_count' => ['nullable', 'integer', 'min:1'],
             'installment_amount' => ['nullable', 'string', 'regex:/^\d+(\.\d{1,18})?$/'],
-            'issue_date' => ['required', 'date'],
-            'first_installment_date' => ['nullable', 'date'],
+            'issue_date' => $this->localeDateRules(),
+            'first_installment_date' => $this->localeDateRules(required: false),
             'description' => ['nullable', 'string', 'max:2000'],
         ];
     }
@@ -107,6 +111,8 @@ class LoanForm extends Form
             ]);
         }
 
+        $this->normalizeMoneyFields('principal_amount', 'interest_amount', 'installment_amount');
+        $this->normalizeDateFields('issue_date', 'first_installment_date');
         $validated = $this->validate();
 
         $loan = app(CreateLoanAction::class)->handle($user, [
@@ -118,8 +124,10 @@ class LoanForm extends Form
             'interest_amount' => ($validated['interest_amount'] ?? '') !== '' ? $validated['interest_amount'] : '0',
             'installments_count' => $validated['installments_count'] ?? null,
             'installment_amount' => ($validated['installment_amount'] ?? '') !== '' ? $validated['installment_amount'] : null,
-            'issue_date' => $validated['issue_date'],
-            'first_installment_date' => ($validated['first_installment_date'] ?? '') !== '' ? $validated['first_installment_date'] : null,
+            'issue_date' => LocaleDate::toStorageDate($validated['issue_date']) ?? $validated['issue_date'],
+            'first_installment_date' => ($validated['first_installment_date'] ?? '') !== ''
+                ? (LocaleDate::toStorageDate($validated['first_installment_date']) ?? $validated['first_installment_date'])
+                : null,
             'description' => ($validated['description'] ?? '') !== '' ? $validated['description'] : null,
         ]);
 

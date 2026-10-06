@@ -127,11 +127,15 @@ new class extends Component
             @endif
 
             @if ($form->status === ChequeStatus::Cleared->value)
-                <flux:field>
-                    <flux:label>{{ __('general.transaction_date') }}</flux:label>
-                    <flux:input type="date" wire:model="form.transaction_date" />
-                    <flux:error name="form.transaction_date" />
-                </flux:field>
+                @if (\App\Support\LocaleDate::usesJalali())
+                    <x-date-picker wire:model="form.transaction_date" name="form.transaction_date" :label="__('general.transaction_date')" required />
+                @else
+                    <flux:field>
+                        <flux:label>{{ __('general.transaction_date') }}</flux:label>
+                        <flux:input type="date" wire:model="form.transaction_date" />
+                        <flux:error name="form.transaction_date" />
+                    </flux:field>
+                @endif
 
                 <flux:field>
                     <flux:label>{{ __('general.account') }}</flux:label>

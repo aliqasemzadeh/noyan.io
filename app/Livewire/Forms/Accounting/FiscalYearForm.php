@@ -3,6 +3,8 @@
 namespace App\Livewire\Forms\Accounting;
 
 use App\Models\Accounting\FiscalYear;
+use App\Support\Concerns\NormalizesLocaleFormValues;
+use App\Support\LocaleDate;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -10,6 +12,8 @@ use Livewire\Form;
 
 class FiscalYearForm extends Form
 {
+    use NormalizesLocaleFormValues;
+
     public ?FiscalYear $fiscalYear = null;
 
     public string $name = '';
@@ -24,8 +28,8 @@ class FiscalYearForm extends Form
     {
         $this->fiscalYear = $fiscalYear;
         $this->name = $fiscalYear->name;
-        $this->start_date = $fiscalYear->start_date->toDateString();
-        $this->end_date = $fiscalYear->end_date->toDateString();
+        $this->start_date = LocaleDate::formatInput($fiscalYear->start_date);
+        $this->end_date = LocaleDate::formatInput($fiscalYear->end_date);
         $this->is_closed = $fiscalYear->is_closed;
     }
 
@@ -45,8 +49,8 @@ class FiscalYearForm extends Form
                     ->where(fn ($query) => $query->where('business_id', $businessId)->whereNull('deleted_at'))
                     ->ignore($this->fiscalYear?->id),
             ],
-            'start_date' => ['required', 'date'],
-            'end_date' => ['required', 'date', 'after_or_equal:start_date'],
+            'start_date' => $this->localeDateRules(),
+            'end_date' => [...$this->localeDateRules(), 'after_or_equal:start_date'],
             'is_closed' => ['boolean'],
         ];
     }
@@ -67,8 +71,11 @@ class FiscalYearForm extends Form
     public function store(): FiscalYear
     {
         $businessId = $this->requireBusinessId();
+        $this->normalizeDateFields('start_date', 'end_date');
         $validated = $this->validate();
         $validated['business_id'] = $businessId;
+        $validated['start_date'] = LocaleDate::toStorageDate($validated['start_date']) ?? $validated['start_date'];
+        $validated['end_date'] = LocaleDate::toStorageDate($validated['end_date']) ?? $validated['end_date'];
 
         $fiscalYear = FiscalYear::query()->create($validated);
         $this->resetFormState();
@@ -79,7 +86,10 @@ class FiscalYearForm extends Form
     public function update(): void
     {
         $this->requireBusinessId();
+        $this->normalizeDateFields('start_date', 'end_date');
         $validated = $this->validate();
+        $validated['start_date'] = LocaleDate::toStorageDate($validated['start_date']) ?? $validated['start_date'];
+        $validated['end_date'] = LocaleDate::toStorageDate($validated['end_date']) ?? $validated['end_date'];
 
         $this->fiscalYear?->update($validated);
         $this->resetFormState();

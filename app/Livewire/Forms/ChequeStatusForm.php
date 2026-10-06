@@ -5,6 +5,8 @@ namespace App\Livewire\Forms;
 use App\Actions\Cheques\ChangeChequeStatusAction;
 use App\Enums\Accounting\ChequeStatus;
 use App\Models\Accounting\Cheque;
+use App\Support\Concerns\NormalizesLocaleFormValues;
+use App\Support\LocaleDate;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -12,6 +14,8 @@ use Livewire\Form;
 
 class ChequeStatusForm extends Form
 {
+    use NormalizesLocaleFormValues;
+
     public ?Cheque $cheque = null;
 
     public string $status = '';
@@ -26,7 +30,7 @@ class ChequeStatusForm extends Form
     {
         $this->cheque = $cheque;
         $this->status = '';
-        $this->transaction_date = now()->toDateString();
+        $this->transaction_date = $this->todayInput();
         $this->account_id = $cheque->account_id;
         $this->note = '';
     }
@@ -35,7 +39,7 @@ class ChequeStatusForm extends Form
     {
         $this->reset();
         $this->cheque = null;
-        $this->transaction_date = now()->toDateString();
+        $this->transaction_date = $this->todayInput();
     }
 
     /**
@@ -49,7 +53,7 @@ class ChequeStatusForm extends Form
 
         return [
             'status' => ['required', Rule::enum(ChequeStatus::class)],
-            'transaction_date' => [$requiresAccount ? 'required' : 'nullable', 'date'],
+            'transaction_date' => $this->localeDateRules(required: $requiresAccount),
             'account_id' => [
                 $requiresAccount ? 'required' : 'nullable',
                 'integer',
@@ -82,11 +86,14 @@ class ChequeStatusForm extends Form
             ]);
         }
 
+        $this->normalizeDateFields('transaction_date');
         $validated = $this->validate();
         $status = ChequeStatus::from($validated['status']);
 
         $cheque = app(ChangeChequeStatusAction::class)->handle($user, $this->cheque, $status, [
-            'transaction_date' => ($validated['transaction_date'] ?? '') !== '' ? $validated['transaction_date'] : null,
+            'transaction_date' => ($validated['transaction_date'] ?? '') !== ''
+                ? (LocaleDate::toStorageDate($validated['transaction_date']) ?? $validated['transaction_date'])
+                : null,
             'account_id' => $validated['account_id'] ?? null,
             'note' => ($validated['note'] ?? '') !== '' ? $validated['note'] : null,
         ]);
