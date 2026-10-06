@@ -317,8 +317,8 @@ class AccountManagementTest extends TestCase
             ->assertSee(__('general.current_balance'))
             ->assertSee('Cash Desk')
             ->assertSee('Main Bank')
-            ->assertSee('2500')
-            ->assertSee('3500')
-            ->assertSee('6000');
+            ->assertSee('2,500')
+            ->assertSee('3,500')
+            ->assertSee('6,000');
     }
 }

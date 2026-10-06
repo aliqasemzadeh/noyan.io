@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\CurrencyType;
 use App\Models\Accounting\Account;
 use App\Models\Accounting\BusinessCurrency;
+use App\Support\Money;
 use Database\Factories\CurrencyFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
@@ -189,10 +190,6 @@ class Currency extends Model
 
     public function formatAmount(string|int $amount): string
     {
-        if (! function_exists('bcadd')) {
-            return (string) $amount;
-        }
-
-        return bcadd((string) $amount, '0', $this->decimal_places);
+        return Money::format((string) $amount, $this->decimal_places);
     }
 }
