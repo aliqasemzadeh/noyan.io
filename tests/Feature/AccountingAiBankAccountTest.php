@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Ai\Agents\AccountingAssistant;
 use App\Ai\Tools\CreateBankAccount;
+use App\Ai\Tools\CreateTransaction;
 use App\Enums\AccountSubType;
 use App\Enums\AccountType;
 use App\Models\Accounting\Account;
@@ -259,8 +260,9 @@ class AccountingAiBankAccountTest extends TestCase
 
         $tools = [...$assistant->tools()];
 
-        $this->assertCount(1, $tools);
+        $this->assertCount(2, $tools);
         $this->assertInstanceOf(CreateBankAccount::class, $tools[0]);
+        $this->assertInstanceOf(CreateTransaction::class, $tools[1]);
         $this->assertTrue(RememberConversation::appliesTo($assistant));
     }
 
@@ -320,7 +322,8 @@ class AccountingAiBankAccountTest extends TestCase
                 'balance' => '644031211',
             ]))
             ->assertSet('prompt', '')
-            ->assertDispatched('panels.accounting.account.index.table');
+            ->assertDispatched('panels.accounting.account.index.table')
+            ->assertDispatched('panels.accounting.transaction.index.table');
 
         AccountingAssistant::assertPrompted($sms);
     }

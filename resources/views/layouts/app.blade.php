@@ -18,6 +18,9 @@
                 || request()->routeIs('accounting.*')
             );
             $aiComposerContext = request()->routeIs('system.users.*') ? 'users' : 'accounting';
+            $aiAssistantTitle = $aiComposerContext === 'users'
+                ? __('general.users')
+                : __('general.accounting_ai_title');
         @endphp
 
         <flux:sidebar sticky collapsible class="bg-zinc-50 dark:bg-zinc-900">
@@ -48,16 +51,42 @@
             <livewire:layout.app-shell variant="header" :key="'layout-app-shell-header'" />
         </flux:header>
 
-        <flux:main inset class="{{ $showAiComposer ? 'pb-28 lg:pb-24' : '' }} lg:ms-0">
+        <flux:main inset class="lg:ms-0">
             {{ $slot }}
         </flux:main>
 
         @if ($showAiComposer)
-            <flux:footer class="!p-3 border-t border-zinc-200 bg-white/95 backdrop-blur dark:border-zinc-700 dark:bg-zinc-900/95">
-                <div class="mx-auto w-full max-w-3xl">
-                    <livewire:ai.composer :context="$aiComposerContext" :key="'ai-composer-'.$aiComposerContext" />
+            <div class="fixed bottom-6 end-6 z-40">
+                <flux:modal.trigger name="ai.assistant">
+                    <flux:tooltip content="{{ __('general.ai_assistant_open') }}">
+                        <flux:button
+                            variant="primary"
+                            color="teal"
+                            icon="sparkles"
+                            class="size-14! rounded-full! shadow-lg shadow-teal-500/30"
+                        />
+                    </flux:tooltip>
+                </flux:modal.trigger>
+            </div>
+
+            <flux:modal
+                name="ai.assistant"
+                class="flex h-dvh max-h-dvh w-full max-w-none! flex-col rounded-none! p-0!"
+            >
+                <div class="flex h-[100dvh] min-h-0 flex-col">
+                    <div class="shrink-0 border-b border-zinc-200 px-4 py-3 dark:border-zinc-700">
+                        <flux:heading size="lg">{{ $aiAssistantTitle }}</flux:heading>
+                        <flux:text class="mt-1">{{ __('general.ai_assistant_modal_hint') }}</flux:text>
+                    </div>
+
+                    <div class="min-h-0 flex-1 overflow-hidden px-4 py-4">
+                        <livewire:ai.composer
+                            :context="$aiComposerContext"
+                            :key="'ai-composer-'.$aiComposerContext"
+                        />
+                    </div>
                 </div>
-            </flux:footer>
+            </flux:modal>
         @endif
 
         @livewireScripts
