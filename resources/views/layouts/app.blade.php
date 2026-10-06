@@ -73,13 +73,20 @@
                 name="ai.assistant"
                 class="flex h-dvh max-h-dvh w-full max-w-none! flex-col rounded-none! p-0!"
             >
-                <div class="flex h-[100dvh] min-h-0 flex-col">
-                    <div class="shrink-0 border-b border-zinc-200 px-4 py-3 dark:border-zinc-700">
-                        <flux:heading size="lg">{{ $aiAssistantTitle }}</flux:heading>
-                        <flux:text class="mt-1">{{ __('general.ai_assistant_modal_hint') }}</flux:text>
+                <div class="flex h-[100dvh] min-h-0 flex-col bg-zinc-50 dark:bg-zinc-950">
+                    <div class="shrink-0 border-b border-zinc-200/80 bg-white/90 px-4 py-3 backdrop-blur dark:border-zinc-800 dark:bg-zinc-900/90">
+                        <div class="mx-auto flex max-w-3xl items-center gap-3">
+                            <div class="flex size-10 shrink-0 items-center justify-center rounded-full bg-teal-500/15 text-teal-600 ring-1 ring-teal-500/20 dark:text-teal-300">
+                                <flux:icon.sparkles class="size-5" />
+                            </div>
+                            <div class="min-w-0">
+                                <flux:heading size="lg">{{ $aiAssistantTitle }}</flux:heading>
+                                <flux:text class="mt-0.5 text-sm">{{ __('general.ai_assistant_modal_hint') }}</flux:text>
+                            </div>
+                        </div>
                     </div>
 
-                    <div class="min-h-0 flex-1 overflow-hidden px-4 py-4">
+                    <div class="mx-auto min-h-0 w-full max-w-3xl flex-1 overflow-hidden px-4 py-4">
                         <livewire:ai.composer
                             :context="$aiComposerContext"
                             :key="'ai-composer-'.$aiComposerContext"

@@ -3,6 +3,7 @@
 use App\Models\Accounting\Account;
 use App\Models\Currency;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Livewire\Attributes\Computed;
@@ -34,7 +35,7 @@ new class extends Component
     #[On('panels.accounting.account.index.table')]
     public function refreshTable(): void
     {
-        unset($this->accounts);
+        unset($this->accounts, $this->balancesByCurrency);
     }
 
     public function dismissAccountsGuide(): void
@@ -79,6 +80,54 @@ new class extends Component
             ->paginate(15);
     }
 
+    /**
+     * @return Collection<int, array{currency: Currency, total: string, formatted: string}>
+     */
+    #[Computed]
+    public function balancesByCurrency(): Collection
+    {
+        $businessId = Auth::user()?->current_business_id;
+
+        if ($businessId === null) {
+            return collect();
+        }
+
+        $totals = Account::query()
+            ->where('business_id', $businessId)
+            ->selectRaw('currency_id, SUM(current_balance) as total')
+            ->groupBy('currency_id')
+            ->pluck('total', 'currency_id');
+
+        if ($totals->isEmpty()) {
+            return collect();
+        }
+
+        $currencies = Currency::query()
+            ->whereIn('id', $totals->keys())
+            ->orderBy('code')
+            ->get()
+            ->keyBy('id');
+
+        return $totals
+            ->map(function (string|float $total, int|string $currencyId) use ($currencies): ?array {
+                $currency = $currencies->get((int) $currencyId);
+
+                if ($currency === null) {
+                    return null;
+                }
+
+                $amount = (string) $total;
+
+                return [
+                    'currency' => $currency,
+                    'total' => $amount,
+                    'formatted' => $currency->formatAmount($amount),
+                ];
+            })
+            ->filter()
+            ->values();
+    }
+
     public function formatCreatedAt(Account $account): string
     {
         return Jalalian::fromDateTime($account->created_at)->format('Y/m/d H:i');
@@ -90,10 +139,10 @@ new class extends Component
         $currency = $account->currency;
 
         if ($currency === null) {
-            return (string) $account->opening_balance;
+            return (string) $account->current_balance;
         }
 
-        return $currency->formatAmount((string) $account->opening_balance);
+        return $currency->formatAmount((string) $account->current_balance);
     }
 
     protected function resolveShouldShowAccountsGuide(): bool
@@ -174,6 +223,22 @@ new class extends Component
         </flux:callout>
     @endif
 
+    @if ($this->balancesByCurrency->isNotEmpty())
+        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            @foreach ($this->balancesByCurrency as $balance)
+                <flux:card class="space-y-2">
+                    <flux:text class="text-zinc-500">
+                        {{ __('general.total_accounts_balance') }}
+                        <span dir="ltr">({{ $balance['currency']->code }})</span>
+                    </flux:text>
+                    <flux:heading size="lg" class="font-semibold text-teal-700 dark:text-teal-400" dir="ltr">
+                        {{ $balance['formatted'] }}
+                    </flux:heading>
+                </flux:card>
+            @endforeach
+        </div>
+    @endif
+
     @if ($showAccountsGuide)
         <flux:callout icon="wallet" variant="secondary" color="teal">
             <flux:callout.heading>{{ __('general.accounts_guide_heading') }}</flux:callout.heading>
@@ -248,12 +313,12 @@ new class extends Component
                 </flux:table.column>
                 <flux:table.column>
                     <div class="inline-flex items-center gap-1">
-                        <span>{{ __('general.opening_balance') }}</span>
+                        <span>{{ __('general.current_balance') }}</span>
                         <flux:dropdown hover position="bottom" align="start">
                             <flux:button size="xs" variant="ghost" icon="circle-question-mark" class="-my-1" />
                             <flux:popover class="max-w-xs space-y-1 p-3">
-                                <flux:heading size="sm">{{ __('general.accounts_help_opening_balance_heading') }}</flux:heading>
-                                <flux:text size="sm">{{ __('general.accounts_help_opening_balance_body') }}</flux:text>
+                                <flux:heading size="sm">{{ __('general.accounts_help_current_balance_heading') }}</flux:heading>
+                                <flux:text size="sm">{{ __('general.accounts_help_current_balance_body') }}</flux:text>
                             </flux:popover>
                         </flux:dropdown>
                     </div>

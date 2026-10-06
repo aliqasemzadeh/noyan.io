@@ -349,29 +349,62 @@ new class extends Component
 
     <div
         x-ref="messages"
-        class="min-h-0 flex-1 space-y-3 overflow-y-auto"
-        wire:loading.class="opacity-70"
-        wire:target="sendPrompt"
+        class="min-h-0 flex-1 space-y-4 overflow-y-auto pe-1"
     >
         @forelse ($messages as $message)
             @if ($message['role'] === 'user')
-                <div class="flex justify-end">
-                    <div class="max-w-[85%] rounded-2xl rounded-ee-md bg-teal-600 px-3 py-2 text-sm text-white whitespace-pre-wrap">
+                <div class="flex items-end justify-end gap-2">
+                    <div class="max-w-[min(100%,42rem)] rounded-2xl rounded-ee-md bg-teal-600 px-4 py-2.5 text-sm leading-6 text-white shadow-sm whitespace-pre-wrap">
                         {{ $message['content'] }}
+                    </div>
+                    <div class="mb-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-teal-600 text-xs font-semibold text-white">
+                        {{ mb_substr(__('general.ai_assistant_you'), 0, 1) }}
                     </div>
                 </div>
             @else
-                <div class="flex justify-start">
-                    <flux:callout icon="sparkles" variant="secondary" inline class="max-w-[85%]">
-                        <span class="whitespace-pre-wrap">{{ $message['content'] }}</span>
-                    </flux:callout>
+                <div class="flex items-end justify-start gap-2">
+                    <div class="mb-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-white text-teal-600 shadow-sm ring-1 ring-zinc-200 dark:bg-zinc-900 dark:text-teal-300 dark:ring-zinc-700">
+                        <flux:icon.sparkles variant="micro" class="size-4" />
+                    </div>
+                    <div class="max-w-[min(100%,42rem)] rounded-2xl rounded-es-md border border-zinc-200/80 bg-white px-4 py-2.5 text-sm leading-6 text-zinc-800 shadow-sm whitespace-pre-wrap dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100">
+                        {{ $message['content'] }}
+                    </div>
                 </div>
             @endif
         @empty
-            <flux:callout icon="sparkles" variant="secondary" inline>
-                {{ __('general.ai_assistant_empty') }}
-            </flux:callout>
+            <div class="flex h-full min-h-48 flex-col items-center justify-center gap-4 px-4 text-center">
+                <div class="flex size-14 items-center justify-center rounded-2xl bg-teal-500/10 text-teal-600 ring-1 ring-teal-500/20 dark:text-teal-300">
+                    <flux:icon.sparkles class="size-7" />
+                </div>
+                <div class="max-w-sm space-y-1">
+                    <flux:heading size="base">{{ __('general.accounting_ai_title') }}</flux:heading>
+                    <flux:text class="text-sm leading-6">{{ __('general.ai_assistant_empty') }}</flux:text>
+                </div>
+                <div class="flex flex-wrap justify-center gap-2">
+                    <flux:badge size="sm" color="teal" icon="wallet">{{ __('general.accounting_ai_capability_balances') }}</flux:badge>
+                    <flux:badge size="sm" color="sky" icon="banknotes">{{ __('general.transactions') }}</flux:badge>
+                    <flux:badge size="sm" color="amber" icon="receipt">{{ __('general.accounting_ai_capability_invoices') }}</flux:badge>
+                </div>
+            </div>
         @endforelse
+
+        <div
+            wire:loading.flex
+            wire:target="sendPrompt"
+            class="hidden items-end justify-start gap-2"
+        >
+            <div class="mb-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-white text-teal-600 shadow-sm ring-1 ring-zinc-200 dark:bg-zinc-900 dark:text-teal-300 dark:ring-zinc-700">
+                <flux:icon.sparkles variant="micro" class="size-4 animate-pulse" />
+            </div>
+            <div class="rounded-2xl rounded-es-md border border-zinc-200/80 bg-white px-4 py-3 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
+                <div class="flex items-center gap-1.5">
+                    <span class="size-1.5 animate-bounce rounded-full bg-zinc-400 [animation-delay:0ms]"></span>
+                    <span class="size-1.5 animate-bounce rounded-full bg-zinc-400 [animation-delay:150ms]"></span>
+                    <span class="size-1.5 animate-bounce rounded-full bg-zinc-400 [animation-delay:300ms]"></span>
+                    <flux:text class="ms-2 text-xs">{{ __('general.ai_assistant_thinking') }}</flux:text>
+                </div>
+            </div>
+        </div>
     </div>
 
     <div
@@ -390,7 +423,7 @@ new class extends Component
         </flux:text>
     </div>
 
-    <form wire:submit="sendPrompt" class="shrink-0">
+    <form wire:submit="sendPrompt" class="shrink-0 rounded-2xl border border-zinc-200/80 bg-white p-2 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
         <flux:composer
             wire:model="prompt"
             rows="1"
