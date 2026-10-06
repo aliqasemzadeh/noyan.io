@@ -26,6 +26,9 @@ new class extends Component
 
     public string $assistantReply = '';
 
+    /** @var list<array{role: string, content: string}> */
+    public array $messages = [];
+
     public bool $isTranscribing = false;
 
     public bool $isRecording = false;
@@ -118,6 +121,11 @@ new class extends Component
 
         $promptText = trim($this->prompt);
 
+        $this->messages[] = [
+            'role' => 'user',
+            'content' => $promptText,
+        ];
+
         try {
             if ($this->context === 'users') {
                 $response = (new UserAssistant)->prompt($promptText);
@@ -125,6 +133,7 @@ new class extends Component
                 $user = auth()->user();
 
                 if ($user === null) {
+                    array_pop($this->messages);
                     Flux::toast(__('general.ai_error'), variant: 'danger');
 
                     return;
@@ -137,13 +146,19 @@ new class extends Component
         } catch (\Throwable $exception) {
             report($exception);
 
+            array_pop($this->messages);
             $this->assistantReply = '';
             Flux::toast(__('general.ai_error'), variant: 'danger');
 
             return;
         }
 
-        $this->assistantReply = $response->text ?: __('general.ai_reply_empty');
+        $reply = $response->text ?: __('general.ai_reply_empty');
+        $this->assistantReply = $reply;
+        $this->messages[] = [
+            'role' => 'assistant',
+            'content' => $reply,
+        ];
         $this->conversationId = $response->conversationId ?? $this->conversationId;
         $this->reset(['prompt', 'audio']);
         $this->isRecording = false;
@@ -154,6 +169,7 @@ new class extends Component
 
         if ($this->context === 'accounting') {
             $this->dispatch('panels.accounting.account.index.table');
+            $this->dispatch('panels.accounting.transaction.index.table');
         }
 
         Flux::toast(__('general.ai_prompt_sent'));
@@ -305,9 +321,18 @@ new class extends Component
                 this.stopRecording()
             }
         },
+        scrollToBottom() {
+            this.$nextTick(() => {
+                const el = this.$refs.messages
+                if (el) {
+                    el.scrollTop = el.scrollHeight
+                }
+            })
+        },
     }"
     x-effect="syncRecording(isRecording)"
-    class="space-y-3"
+    x-init="$watch(() => $wire.messages, () => scrollToBottom())"
+    class="flex h-full min-h-0 flex-col gap-3"
 >
     <input
         type="file"
@@ -322,7 +347,34 @@ new class extends Component
         x-on:livewire-upload-error="uploading = false; progress = 0"
     />
 
-    <form wire:submit="sendPrompt">
+    <div
+        x-ref="messages"
+        class="min-h-0 flex-1 space-y-3 overflow-y-auto"
+        wire:loading.class="opacity-70"
+        wire:target="sendPrompt"
+    >
+        @forelse ($messages as $message)
+            @if ($message['role'] === 'user')
+                <div class="flex justify-end">
+                    <div class="max-w-[85%] rounded-2xl rounded-ee-md bg-teal-600 px-3 py-2 text-sm text-white whitespace-pre-wrap">
+                        {{ $message['content'] }}
+                    </div>
+                </div>
+            @else
+                <div class="flex justify-start">
+                    <flux:callout icon="sparkles" variant="secondary" inline class="max-w-[85%]">
+                        <span class="whitespace-pre-wrap">{{ $message['content'] }}</span>
+                    </flux:callout>
+                </div>
+            @endif
+        @empty
+            <flux:callout icon="sparkles" variant="secondary" inline>
+                {{ __('general.ai_assistant_empty') }}
+            </flux:callout>
+        @endforelse
+    </div>
+
+    <form wire:submit="sendPrompt" class="shrink-0">
         <flux:composer
             wire:model="prompt"
             :label="__('general.ai_prompt')"
@@ -390,10 +442,4 @@ new class extends Component
         <flux:error name="prompt" />
         <flux:error name="audio" />
     </form>
-
-    @if ($assistantReply !== '')
-        <flux:callout icon="sparkles" variant="secondary" inline>
-            {{ $assistantReply }}
-        </flux:callout>
-    @endif
 </div>
