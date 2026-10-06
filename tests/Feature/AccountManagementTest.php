@@ -281,4 +281,44 @@ class AccountManagementTest extends TestCase
             ->assertSet('showAccountsGuide', true)
             ->assertSee(__('general.accounts_guide_heading'));
     }
+
+    public function test_accounts_index_shows_current_balance_and_total_by_currency(): void
+    {
+        $user = User::factory()->create();
+        $business = Business::factory()->for($user, 'owner')->create();
+        $user->forceFill(['current_business_id' => $business->id])->save();
+        $currency = Currency::factory()->create([
+            'code' => 'IRR',
+            'decimal_places' => 0,
+        ]);
+        $business->activateCurrency($currency, '1');
+
+        Cache::forever("accounts_guide_dismissed:{$user->id}:{$business->id}", true);
+
+        Account::factory()->create([
+            'business_id' => $business->id,
+            'currency_id' => $currency->id,
+            'name' => 'Cash Desk',
+            'opening_balance' => '1000',
+            'current_balance' => '2500',
+        ]);
+
+        Account::factory()->create([
+            'business_id' => $business->id,
+            'currency_id' => $currency->id,
+            'name' => 'Main Bank',
+            'opening_balance' => '500',
+            'current_balance' => '3500',
+        ]);
+
+        Livewire::actingAs($user)
+            ->test('pages::panel.accounting.account.index')
+            ->assertSee(__('general.total_accounts_balance'))
+            ->assertSee(__('general.current_balance'))
+            ->assertSee('Cash Desk')
+            ->assertSee('Main Bank')
+            ->assertSee('2500')
+            ->assertSee('3500')
+            ->assertSee('6000');
+    }
 }
