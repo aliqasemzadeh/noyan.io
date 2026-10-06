@@ -73,9 +73,22 @@ class LocaleDate
 
         try {
             if (self::usesJalali($locale)) {
-                $normalized = str_replace(['-', '.'], '/', $value);
+                if (preg_match('/^(\d{4})[-\/.](\d{1,2})[-\/.](\d{1,2})$/', $value, $matches) !== 1) {
+                    return null;
+                }
 
-                return Jalalian::fromFormat('Y/m/d', $normalized)->toCarbon()->startOfDay();
+                $year = (int) $matches[1];
+                $month = (int) $matches[2];
+                $day = (int) $matches[3];
+
+                // Storage/ISO dates are Gregorian (year >= 1700). User-facing Jalali years are smaller.
+                if ($year >= 1700) {
+                    return Carbon::createFromFormat('Y-m-d', sprintf('%04d-%02d-%02d', $year, $month, $day))->startOfDay();
+                }
+
+                return Jalalian::fromFormat('Y/m/d', sprintf('%04d/%02d/%02d', $year, $month, $day))
+                    ->toCarbon()
+                    ->startOfDay();
             }
 
             return Carbon::createFromFormat('Y-m-d', $value)->startOfDay();
