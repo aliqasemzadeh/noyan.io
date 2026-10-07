@@ -82,6 +82,43 @@ new class extends Component
                     </flux:badge>
                 </div>
             </div>
+            <div>
+                <flux:text class="text-sm text-zinc-500">{{ __('general.phone') }}</flux:text>
+                <flux:heading size="sm" class="mt-1" dir="ltr">{{ $business->phone ?: '—' }}</flux:heading>
+            </div>
+            <div class="sm:col-span-2">
+                <flux:text class="text-sm text-zinc-500">{{ __('general.address') }}</flux:text>
+                <flux:heading size="sm" class="mt-1">{{ $business->address ?: '—' }}</flux:heading>
+            </div>
+            <div>
+                <flux:text class="text-sm text-zinc-500">{{ __('general.logo') }}</flux:text>
+                <div class="mt-2">
+                    @if ($business->logoUrl())
+                        <img
+                            src="{{ $business->logoUrl() }}"
+                            alt="{{ $business->name }}"
+                            class="h-16 w-16 rounded-xl object-contain ring-1 ring-zinc-200 dark:ring-zinc-700"
+                        />
+                    @else
+                        <flux:heading size="sm">—</flux:heading>
+                    @endif
+                </div>
+            </div>
+            <div>
+                <flux:text class="text-sm text-zinc-500">{{ __('general.invoice_colors') }}</flux:text>
+                <div class="mt-2 flex items-center gap-2">
+                    <span
+                        class="size-8 rounded-full ring-1 ring-zinc-200 dark:ring-zinc-700"
+                        style="background-color: {{ $business->invoicePrimaryColor() }}"
+                        title="{{ $business->invoicePrimaryColor() }}"
+                    ></span>
+                    <span
+                        class="size-8 rounded-full ring-1 ring-zinc-200 dark:ring-zinc-700"
+                        style="background-color: {{ $business->invoiceSecondaryColor() }}"
+                        title="{{ $business->invoiceSecondaryColor() }}"
+                    ></span>
+                </div>
+            </div>
         </div>
     </flux:card>
 </div>

@@ -1,5 +1,6 @@
 <?php
 
+use App\Actions\Invoices\CreateInvoiceShareLinkAction;
 use App\Enums\Accounting\InvoiceType;
 use App\Models\Accounting\Invoice;
 use Flux\Flux;
@@ -67,6 +68,27 @@ new class extends Component
         $invoice->delete();
         unset($this->invoices);
         Flux::toast(__('general.invoice_deleted'));
+    }
+
+    public function copyShareLink(Invoice $invoice, CreateInvoiceShareLinkAction $action): void
+    {
+        $businessId = Auth::user()?->current_business_id;
+
+        if ($businessId === null || (int) $invoice->business_id !== (int) $businessId) {
+            return;
+        }
+
+        if (! $invoice->isFinalized()) {
+            Flux::toast(text: __('general.invoice_share_requires_finalized'), variant: 'danger');
+
+            return;
+        }
+
+        $url = $action->handle($invoice->loadMissing('business'));
+
+        $this->js('navigator.clipboard.writeText('.json_encode($url).')');
+
+        Flux::toast(__('general.invoice_link_copied'));
     }
 
     /**
@@ -231,6 +253,17 @@ new class extends Component
                                         <flux:modal.trigger name="invoice.delete.{{ $invoice->id }}">
                                             <flux:button size="xs" variant="danger" icon="trash" icon:variant="outline" />
                                         </flux:modal.trigger>
+                                    </flux:tooltip>
+                                @else
+                                    <flux:tooltip content="{{ __('general.copy_invoice_link') }}">
+                                        <flux:button
+                                            size="xs"
+                                            variant="primary"
+                                            color="teal"
+                                            icon="link"
+                                            icon:variant="outline"
+                                            wire:click="copyShareLink({{ $invoice->id }})"
+                                        />
                                     </flux:tooltip>
                                 @endif
                             </div>

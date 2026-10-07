@@ -11,14 +11,27 @@ use App\Models\Business;
 use App\Models\BusinessUser;
 use App\Models\Currency;
 use App\Models\User;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 
 class CreateBusinessAction
 {
     /**
-     * @param  array{name: string, type: string|BusinessType, category: string|BusinessCategory, currency_ids?: list<int|string>, currency_id?: int|null}  $data
+     * @param  array{
+     *     name: string,
+     *     type: string|BusinessType,
+     *     category: string|BusinessCategory,
+     *     phone?: string|null,
+     *     address?: string|null,
+     *     invoice_primary_color?: string|null,
+     *     invoice_secondary_color?: string|null,
+     *     logo?: TemporaryUploadedFile|UploadedFile|null,
+     *     currency_ids?: list<int|string>,
+     *     currency_id?: int|null
+     * }  $data
      */
     public function handle(User $user, array $data): Business
     {
@@ -37,8 +50,22 @@ class CreateBusinessAction
                 'slug' => $this->resolveUniqueSlug($data['name']),
                 'type' => $type,
                 'category' => $category,
+                'phone' => filled($data['phone'] ?? null) ? $data['phone'] : null,
+                'address' => filled($data['address'] ?? null) ? $data['address'] : null,
+                'invoice_primary_color' => filled($data['invoice_primary_color'] ?? null)
+                    ? $data['invoice_primary_color']
+                    : null,
+                'invoice_secondary_color' => filled($data['invoice_secondary_color'] ?? null)
+                    ? $data['invoice_secondary_color']
+                    : null,
                 'is_active' => true,
             ]);
+
+            if (($data['logo'] ?? null) !== null) {
+                $business
+                    ->addMedia($data['logo'])
+                    ->toMediaCollection('logo');
+            }
 
             BusinessUser::query()->create([
                 'business_id' => $business->id,

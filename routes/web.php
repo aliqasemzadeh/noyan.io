@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\ShortLink;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -15,6 +16,20 @@ Route::get('/locale/{locale}', function (string $locale) {
 
     return redirect()->back();
 })->name('locale.switch');
+
+Route::get('/i/{code}', function (string $code) {
+    $shortLink = ShortLink::query()->where('code', $code)->firstOrFail();
+
+    abort_if($shortLink->isExpired(), 404);
+
+    $shortLink->increment('hits');
+
+    return redirect()->away($shortLink->destination);
+})->name('short-links.redirect');
+
+Route::livewire('/invoices/public/{invoice}', 'pages::public.invoice.show')
+    ->middleware('signed')
+    ->name('invoices.public');
 
 Route::middleware('guest')->group(function () {
     Route::livewire('/login', 'pages::auth.login')->name('login');

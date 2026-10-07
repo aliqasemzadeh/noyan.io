@@ -218,6 +218,36 @@ class UserBusinessOnboardingTest extends TestCase
         $this->assertSame(BusinessCategory::Education, $business->category);
     }
 
+    public function test_user_can_update_optional_invoice_branding_fields(): void
+    {
+        $user = User::factory()->create();
+        $business = Business::factory()->for($user, 'owner')->create([
+            'type' => BusinessType::Store,
+            'category' => BusinessCategory::Other,
+        ]);
+        $user->forceFill(['current_business_id' => $business->id])->save();
+
+        Livewire::actingAs($user)
+            ->test('pages::panel.user.business.edit', ['business' => $business])
+            ->set('form.name', $business->name)
+            ->set('form.type', BusinessType::Store->value)
+            ->set('form.category', BusinessCategory::Other->value)
+            ->set('form.phone', '02112345678')
+            ->set('form.address', 'Tehran')
+            ->set('form.invoice_primary_color', '#0ea5e9')
+            ->set('form.invoice_secondary_color', '#0369a1')
+            ->call('save')
+            ->assertHasNoErrors()
+            ->assertRedirect(route('user.businesses.view', $business));
+
+        $business->refresh();
+
+        $this->assertSame('02112345678', $business->phone);
+        $this->assertSame('Tehran', $business->address);
+        $this->assertSame('#0ea5e9', $business->invoice_primary_color);
+        $this->assertSame('#0369a1', $business->invoice_secondary_color);
+    }
+
     public function test_foreign_user_cannot_edit_business(): void
     {
         $owner = User::factory()->create();

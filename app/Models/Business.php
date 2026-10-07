@@ -21,12 +21,29 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\DB;
+use Spatie\MediaLibrary\HasMedia;
+use Spatie\MediaLibrary\InteractsWithMedia;
 
-#[Fillable(['owner_id', 'name', 'slug', 'type', 'category', 'is_active'])]
-class Business extends Model
+#[Fillable([
+    'owner_id',
+    'name',
+    'slug',
+    'type',
+    'category',
+    'phone',
+    'address',
+    'invoice_primary_color',
+    'invoice_secondary_color',
+    'is_active',
+])]
+class Business extends Model implements HasMedia
 {
     /** @use HasFactory<BusinessFactory> */
-    use HasFactory, SoftDeletes;
+    use HasFactory, InteractsWithMedia, SoftDeletes;
+
+    public const DEFAULT_INVOICE_PRIMARY_COLOR = '#0d9488';
+
+    public const DEFAULT_INVOICE_SECONDARY_COLOR = '#134e4a';
 
     /**
      * @return array<string, string>
@@ -40,9 +57,43 @@ class Business extends Model
         ];
     }
 
+    public function registerMediaCollections(): void
+    {
+        $this->addMediaCollection('logo')
+            ->singleFile()
+            ->acceptsMimeTypes(['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml']);
+    }
+
+    public function logoUrl(): ?string
+    {
+        return $this->getFirstMediaUrl('logo') ?: null;
+    }
+
+    public function invoicePrimaryColor(): string
+    {
+        return filled($this->invoice_primary_color)
+            ? $this->invoice_primary_color
+            : self::DEFAULT_INVOICE_PRIMARY_COLOR;
+    }
+
+    public function invoiceSecondaryColor(): string
+    {
+        return filled($this->invoice_secondary_color)
+            ? $this->invoice_secondary_color
+            : self::DEFAULT_INVOICE_SECONDARY_COLOR;
+    }
+
     public function owner(): BelongsTo
     {
         return $this->belongsTo(User::class, 'owner_id');
+    }
+
+    /**
+     * @return HasMany<ShortLink, $this>
+     */
+    public function shortLinks(): HasMany
+    {
+        return $this->hasMany(ShortLink::class);
     }
 
     public function memberships(): HasMany

@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Models\Business;
 use App\Models\ShortLink;
 use Carbon\CarbonInterface;
 use RuntimeException;
@@ -10,22 +11,33 @@ class ShortLinkService
 {
     private const ALPHABET = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
 
-    public function create(string $destination, ?CarbonInterface $expiresAt = null): string
-    {
+    public function create(
+        string $destination,
+        ?Business $business = null,
+        ?CarbonInterface $expiresAt = null,
+    ): string {
         $code = $this->generateUniqueCode();
 
         ShortLink::query()->create([
+            'business_id' => $business?->id,
             'code' => $code,
             'destination' => $destination,
             'expires_at' => $expiresAt,
         ]);
 
-        return rtrim((string) config('shortlink.base_url'), '/').'/i/'.$code;
+        return $this->urlForCode($code);
+    }
+
+    public function urlForCode(string $code): string
+    {
+        $base = rtrim((string) (config('short-link.short_url') ?: config('app.url')), '/');
+
+        return $base.'/i/'.$code;
     }
 
     private function generateUniqueCode(): string
     {
-        $length = max(4, (int) config('shortlink.code_length', 5));
+        $length = max(4, (int) config('short-link.code_length', 5));
 
         for ($attempt = 0; $attempt < 20; $attempt++) {
             $code = $this->randomCode($length);
