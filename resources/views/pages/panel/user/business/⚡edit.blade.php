@@ -8,9 +8,12 @@ use App\Models\Business;
 use Flux\Flux;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
+use Livewire\WithFileUploads;
 
 new class extends Component
 {
+    use WithFileUploads;
+
     public Business $business;
 
     public UserBusinessForm $form;
@@ -99,6 +102,12 @@ new class extends Component
                     </flux:select>
                     <flux:error name="form.category" />
                 </flux:field>
+
+                <x-business.branding-fields
+                    :logo="$form->logo"
+                    :existing-logo-url="$business->logoUrl()"
+                    :remove-logo="$form->remove_logo"
+                />
 
                 <flux:button type="submit" variant="primary" color="teal" class="w-full">
                     {{ __('general.save') }}

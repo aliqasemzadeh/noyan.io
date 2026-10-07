@@ -10,9 +10,12 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
 use Livewire\Component;
+use Livewire\WithFileUploads;
 
 new class extends Component
 {
+    use WithFileUploads;
+
     public UserBusinessForm $form;
 
     public int $step = 1;
@@ -193,6 +196,8 @@ new class extends Component
                             </flux:select>
                             <flux:error name="form.category" />
                         </flux:field>
+
+                        <x-business.branding-fields :logo="$form->logo" />
                     </div>
                 @endif
 
