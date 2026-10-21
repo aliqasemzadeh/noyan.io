@@ -19,18 +19,21 @@ class BusinessUserForm extends Form
 
     public ?int $user_id = null;
 
-    public string $role = 'viewer';
-
     /** @var list<string> */
+    public array $roles = [];
+
+    /** @var array<string, list<string>> */
     public array $permissions = [];
 
     public function setBusiness(Business $business): void
     {
         $this->business = $business;
         $this->membership = null;
-        $this->reset(['user_id', 'role', 'permissions']);
-        $this->role = BusinessRole::Viewer->value;
-        $this->permissions = BusinessRole::Viewer->defaultPermissions();
+        $this->reset(['user_id', 'roles', 'permissions']);
+        $this->roles = [BusinessRole::Viewer->value];
+        $this->permissions = [
+            BusinessRole::Viewer->value => BusinessRole::Viewer->defaultPermissions(),
+        ];
     }
 
     public function setMembership(BusinessUser $membership): void
@@ -38,21 +41,30 @@ class BusinessUserForm extends Form
         $this->membership = $membership;
         $this->business = $membership->business;
         $this->user_id = $membership->user_id;
-        $this->role = $membership->role->value;
-        $this->permissions = $membership->permissions ?? $membership->role->defaultPermissions();
+        $this->roles = $membership->roleValues();
+        $this->permissions = $this->normalizePermissionsMap(
+            $membership->permissions,
+            $this->roles,
+        );
     }
 
-    public function syncPermissionsFromRole(): void
+    public function syncPermissionsFromRoles(): void
     {
-        $role = BusinessRole::tryFrom($this->role);
+        $selected = $this->normalizedRoles($this->roles);
+        $next = [];
 
-        if ($role === null) {
-            $this->permissions = [];
-
-            return;
+        foreach ($selected as $roleValue) {
+            $role = BusinessRole::from($roleValue);
+            $next[$roleValue] = $this->permissions[$roleValue]
+                ?? $role->defaultPermissions();
+            $next[$roleValue] = array_values(array_intersect(
+                $role->applicablePermissionValues(),
+                array_map('strval', $next[$roleValue]),
+            ));
         }
 
-        $this->permissions = $role->defaultPermissions();
+        $this->roles = $selected;
+        $this->permissions = $next;
     }
 
     /**
@@ -85,12 +97,14 @@ class BusinessUserForm extends Form
 
         return [
             'user_id' => $userRules,
-            'role' => [
-                'required',
+            'roles' => ['required', 'array', 'min:1'],
+            'roles.*' => [
+                'string',
                 Rule::enum(BusinessRole::class)->except([BusinessRole::Owner]),
             ],
             'permissions' => ['array'],
-            'permissions.*' => ['string', Rule::in(BusinessPermission::values())],
+            'permissions.*' => ['array'],
+            'permissions.*.*' => ['string', Rule::in(BusinessPermission::values())],
         ];
     }
 
@@ -101,7 +115,7 @@ class BusinessUserForm extends Form
     {
         return [
             'user_id' => __('general.user'),
-            'role' => __('general.role'),
+            'roles' => __('general.roles'),
             'permissions' => __('general.business_permissions'),
         ];
     }
@@ -115,7 +129,8 @@ class BusinessUserForm extends Form
         }
 
         $validated = $this->validate();
-        $permissions = $this->normalizedPermissions($validated['permissions'] ?? []);
+        $roles = $this->normalizedRoles($validated['roles'] ?? []);
+        $permissions = $this->normalizePermissionsMap($validated['permissions'] ?? [], $roles);
 
         $membership = BusinessUser::withTrashed()
             ->where('business_id', $this->business->id)
@@ -128,23 +143,25 @@ class BusinessUserForm extends Form
             }
 
             $membership->update([
-                'role' => $validated['role'],
+                'roles' => $roles,
                 'permissions' => $permissions,
             ]);
         } else {
             $membership = BusinessUser::create([
                 'business_id' => $this->business->id,
                 'user_id' => $validated['user_id'],
-                'role' => $validated['role'],
+                'roles' => $roles,
                 'permissions' => $permissions,
             ]);
         }
 
         User::query()->find($validated['user_id'])?->forgetBusinessesCache();
 
-        $this->reset(['user_id', 'role', 'permissions', 'membership']);
-        $this->role = BusinessRole::Viewer->value;
-        $this->permissions = BusinessRole::Viewer->defaultPermissions();
+        $this->reset(['user_id', 'roles', 'permissions', 'membership']);
+        $this->roles = [BusinessRole::Viewer->value];
+        $this->permissions = [
+            BusinessRole::Viewer->value => BusinessRole::Viewer->defaultPermissions(),
+        ];
 
         return $membership;
     }
@@ -153,50 +170,95 @@ class BusinessUserForm extends Form
     {
         if ($this->membership === null || $this->business === null) {
             throw ValidationException::withMessages([
-                'role' => __('general.business_required'),
+                'roles' => __('general.business_required'),
             ]);
         }
 
-        if ($this->membership->role === BusinessRole::Owner) {
+        if ($this->membership->isOwner()) {
             throw ValidationException::withMessages([
-                'role' => __('general.cannot_edit_business_owner'),
+                'roles' => __('general.cannot_edit_business_owner'),
             ]);
         }
 
         $validated = $this->validate([
-            'role' => [
-                'required',
+            'roles' => ['required', 'array', 'min:1'],
+            'roles.*' => [
+                'string',
                 Rule::enum(BusinessRole::class)->except([BusinessRole::Owner]),
             ],
             'permissions' => ['array'],
-            'permissions.*' => ['string', Rule::in(BusinessPermission::values())],
+            'permissions.*' => ['array'],
+            'permissions.*.*' => ['string', Rule::in(BusinessPermission::values())],
         ]);
 
+        $roles = $this->normalizedRoles($validated['roles'] ?? []);
+        $permissions = $this->normalizePermissionsMap($validated['permissions'] ?? [], $roles);
+
         $this->membership->update([
-            'role' => $validated['role'],
-            'permissions' => $this->normalizedPermissions($validated['permissions'] ?? []),
+            'roles' => $roles,
+            'permissions' => $permissions,
         ]);
 
         $this->membership->user?->forgetBusinessesCache();
 
         $membership = $this->membership->fresh();
 
-        $this->reset(['user_id', 'role', 'permissions', 'membership', 'business']);
-        $this->role = BusinessRole::Viewer->value;
-        $this->permissions = BusinessRole::Viewer->defaultPermissions();
+        $this->reset(['user_id', 'roles', 'permissions', 'membership', 'business']);
+        $this->roles = [BusinessRole::Viewer->value];
+        $this->permissions = [
+            BusinessRole::Viewer->value => BusinessRole::Viewer->defaultPermissions(),
+        ];
 
         return $membership;
     }
 
     /**
-     * @param  list<string>  $permissions
+     * @param  list<string>|mixed  $roles
      * @return list<string>
      */
-    protected function normalizedPermissions(array $permissions): array
+    protected function normalizedRoles(mixed $roles): array
     {
-        return array_values(array_intersect(
-            BusinessPermission::values(),
-            array_map('strval', $permissions),
-        ));
+        if (! is_array($roles)) {
+            return [];
+        }
+
+        $assignable = array_column(BusinessRole::assignable(), 'value');
+
+        return array_values(array_unique(array_filter(
+            array_map('strval', $roles),
+            fn (string $role): bool => in_array($role, $assignable, true),
+        )));
+    }
+
+    /**
+     * @param  mixed  $permissions
+     * @param  list<string>  $roles
+     * @return array<string, list<string>>
+     */
+    protected function normalizePermissionsMap(mixed $permissions, array $roles): array
+    {
+        $map = is_array($permissions) ? $permissions : [];
+        $normalized = [];
+
+        foreach ($roles as $roleValue) {
+            $role = BusinessRole::tryFrom($roleValue);
+
+            if ($role === null) {
+                continue;
+            }
+
+            $rolePermissions = $map[$roleValue] ?? $role->defaultPermissions();
+
+            if (! is_array($rolePermissions)) {
+                $rolePermissions = $role->defaultPermissions();
+            }
+
+            $normalized[$roleValue] = array_values(array_intersect(
+                $role->applicablePermissionValues(),
+                array_map('strval', $rolePermissions),
+            ));
+        }
+
+        return $normalized;
     }
 }
