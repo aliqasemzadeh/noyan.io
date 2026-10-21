@@ -1,3 +1,11 @@
+@php
+    use App\Enums\Business\InvoiceOrientation;
+
+    $orientation = $invoiceOrientation ?? InvoiceOrientation::Portrait;
+    if (! $orientation instanceof InvoiceOrientation) {
+        $orientation = InvoiceOrientation::tryFrom((string) $orientation) ?? InvoiceOrientation::Portrait;
+    }
+@endphp
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}" dir="{{ \App\Support\LocaleDate::direction() }}">
     <head>
@@ -12,6 +20,11 @@
 
         <style>
             @media print {
+                @page {
+                    size: {{ $orientation->pageSize() }};
+                    margin: 12mm;
+                }
+
                 .no-print {
                     display: none !important;
                 }
