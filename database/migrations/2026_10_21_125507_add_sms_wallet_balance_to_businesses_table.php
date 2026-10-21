@@ -6,23 +6,17 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         Schema::table('businesses', function (Blueprint $table) {
-            //
+            $table->decimal('sms_wallet_balance', 18, 2)->default(0)->after('is_active');
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::table('businesses', function (Blueprint $table) {
-            //
+            $table->dropColumn('sms_wallet_balance');
         });
     }
 };
