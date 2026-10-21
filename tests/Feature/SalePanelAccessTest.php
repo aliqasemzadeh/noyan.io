@@ -74,16 +74,20 @@ class SalePanelAccessTest extends TestCase
         $member = User::factory()->create();
         $business = Business::factory()->for($owner, 'owner')->create();
 
+        $customPermissions = [
+            BusinessPermission::QuoteView->value,
+            BusinessPermission::InvoiceView->value,
+            BusinessPermission::PartyView->value,
+            BusinessPermission::PartyCreate->value,
+        ];
+
         Livewire::actingAs($admin)
             ->test('business.create-user')
             ->call('assignData', $business)
             ->set('form.user_id', $member->id)
-            ->set('form.role', BusinessRole::Seller->value)
+            ->set('form.roles', [BusinessRole::Seller->value])
             ->set('form.permissions', [
-                BusinessPermission::QuoteView->value,
-                BusinessPermission::InvoiceView->value,
-                BusinessPermission::PartyView->value,
-                BusinessPermission::PartyCreate->value,
+                BusinessRole::Seller->value => $customPermissions,
             ])
             ->call('save')
             ->assertHasNoErrors();
@@ -94,13 +98,8 @@ class SalePanelAccessTest extends TestCase
             ->first();
 
         $this->assertNotNull($membership);
-        $this->assertSame(BusinessRole::Seller, $membership->role);
-        $this->assertSame([
-            BusinessPermission::QuoteView->value,
-            BusinessPermission::InvoiceView->value,
-            BusinessPermission::PartyView->value,
-            BusinessPermission::PartyCreate->value,
-        ], $membership->permissions);
+        $this->assertTrue($membership->hasRole(BusinessRole::Seller));
+        $this->assertSame($customPermissions, $membership->permissionsFor(BusinessRole::Seller));
         $this->assertFalse($membership->hasPermission(BusinessPermission::InvoiceCreate));
     }
 
@@ -114,14 +113,16 @@ class SalePanelAccessTest extends TestCase
         $seller = User::factory()->create();
         $business = Business::factory()->for($owner, 'owner')->create();
 
-        BusinessUser::factory()
+        $factory = BusinessUser::factory()
             ->seller()
             ->for($business)
-            ->for($seller, 'user')
-            ->state([
-                'permissions' => $permissions ?? BusinessRole::Seller->defaultPermissions(),
-            ])
-            ->create();
+            ->for($seller, 'user');
+
+        if ($permissions !== null) {
+            $factory = $factory->withPermissions($permissions, BusinessRole::Seller);
+        }
+
+        $factory->create();
 
         $seller->forceFill(['current_business_id' => $business->id])->save();
 

@@ -35,11 +35,13 @@ class BusinessManagementTest extends TestCase
 
         $this->assertNotNull($business);
         $this->assertSame($owner->id, $business->owner_id);
-        $this->assertDatabaseHas('business_user', [
-            'business_id' => $business->id,
-            'user_id' => $owner->id,
-            'role' => BusinessRole::Owner->value,
-        ]);
+        $ownerMembership = BusinessUser::query()
+            ->where('business_id', $business->id)
+            ->where('user_id', $owner->id)
+            ->first();
+
+        $this->assertNotNull($ownerMembership);
+        $this->assertTrue($ownerMembership->hasRole(BusinessRole::Owner));
         $this->assertSame($business->id, $owner->fresh()->current_business_id);
     }
 
@@ -65,17 +67,19 @@ class BusinessManagementTest extends TestCase
         $this->assertSame('New Name', $business->name);
         $this->assertSame($newOwner->id, $business->owner_id);
 
-        $this->assertDatabaseHas('business_user', [
-            'business_id' => $business->id,
-            'user_id' => $newOwner->id,
-            'role' => BusinessRole::Owner->value,
-        ]);
+        $newOwnerMembership = BusinessUser::query()
+            ->where('business_id', $business->id)
+            ->where('user_id', $newOwner->id)
+            ->first();
+        $oldOwnerMembership = BusinessUser::query()
+            ->where('business_id', $business->id)
+            ->where('user_id', $oldOwner->id)
+            ->first();
 
-        $this->assertDatabaseHas('business_user', [
-            'business_id' => $business->id,
-            'user_id' => $oldOwner->id,
-            'role' => BusinessRole::Admin->value,
-        ]);
+        $this->assertNotNull($newOwnerMembership);
+        $this->assertTrue($newOwnerMembership->hasRole(BusinessRole::Owner));
+        $this->assertNotNull($oldOwnerMembership);
+        $this->assertTrue($oldOwnerMembership->hasRole(BusinessRole::Admin));
     }
 
     public function test_admin_can_add_and_remove_business_user(): void
@@ -89,7 +93,7 @@ class BusinessManagementTest extends TestCase
             ->test('business.create-user')
             ->call('assignData', $business)
             ->set('form.user_id', $member->id)
-            ->set('form.role', BusinessRole::Accountant->value)
+            ->set('form.roles', [BusinessRole::Accountant->value])
             ->call('save')
             ->assertHasNoErrors();
 
@@ -99,7 +103,7 @@ class BusinessManagementTest extends TestCase
             ->first();
 
         $this->assertNotNull($membership);
-        $this->assertSame(BusinessRole::Accountant, $membership->role);
+        $this->assertTrue($membership->hasRole(BusinessRole::Accountant));
 
         Livewire::actingAs($admin)
             ->test('business.remove-user')
@@ -127,11 +131,10 @@ class BusinessManagementTest extends TestCase
             ->call('remove')
             ->assertHasNoErrors();
 
-        $this->assertDatabaseHas('business_user', [
-            'id' => $ownerMembership->id,
-            'deleted_at' => null,
-            'role' => BusinessRole::Owner->value,
-        ]);
+        $ownerMembership->refresh();
+
+        $this->assertNull($ownerMembership->deleted_at);
+        $this->assertTrue($ownerMembership->hasRole(BusinessRole::Owner));
     }
 
     public function test_business_users_page_renders(): void

@@ -68,11 +68,13 @@ class UserBusinessOnboardingTest extends TestCase
         $this->assertSame($user->id, $business->owner_id);
         $this->assertSame($business->id, $user->fresh()->current_business_id);
 
-        $this->assertDatabaseHas('business_user', [
-            'business_id' => $business->id,
-            'user_id' => $user->id,
-            'role' => BusinessRole::Owner->value,
-        ]);
+        $membership = BusinessUser::query()
+            ->where('business_id', $business->id)
+            ->where('user_id', $user->id)
+            ->first();
+
+        $this->assertNotNull($membership);
+        $this->assertTrue($membership->hasRole(BusinessRole::Owner));
 
         $this->assertDatabaseHas('business_currencies', [
             'business_id' => $business->id,
