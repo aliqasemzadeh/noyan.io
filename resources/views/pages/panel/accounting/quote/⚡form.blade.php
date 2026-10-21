@@ -67,6 +67,8 @@ new class extends Component
     public function updatedFormPartyId(?int $partyId): void
     {
         if ($partyId === null) {
+            $this->form->party_name = '';
+
             return;
         }
 
