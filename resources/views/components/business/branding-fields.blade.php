@@ -5,10 +5,6 @@
     'business' => null,
 ])
 
-@php
-    use App\Enums\Business\InvoiceOrientation;
-@endphp
-
 <div class="space-y-4 border-t border-zinc-200 pt-6 dark:border-zinc-700">
     <div>
         <flux:heading size="lg">{{ __('general.invoice_branding') }}</flux:heading>
@@ -100,7 +96,7 @@
     <flux:field>
         <flux:label>{{ __('general.invoice_orientation') }}</flux:label>
         <flux:radio.group wire:model="form.invoice_orientation" variant="cards" class="flex max-sm:flex-col">
-            @foreach (InvoiceOrientation::cases() as $orientation)
+            @foreach (\App\Enums\Business\InvoiceOrientation::cases() as $orientation)
                 <flux:radio :value="$orientation->value" :label="$orientation->label()" />
             @endforeach
         </flux:radio.group>
