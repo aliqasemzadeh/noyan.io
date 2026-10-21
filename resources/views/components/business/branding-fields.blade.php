@@ -12,6 +12,40 @@
     </div>
 
     <flux:field>
+        <flux:label>{{ __('general.legal_name') }}</flux:label>
+        <flux:input
+            wire:model="form.legal_name"
+            placeholder="{{ __('general.legal_name') }}"
+            clearable
+        />
+        <flux:error name="form.legal_name" />
+    </flux:field>
+
+    <div class="grid gap-4 sm:grid-cols-2">
+        <flux:field>
+            <flux:label>{{ __('general.national_id') }}</flux:label>
+            <flux:input
+                wire:model="form.national_id"
+                placeholder="{{ __('general.national_id_placeholder') }}"
+                clearable
+                dir="ltr"
+            />
+            <flux:error name="form.national_id" />
+        </flux:field>
+
+        <flux:field>
+            <flux:label>{{ __('general.economic_code') }}</flux:label>
+            <flux:input
+                wire:model="form.economic_code"
+                placeholder="{{ __('general.economic_code_placeholder') }}"
+                clearable
+                dir="ltr"
+            />
+            <flux:error name="form.economic_code" />
+        </flux:field>
+    </div>
+
+    <flux:field>
         <flux:label>{{ __('general.phone') }}</flux:label>
         <flux:input
             wire:model="form.phone"
@@ -31,6 +65,31 @@
         />
         <flux:error name="form.address" />
     </flux:field>
+
+    <div class="grid gap-4 sm:grid-cols-2">
+        <flux:field>
+            <flux:label>{{ __('general.postal_code') }}</flux:label>
+            <flux:input
+                wire:model="form.postal_code"
+                placeholder="{{ __('general.postal_code_placeholder') }}"
+                clearable
+                dir="ltr"
+            />
+            <flux:error name="form.postal_code" />
+        </flux:field>
+
+        <flux:field>
+            <flux:label>{{ __('general.tax_memory_id') }}</flux:label>
+            <flux:input
+                wire:model="form.tax_memory_id"
+                placeholder="{{ __('general.tax_memory_id_placeholder') }}"
+                clearable
+                dir="ltr"
+            />
+            <flux:description>{{ __('general.tax_memory_id_hint') }}</flux:description>
+            <flux:error name="form.tax_memory_id" />
+        </flux:field>
+    </div>
 
     <flux:file-upload wire:model="form.logo" label="{{ __('general.logo') }}">
         <flux:file-upload.dropzone

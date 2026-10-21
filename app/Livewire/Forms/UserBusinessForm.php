@@ -133,16 +133,31 @@ class UserBusinessForm extends Form
     {
         return [
             'name' => __('general.name'),
+            'legal_name' => __('general.legal_name'),
             'type' => __('general.business_type'),
             'category' => __('general.business_category'),
             'phone' => __('general.phone'),
             'address' => __('general.address'),
+            'national_id' => __('general.national_id'),
+            'economic_code' => __('general.economic_code'),
+            'postal_code' => __('general.postal_code'),
+            'tax_memory_id' => __('general.tax_memory_id'),
             'invoice_primary_color' => __('general.invoice_primary_color'),
             'invoice_secondary_color' => __('general.invoice_secondary_color'),
             'invoice_orientation' => __('general.invoice_orientation'),
             'logo' => __('general.logo'),
             'currency_ids' => __('general.currencies'),
             'currency_ids.*' => __('general.currency'),
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'economic_code.regex' => __('general.economic_code_format'),
         ];
     }
 

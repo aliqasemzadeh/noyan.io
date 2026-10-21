@@ -20,9 +20,17 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'created_by',
     'party_id',
     'party_name',
+    'buyer_legal_name',
+    'buyer_national_id',
+    'buyer_economic_code',
+    'buyer_postal_code',
+    'buyer_phone',
+    'buyer_address',
     'quote_id',
     'invoice_number',
     'type',
+    'sale_kind_id',
+    'settlement_type',
     'issue_date',
     'due_date',
     'finalized_at',
@@ -34,6 +42,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'meta',
     'payment_status',
     'note',
+    'moodian_tax_id',
+    'moodian_status',
 ])]
 class Invoice extends Model
 {
@@ -111,6 +121,11 @@ class Invoice extends Model
         return $this->belongsTo(Party::class);
     }
 
+    public function saleKind(): BelongsTo
+    {
+        return $this->belongsTo(SaleKind::class);
+    }
+
     public function quote(): BelongsTo
     {
         return $this->belongsTo(Quote::class);
@@ -145,10 +160,51 @@ class Invoice extends Model
 
     public function displayPartyName(): string
     {
+        if (filled($this->buyer_legal_name)) {
+            return (string) $this->buyer_legal_name;
+        }
+
         if ($this->party !== null) {
             return $this->party->displayName();
         }
 
         return (string) ($this->party_name ?? '');
+    }
+
+    public function buyerNationalId(): ?string
+    {
+        return filled($this->buyer_national_id)
+            ? (string) $this->buyer_national_id
+            : ($this->party?->national_id);
+    }
+
+    public function buyerEconomicCode(): ?string
+    {
+        return filled($this->buyer_economic_code)
+            ? (string) $this->buyer_economic_code
+            : ($this->party?->economic_code);
+    }
+
+    public function buyerPostalCode(): ?string
+    {
+        return filled($this->buyer_postal_code)
+            ? (string) $this->buyer_postal_code
+            : ($this->party?->postal_code);
+    }
+
+    public function buyerPhone(): ?string
+    {
+        if (filled($this->buyer_phone)) {
+            return (string) $this->buyer_phone;
+        }
+
+        return $this->party?->mobile ?: $this->party?->phone;
+    }
+
+    public function buyerAddress(): ?string
+    {
+        return filled($this->buyer_address)
+            ? (string) $this->buyer_address
+            : ($this->party?->address);
     }
 }

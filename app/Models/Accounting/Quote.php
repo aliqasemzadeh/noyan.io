@@ -19,6 +19,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'party_id',
     'party_name',
     'quote_number',
+    'sale_kind_id',
     'issue_date',
     'valid_until',
     'finalized_at',
