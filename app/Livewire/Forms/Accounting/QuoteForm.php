@@ -271,6 +271,9 @@ class QuoteForm extends Form
             foreach (['quantity', 'unit_price', 'discount_amount', 'tax_amount'] as $field) {
                 $this->items[$index][$field] = Money::normalize((string) ($item[$field] ?? '0'));
             }
+
+            $this->items[$index]['sku'] = filled($item['sku'] ?? null) ? (string) $item['sku'] : null;
+            $this->items[$index]['unit'] = filled($item['unit'] ?? null) ? (string) $item['unit'] : null;
         }
     }
 }
