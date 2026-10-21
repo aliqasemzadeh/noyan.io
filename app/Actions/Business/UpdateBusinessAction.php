@@ -17,8 +17,13 @@ class UpdateBusinessAction
      *     name: string,
      *     type: string|BusinessType,
      *     category: string|BusinessCategory,
+     *     legal_name?: string|null,
      *     phone?: string|null,
      *     address?: string|null,
+     *     national_id?: string|null,
+     *     economic_code?: string|null,
+     *     postal_code?: string|null,
+     *     tax_memory_id?: string|null,
      *     invoice_primary_color?: string|null,
      *     invoice_secondary_color?: string|null,
      *     invoice_orientation?: string|InvoiceOrientation|null,
@@ -46,10 +51,15 @@ class UpdateBusinessAction
 
         $business->update([
             'name' => $data['name'],
+            'legal_name' => filled($data['legal_name'] ?? null) ? $data['legal_name'] : null,
             'type' => $type,
             'category' => $category,
             'phone' => filled($data['phone'] ?? null) ? $data['phone'] : null,
             'address' => filled($data['address'] ?? null) ? $data['address'] : null,
+            'national_id' => filled($data['national_id'] ?? null) ? $data['national_id'] : null,
+            'economic_code' => filled($data['economic_code'] ?? null) ? $data['economic_code'] : null,
+            'postal_code' => filled($data['postal_code'] ?? null) ? $data['postal_code'] : null,
+            'tax_memory_id' => filled($data['tax_memory_id'] ?? null) ? $data['tax_memory_id'] : null,
             'invoice_primary_color' => filled($data['invoice_primary_color'] ?? null)
                 ? $data['invoice_primary_color']
                 : null,
