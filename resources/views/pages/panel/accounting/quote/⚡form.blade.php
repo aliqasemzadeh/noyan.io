@@ -292,7 +292,11 @@ new class extends Component
 
     <form wire:submit="saveAsDraft" class="space-y-6">
         <flux:card class="space-y-4">
-            <div class="grid gap-4 md:grid-cols-2">
+            <div @class([
+                'grid gap-4 grid-cols-1',
+                'md:grid-cols-3' => $this->saleKinds->isNotEmpty(),
+                'md:grid-cols-2' => $this->saleKinds->isEmpty(),
+            ])>
                 @if ($this->saleKinds->isNotEmpty())
                     <flux:field>
                         <flux:label>{{ __('general.sale_kind') }}</flux:label>
