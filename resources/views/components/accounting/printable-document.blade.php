@@ -42,8 +42,9 @@
     $headerTint = "color-mix(in srgb, {$primary} 18%, white)";
     $stripeTint = "color-mix(in srgb, {$primary} 8%, white)";
     $borderColor = "color-mix(in srgb, {$primary} 35%, #71717a)";
-    $issueDateValue = collect($dates)->firstWhere('label', __('general.issue_date'))['value']
-        ?? (collect($dates)->first()['value'] ?? '—');
+    $issueDateRow = collect($dates)->firstWhere('label', __('general.issue_date'))
+        ?? collect($dates)->first();
+    $issueDateValue = is_array($issueDateRow) ? ($issueDateRow['value'] ?? '—') : '—';
     $columnTotals = DocumentLineAmounts::columnTotals($items);
     $accountsList = collect($accounts);
 @endphp
@@ -104,7 +105,7 @@
                 <div class="space-y-0.5 p-1.5 text-black" style="border-color: {{ $borderColor }};">
                     <p><span class="font-semibold">{{ __('general.legal_or_natural_name') }}:</span> {{ $sellerName }}</p>
                     @if (filled($business->name) && $business->name !== $sellerName)
-                        <p><span class="font-semibold">{{ __('general.business_name') }}:</span> {{ $business->name }}</p>
+                        <p><span class="font-semibold">{{ __('general.name') }}:</span> {{ $business->name }}</p>
                     @endif
                     @if (filled($business->phone))
                         <p><span class="font-semibold">{{ __('general.phone') }}:</span> <span dir="ltr">{{ $business->phone }}</span></p>

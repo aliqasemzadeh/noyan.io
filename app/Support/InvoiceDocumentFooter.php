@@ -24,9 +24,9 @@ class InvoiceDocumentFooter
         }
 
         $html = collect($parts)
-            ->map(fn (string $part): string => '<p class="mt-2 text-sm text-zinc-600 dark:text-zinc-300 whitespace-pre-wrap">'.e($part).'</p>')
+            ->map(fn (string $part): string => '<p class="mt-1 text-[10px] text-black whitespace-pre-wrap">'.e($part).'</p>')
             ->implode('');
 
-        return new HtmlString('<div class="mt-4 border-t border-zinc-200 pt-4 dark:border-zinc-700">'.$html.'</div>');
+        return new HtmlString('<div class="mt-1.5 border-t border-zinc-300 pt-1.5">'.$html.'</div>');
     }
 }
