@@ -4,6 +4,7 @@ namespace App\Actions\Business;
 
 use App\Enums\Business\BusinessCategory;
 use App\Enums\Business\BusinessType;
+use App\Enums\Business\InvoiceOrientation;
 use App\Models\Business;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Str;
