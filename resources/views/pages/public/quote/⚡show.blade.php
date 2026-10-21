@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\Business\InvoiceOrientation;
 use App\Models\Accounting\Quote;
 use App\Models\Business;
 use App\Support\InvoiceDocumentFooter;
@@ -41,16 +42,26 @@ new #[Layout('layouts::invoice')] class extends Component
     {
         return number_format((float) $amount, 0, '.', ',');
     }
+
+    public function orientation(): InvoiceOrientation
+    {
+        return $this->business()->invoiceOrientation();
+    }
 };
 ?>
 
 @php
     $business = $this->business();
+    $orientation = $this->orientation();
+    $containerClass = $orientation === InvoiceOrientation::Landscape
+        ? 'mx-auto max-w-5xl px-4 py-8 sm:px-6'
+        : 'mx-auto max-w-3xl px-4 py-8 sm:px-6';
 @endphp
 
 <x-slot name="title">{{ __('general.quote') }} {{ $quote->quote_number }} - {{ $business->name }}</x-slot>
+<x-slot name="invoiceOrientation">{{ $orientation->value }}</x-slot>
 
-<div class="mx-auto max-w-3xl px-4 py-8 sm:px-6">
+<div class="{{ $containerClass }}">
     <div class="no-print mb-4 flex justify-end">
         <flux:button
             type="button"

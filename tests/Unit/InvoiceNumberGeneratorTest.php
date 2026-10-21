@@ -2,9 +2,11 @@
 
 namespace Tests\Unit;
 
+use App\Enums\Accounting\InvoiceNumberFormat;
 use App\Enums\Accounting\InvoiceType;
 use App\Models\Accounting\Invoice;
 use App\Models\Business;
+use App\Models\BusinessInvoiceSetting;
 use App\Models\User;
 use App\Services\InvoiceNumberGenerator;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -46,5 +48,33 @@ class InvoiceNumberGeneratorTest extends TestCase
         $number = app(InvoiceNumberGenerator::class)->generate($business->id, InvoiceType::Purchase, $jalali);
 
         $this->assertSame('PR-1405-02-0001', $number);
+    }
+
+    public function test_year_format_resets_annually_with_custom_prefix(): void
+    {
+        $user = User::factory()->create();
+        $business = Business::factory()->for($user, 'owner')->create();
+
+        BusinessInvoiceSetting::forBusiness($business)->update([
+            'number_format' => InvoiceNumberFormat::Year,
+            'sale_prefix' => 'INV',
+            'number_pad' => 4,
+        ]);
+
+        $jalali = Jalalian::fromFormat('Y-m-d', '1405-07-20');
+        $generator = app(InvoiceNumberGenerator::class);
+
+        $first = $generator->generate($business->id, InvoiceType::Sale, $jalali);
+        $this->assertSame('INV-1405-0001', $first);
+
+        Invoice::factory()->create([
+            'business_id' => $business->id,
+            'created_by' => $user->id,
+            'type' => InvoiceType::Sale,
+            'invoice_number' => $first,
+        ]);
+
+        $second = $generator->generate($business->id, InvoiceType::Sale, $jalali);
+        $this->assertSame('INV-1405-0002', $second);
     }
 }

@@ -65,7 +65,7 @@ new class extends Component
         </div>
 
         @if ($business)
-            <flux:callout icon="building-2" variant="secondary" inline>
+            <flux:callout icon="building" variant="secondary" inline>
                 {{ $business->name }}
                 —
                 <span dir="ltr">{{ number_format((float) $business->sms_wallet_balance) }}</span>

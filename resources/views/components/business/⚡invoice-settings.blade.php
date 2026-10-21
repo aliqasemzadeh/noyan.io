@@ -40,7 +40,7 @@ new class extends Component
     </div>
 
     @if ($business)
-        <flux:callout icon="building-2" variant="secondary" inline>
+        <flux:callout icon="building" variant="secondary" inline>
             {{ $business->name }}
             —
             {{ __('general.sms_wallet_balance') }}:

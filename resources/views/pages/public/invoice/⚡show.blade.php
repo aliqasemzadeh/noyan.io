@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\Business\InvoiceOrientation;
 use App\Models\Accounting\Invoice;
 use App\Models\Business;
 use App\Support\InvoiceDocumentFooter;
@@ -15,7 +16,13 @@ new #[Layout('layouts::invoice')] class extends Component
     {
         abort_unless($invoice->isFinalized(), 404);
 
-        $this->invoice = $invoice->loadMissing(['items', 'party', 'business.media', 'business.invoiceSettings']);
+        $this->invoice = $invoice->loadMissing([
+            'items',
+            'party',
+            'accounts',
+            'business.media',
+            'business.invoiceSettings',
+        ]);
     }
 
     public function business(): Business
@@ -41,11 +48,20 @@ new #[Layout('layouts::invoice')] class extends Component
     {
         return number_format((float) $amount, 0, '.', ',');
     }
+
+    public function orientation(): InvoiceOrientation
+    {
+        return $this->business()->invoiceOrientation();
+    }
 };
 ?>
 
 @php
     $business = $this->business();
+    $orientation = $this->orientation();
+    $containerClass = $orientation === InvoiceOrientation::Landscape
+        ? 'mx-auto max-w-5xl px-4 py-8 sm:px-6'
+        : 'mx-auto max-w-3xl px-4 py-8 sm:px-6';
     $dates = [
         ['label' => __('general.issue_date'), 'value' => $this->formatDate($invoice->issue_date)],
     ];
@@ -56,8 +72,9 @@ new #[Layout('layouts::invoice')] class extends Component
 @endphp
 
 <x-slot name="title">{{ __('general.invoice') }} {{ $invoice->invoice_number }} - {{ $business->name }}</x-slot>
+<x-slot name="invoiceOrientation">{{ $orientation->value }}</x-slot>
 
-<div class="mx-auto max-w-3xl px-4 py-8 sm:px-6">
+<div class="{{ $containerClass }}">
     <div class="no-print mb-4 flex justify-end">
         <flux:button
             type="button"
@@ -82,6 +99,7 @@ new #[Layout('layouts::invoice')] class extends Component
         :global-tax="$invoice->global_tax"
         :total-amount="$invoice->total_amount"
         :note="$invoice->note"
+        :accounts="$invoice->accounts"
         :format-amount="fn (string $amount): string => $this->formatAmount($amount)"
     >
         @if ($footer = $this->documentFooter())

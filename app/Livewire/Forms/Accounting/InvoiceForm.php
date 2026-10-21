@@ -39,6 +39,11 @@ class InvoiceForm extends Form
 
     public string $note = '';
 
+    /**
+     * @var list<int|string>
+     */
+    public array $account_ids = [];
+
     /** @var list<array<string, mixed>> */
     public array $items = [];
 
@@ -58,6 +63,8 @@ class InvoiceForm extends Form
         $this->global_discount = $this->formatAmount((string) $invoice->global_discount);
         $this->global_tax = $this->formatAmount((string) $invoice->global_tax);
         $this->note = (string) ($invoice->note ?? '');
+        $invoice->loadMissing('accounts');
+        $this->account_ids = $invoice->accounts->pluck('id')->map(fn ($id): int => (int) $id)->values()->all();
         $this->items = $invoice->items
             ->map(fn ($item): array => [
                 'id' => (string) $item->id,
@@ -87,6 +94,7 @@ class InvoiceForm extends Form
         $this->note = '';
         $this->party_id = null;
         $this->party_name = '';
+        $this->account_ids = [];
         $this->items = [];
         $this->addItem();
     }
@@ -177,6 +185,15 @@ class InvoiceForm extends Form
             'global_discount' => $amount,
             'global_tax' => $amount,
             'note' => ['nullable', 'string'],
+            'account_ids' => ['nullable', 'array'],
+            'account_ids.*' => [
+                'integer',
+                Rule::exists('accounting_accounts', 'id')
+                    ->where(fn ($query) => $query
+                        ->where('business_id', $businessId)
+                        ->where('is_active', true)
+                        ->whereNull('deleted_at')),
+            ],
             'items' => [$requireItems ? 'required' : 'nullable', 'array', $requireItems ? 'min:1' : 'min:0'],
             'items.*.title' => [
                 $requireItems ? 'required' : 'nullable',
@@ -213,6 +230,8 @@ class InvoiceForm extends Form
             'due_date' => __('general.due_date'),
             'global_discount' => __('general.global_discount'),
             'global_tax' => __('general.global_tax'),
+            'account_ids' => __('general.invoice_payment_accounts'),
+            'account_ids.*' => __('general.account'),
             'items' => __('general.invoice_items'),
             'items.*.title' => __('general.item_title'),
             'items.*.quantity' => __('general.quantity'),
@@ -238,6 +257,11 @@ class InvoiceForm extends Form
             'global_discount' => $this->normalizeAmount($this->global_discount),
             'global_tax' => $this->normalizeAmount($this->global_tax),
             'note' => $this->note !== '' ? $this->note : null,
+            'account_ids' => collect($this->account_ids)
+                ->map(fn ($id): int => (int) $id)
+                ->unique()
+                ->values()
+                ->all(),
             'items' => collect($this->items)
                 ->filter(fn (array $item): bool => ! RichText::isBlank((string) ($item['title'] ?? '')))
                 ->values()

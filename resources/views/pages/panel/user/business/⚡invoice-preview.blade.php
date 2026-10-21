@@ -1,13 +1,113 @@
 <?php
 
+use App\Enums\Business\InvoiceOrientation;
+use App\Models\Business;
+use App\Support\Accounting\PreviewDocumentItem;
+use App\Support\InvoiceDocumentFooter;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Auth;
+use Livewire\Attributes\Computed;
+use Livewire\Attributes\Layout;
 use Livewire\Component;
+use Morilog\Jalali\Jalalian;
 
-new class extends Component
+new #[Layout('layouts::invoice')] class extends Component
 {
-    //
+    public Business $business;
+
+    public function mount(Business $business): void
+    {
+        abort_unless(Auth::user()?->belongsToBusiness($business), 403);
+
+        $this->business = $business->loadMissing('media', 'invoiceSettings');
+    }
+
+    /**
+     * @return Collection<int, PreviewDocumentItem>
+     */
+    #[Computed]
+    public function sampleItems(): Collection
+    {
+        return collect([
+            new PreviewDocumentItem(__('general.invoice_preview_sample_item_1'), '2', '150000', '300000'),
+            new PreviewDocumentItem(__('general.invoice_preview_sample_item_2'), '1', '250000', '250000'),
+        ]);
+    }
+
+    public function documentFooter(): ?\Illuminate\Support\HtmlString
+    {
+        return InvoiceDocumentFooter::forBusiness($this->business);
+    }
+
+    public function formatDate(?\DateTimeInterface $date): string
+    {
+        if ($date === null) {
+            return '—';
+        }
+
+        return Jalalian::fromDateTime($date)->format('Y/m/d');
+    }
+
+    public function formatAmount(string $amount): string
+    {
+        return number_format((float) $amount, 0, '.', ',');
+    }
+
+    public function orientation(): InvoiceOrientation
+    {
+        return $this->business->invoiceOrientation();
+    }
 };
 ?>
 
-<div>
-    {{-- Life is available only in the present moment. - Thich Nhat Hanh --}}
+@php
+    $orientation = $this->orientation();
+    $containerClass = $orientation === InvoiceOrientation::Landscape
+        ? 'mx-auto max-w-5xl px-4 py-8 sm:px-6'
+        : 'mx-auto max-w-3xl px-4 py-8 sm:px-6';
+@endphp
+
+<x-slot name="title">{{ __('general.preview_invoice') }} - {{ $business->name }}</x-slot>
+<x-slot name="invoiceOrientation">{{ $orientation->value }}</x-slot>
+
+<div class="{{ $containerClass }}">
+    <div class="no-print mb-4 flex flex-wrap items-center justify-between gap-3">
+        <flux:callout icon="eye" variant="secondary" inline>
+            {{ __('general.invoice_preview_sample_notice') }}
+        </flux:callout>
+
+        <flux:button
+            type="button"
+            variant="primary"
+            color="teal"
+            icon="printer"
+            x-on:click="window.print()"
+        >
+            {{ __('general.print_invoice') }}
+        </flux:button>
+    </div>
+
+    <x-accounting.printable-document
+        :business="$business"
+        :document-label="__('general.invoice')"
+        :number="__('general.invoice_preview_sample_number')"
+        :party-name="__('general.invoice_preview_sample_party')"
+        :dates="[
+            ['label' => __('general.issue_date'), 'value' => $this->formatDate(now())],
+            ['label' => __('general.due_date'), 'value' => $this->formatDate(now()->addDays(7))],
+        ]"
+        :items="$this->sampleItems"
+        items-total="550000"
+        global-discount="50000"
+        global-tax="0"
+        total-amount="500000"
+        :note="__('general.invoice_preview_sample_note')"
+        :format-amount="fn (string $amount): string => $this->formatAmount($amount)"
+    >
+        @if ($footer = $this->documentFooter())
+            <x-slot:footer>
+                {{ $footer }}
+            </x-slot:footer>
+        @endif
+    </x-accounting.printable-document>
 </div>

@@ -15,11 +15,13 @@ return new class extends Migration
             $table->decimal('amount', 18, 2);
             $table->decimal('balance_after', 18, 2);
             $table->string('reason')->nullable();
-            $table->nullableMorphs('reference');
+            $table->string('reference_type')->nullable();
+            $table->unsignedBigInteger('reference_id')->nullable();
             $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();
 
-            $table->index(['business_id', 'created_at']);
+            $table->index(['reference_type', 'reference_id'], 'sms_wallet_reference_index');
+            $table->index(['business_id', 'created_at'], 'sms_wallet_business_created_index');
         });
     }
 

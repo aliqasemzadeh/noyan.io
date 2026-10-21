@@ -5,6 +5,7 @@ use App\Actions\Invoices\SaveInvoiceAction;
 use App\Enums\Accounting\InvoiceType;
 use App\Enums\Business\BusinessPermission;
 use App\Livewire\Forms\Accounting\InvoiceForm;
+use App\Models\Accounting\Account;
 use App\Models\Accounting\Invoice;
 use App\Models\Accounting\Party;
 use App\Models\Catalog\Product;
@@ -229,6 +230,25 @@ new class extends Component
     }
 
     /**
+     * @return Collection<int, Account>
+     */
+    #[Computed]
+    public function selectableAccounts(): Collection
+    {
+        $businessId = Auth::user()?->current_business_id;
+
+        if ($businessId === null) {
+            return collect();
+        }
+
+        return Account::query()
+            ->where('business_id', $businessId)
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get(['id', 'name', 'bank_name', 'account_number', 'iban', 'card_number']);
+    }
+
+    /**
      * @return Collection<int, Product>
      */
     public function productsFor(int $index): Collection
@@ -362,6 +382,30 @@ new class extends Component
                 <flux:textarea wire:model="form.note" rows="2" clearable />
                 <flux:error name="form.note" />
             </flux:field>
+
+            @if ($this->selectableAccounts->isNotEmpty())
+                <div class="space-y-2">
+                    <flux:checkbox.group
+                        wire:model="form.account_ids"
+                        label="{{ __('general.invoice_payment_accounts') }}"
+                        description="{{ __('general.invoice_payment_accounts_hint') }}"
+                    >
+                        @foreach ($this->selectableAccounts as $account)
+                            <flux:checkbox
+                                wire:key="invoice-account-{{ $account->id }}"
+                                value="{{ $account->id }}"
+                                :label="$account->name"
+                                :description="collect([
+                                    $account->bank_name,
+                                    $account->iban ?: $account->account_number ?: $account->card_number,
+                                ])->filter()->implode(' — ')"
+                            />
+                        @endforeach
+                    </flux:checkbox.group>
+                    <flux:error name="form.account_ids" />
+                    <flux:error name="form.account_ids.*" />
+                </div>
+            @endif
         </flux:card>
 
         <flux:card class="space-y-4">

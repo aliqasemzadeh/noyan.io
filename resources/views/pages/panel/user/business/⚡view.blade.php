@@ -133,6 +133,35 @@ new class extends Component
                     ></span>
                 </div>
             </div>
+            <div>
+                <flux:text class="text-sm text-zinc-500">{{ __('general.invoice_orientation') }}</flux:text>
+                <flux:heading size="sm" class="mt-1">{{ $business->invoiceOrientation()->label() }}</flux:heading>
+            </div>
+            <div class="sm:col-span-2">
+                <flux:text class="text-sm text-zinc-500">{{ __('general.invoice_preview') }}</flux:text>
+                <div class="mt-2 flex flex-wrap gap-2">
+                    <flux:button
+                        size="sm"
+                        variant="primary"
+                        color="teal"
+                        icon="eye"
+                        :href="route('user.businesses.invoice-preview', $business)"
+                        target="_blank"
+                    >
+                        {{ __('general.preview_invoice') }}
+                    </flux:button>
+                    <flux:button
+                        size="sm"
+                        variant="primary"
+                        color="sky"
+                        icon="eye"
+                        :href="route('user.businesses.quote-preview', $business)"
+                        target="_blank"
+                    >
+                        {{ __('general.preview_quote') }}
+                    </flux:button>
+                </div>
+            </div>
         </div>
     </flux:card>
 </div>

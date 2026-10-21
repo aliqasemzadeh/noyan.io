@@ -5,6 +5,7 @@ namespace App\Actions\Invoices;
 use App\Actions\Concerns\NormalizesLineItems;
 use App\Enums\Accounting\InvoicePaymentStatus;
 use App\Enums\Accounting\InvoiceType;
+use App\Models\Accounting\Account;
 use App\Models\Accounting\Invoice;
 use App\Models\Accounting\InvoiceItem;
 use App\Models\User;
@@ -31,6 +32,7 @@ class SaveInvoiceAction
      *     global_discount?: string|float|int,
      *     global_tax?: string|float|int,
      *     note?: string|null,
+     *     account_ids?: list<int>,
      *     meta?: array<string, mixed>|null,
      *     quote_id?: int|null,
      *     items: list<array{
@@ -111,9 +113,37 @@ class SaveInvoiceAction
             }
 
             $this->syncItems($invoice, $items);
+            $this->syncAccounts($invoice, $businessId, $data['account_ids'] ?? []);
 
-            return $invoice->fresh(['items', 'party']);
+            return $invoice->fresh(['items', 'party', 'accounts']);
         });
+    }
+
+    /**
+     * @param  list<int|string>  $accountIds
+     */
+    protected function syncAccounts(Invoice $invoice, int $businessId, array $accountIds): void
+    {
+        $ids = collect($accountIds)
+            ->map(fn ($id): int => (int) $id)
+            ->unique()
+            ->values()
+            ->all();
+
+        if ($ids === []) {
+            $invoice->accounts()->sync([]);
+
+            return;
+        }
+
+        $validIds = Account::query()
+            ->where('business_id', $businessId)
+            ->where('is_active', true)
+            ->whereIn('id', $ids)
+            ->pluck('id')
+            ->all();
+
+        $invoice->accounts()->sync($validIds);
     }
 
     /**
