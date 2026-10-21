@@ -12,6 +12,9 @@
     </head>
     <body class="min-h-dvh bg-zinc-50 dark:bg-zinc-900 antialiased">
         @php
+            $currentBusiness = auth()->user()?->currentBusiness;
+            $brandName = $currentBusiness?->name ?? __('general.app_name');
+            $brandLogo = $currentBusiness?->logoUrl();
             $showAiComposer = auth()->check() && (
                 request()->routeIs('system.*')
                 || request()->routeIs('user.*')
@@ -28,7 +31,9 @@
                 <flux:sidebar.brand
                     :href="route('dashboard')"
                     wire:navigate
-                    :name="__('general.app_name')"
+                    :name="$brandName"
+                    :logo="$brandLogo"
+                    :alt="$brandName"
                 />
 
                 <flux:sidebar.collapse class="in-data-flux-sidebar-on-desktop:not-in-data-flux-sidebar-collapsed-desktop:-mr-2" />
@@ -45,6 +50,17 @@
 
         <flux:header class="lg:hidden bg-white dark:bg-zinc-800">
             <flux:sidebar.toggle class="lg:hidden" icon="bars-2" inset="left" />
+
+            <flux:spacer />
+
+            <flux:brand
+                :href="route('dashboard')"
+                wire:navigate
+                :name="$brandName"
+                :logo="$brandLogo"
+                :alt="$brandName"
+                class="me-0"
+            />
 
             <flux:spacer />
 

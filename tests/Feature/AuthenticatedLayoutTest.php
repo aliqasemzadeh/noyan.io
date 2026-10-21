@@ -61,6 +61,20 @@ class AuthenticatedLayoutTest extends TestCase
         $this->actingAs($user->fresh())
             ->get(route('system.dashboard'))
             ->assertOk()
-            ->assertSee('Noyan Shop');
+            ->assertSee('Noyan Shop')
+            ->assertSee('data-flux-sidebar-brand', false)
+            ->assertSee('data-flux-brand', false);
+    }
+
+    public function test_dashboard_falls_back_to_app_name_without_current_business(): void
+    {
+        $user = $this->grantAdministratorAccess(User::factory()->create([
+            'current_business_id' => null,
+        ]));
+
+        $this->actingAs($user)
+            ->get(route('system.dashboard'))
+            ->assertOk()
+            ->assertSee(__('general.app_name'));
     }
 }
