@@ -4,6 +4,7 @@ namespace App\Livewire\Forms\Accounting;
 
 use App\Actions\Quotes\FinalizeQuoteAction;
 use App\Actions\Quotes\SaveQuoteAction;
+use App\Enums\Catalog\ProductUnit;
 use App\Livewire\Forms\Concerns\ManagesLineItems;
 use App\Models\Accounting\Quote;
 use App\Models\Catalog\Product;
@@ -21,6 +22,8 @@ class QuoteForm extends Form
     use NormalizesLocaleFormValues;
 
     public ?Quote $quote = null;
+
+    public ?int $sale_kind_id = null;
 
     public ?int $party_id = null;
 
@@ -42,6 +45,7 @@ class QuoteForm extends Form
     public function setQuote(Quote $quote): void
     {
         $this->quote = $quote;
+        $this->sale_kind_id = $quote->sale_kind_id;
         $this->party_id = $quote->party_id;
         $this->party_name = (string) ($quote->party_name ?? '');
         $this->issue_date = LocaleDate::formatInput($quote->issue_date);
@@ -54,6 +58,8 @@ class QuoteForm extends Form
                 'id' => (string) $item->id,
                 'product_id' => $item->product_id,
                 'title' => $item->title,
+                'sku' => (string) ($item->sku ?? ''),
+                'unit' => (string) ($item->unit ?? ''),
                 'quantity' => $this->formatAmount((string) $item->quantity),
                 'unit_price' => $this->formatAmount((string) $item->unit_price),
                 'discount_amount' => $this->formatAmount((string) $item->discount_amount),
@@ -76,6 +82,7 @@ class QuoteForm extends Form
         $this->global_discount = '0';
         $this->global_tax = '0';
         $this->note = '';
+        $this->sale_kind_id = Auth::user()?->currentBusiness?->defaultSaleKind()?->id;
         $this->party_id = null;
         $this->party_name = '';
         $this->items = [];
@@ -101,6 +108,10 @@ class QuoteForm extends Form
 
         $this->items[$index]['product_id'] = $product->id;
         $this->items[$index]['title'] = RichText::fromPlain($product->name);
+        $this->items[$index]['sku'] = (string) ($product->sku ?? '');
+        $this->items[$index]['unit'] = $product->unit instanceof ProductUnit
+            ? $product->unit->value
+            : (string) ($product->unit ?? '');
         $this->items[$index]['unit_price'] = $this->formatAmount((string) $product->sale_price);
         $this->recalculate();
     }
@@ -151,6 +162,12 @@ class QuoteForm extends Form
         $amount = ['required', 'string', 'regex:/^-?\d+(\.\d{1,18})?$/'];
 
         return [
+            'sale_kind_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('business_sale_kinds', 'sale_kind_id')
+                    ->where(fn ($query) => $query->where('business_id', $businessId)),
+            ],
             'party_id' => [
                 'required',
                 'integer',
@@ -180,6 +197,8 @@ class QuoteForm extends Form
                 Rule::exists('products', 'id')
                     ->where(fn ($query) => $query->where('business_id', $businessId)->whereNull('deleted_at')),
             ],
+            'items.*.sku' => ['nullable', 'string', 'max:100'],
+            'items.*.unit' => ['nullable', 'string', Rule::enum(ProductUnit::class)],
             'items.*.quantity' => $amount,
             'items.*.unit_price' => $amount,
             'items.*.discount_amount' => $amount,
@@ -195,12 +214,15 @@ class QuoteForm extends Form
         return [
             'party_id' => __('general.party'),
             'party_name' => __('general.party_name'),
+            'sale_kind_id' => __('general.sale_kind'),
             'issue_date' => __('general.issue_date'),
             'valid_until' => __('general.valid_until'),
             'global_discount' => __('general.global_discount'),
             'global_tax' => __('general.global_tax'),
             'items' => __('general.quote_items'),
             'items.*.title' => __('general.item_title'),
+            'items.*.sku' => __('general.product_sku'),
+            'items.*.unit' => __('general.unit'),
             'items.*.quantity' => __('general.quantity'),
             'items.*.unit_price' => __('general.unit_price'),
             'items.*.discount_amount' => __('general.discount_amount'),
@@ -214,6 +236,7 @@ class QuoteForm extends Form
     protected function payload(): array
     {
         return [
+            'sale_kind_id' => $this->sale_kind_id,
             'party_id' => $this->party_id,
             'party_name' => $this->party_name !== '' ? $this->party_name : null,
             'issue_date' => LocaleDate::toStorageDate($this->issue_date) ?? $this->issue_date,
@@ -227,6 +250,8 @@ class QuoteForm extends Form
                 ->map(fn (array $item, int $index): array => [
                     'product_id' => $item['product_id'] ?? null,
                     'title' => (string) $item['title'],
+                    'sku' => filled($item['sku'] ?? null) ? (string) $item['sku'] : null,
+                    'unit' => filled($item['unit'] ?? null) ? (string) $item['unit'] : null,
                     'quantity' => $this->normalizeAmount((string) ($item['quantity'] ?? '1')),
                     'unit_price' => $this->normalizeAmount((string) ($item['unit_price'] ?? '0')),
                     'discount_amount' => $this->normalizeAmount((string) ($item['discount_amount'] ?? '0')),

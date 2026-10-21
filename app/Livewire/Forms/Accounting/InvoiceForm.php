@@ -98,7 +98,7 @@ class InvoiceForm extends Form
         $this->global_discount = '0';
         $this->global_tax = '0';
         $this->note = '';
-        $this->sale_kind_id = Auth::user()?->currentBusiness()?->defaultSaleKind()?->id;
+        $this->sale_kind_id = Auth::user()?->currentBusiness?->defaultSaleKind()?->id;
         $this->party_id = null;
         $this->party_name = '';
         $this->account_ids = [];
@@ -312,6 +312,9 @@ class InvoiceForm extends Form
             foreach (['quantity', 'unit_price', 'discount_amount', 'tax_amount'] as $field) {
                 $this->items[$index][$field] = Money::normalize((string) ($item[$field] ?? '0'));
             }
+
+            $this->items[$index]['sku'] = filled($item['sku'] ?? null) ? (string) $item['sku'] : null;
+            $this->items[$index]['unit'] = filled($item['unit'] ?? null) ? (string) $item['unit'] : null;
         }
     }
 }

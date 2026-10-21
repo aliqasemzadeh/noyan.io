@@ -73,6 +73,7 @@ class SaveQuoteAction
             $attributes = [
                 'party_id' => $partyId,
                 'party_name' => $partyName,
+                'sale_kind_id' => $data['sale_kind_id'] ?? null,
                 'issue_date' => $data['issue_date'],
                 'valid_until' => $data['valid_until'],
                 'items_total' => $itemsTotal,
