@@ -42,8 +42,10 @@ class BusinessFactory extends Factory
                     'user_id' => $business->owner_id,
                 ],
                 [
-                    'role' => BusinessRole::Owner,
-                    'permissions' => BusinessRole::Owner->defaultPermissions(),
+                    'roles' => [BusinessRole::Owner->value],
+                    'permissions' => [
+                        BusinessRole::Owner->value => BusinessRole::Owner->defaultPermissions(),
+                    ],
                 ],
             );
 

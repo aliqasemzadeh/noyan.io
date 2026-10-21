@@ -140,8 +140,10 @@ class BusinessForm extends Form
                 }
 
                 $previousMembership->update([
-                    'role' => BusinessRole::Admin,
-                    'permissions' => BusinessRole::Admin->defaultPermissions(),
+                    'roles' => [BusinessRole::Admin->value],
+                    'permissions' => [
+                        BusinessRole::Admin->value => BusinessRole::Admin->defaultPermissions(),
+                    ],
                 ]);
             }
         }
@@ -157,8 +159,10 @@ class BusinessForm extends Form
             }
 
             $membership->update([
-                'role' => BusinessRole::Owner,
-                'permissions' => BusinessRole::Owner->defaultPermissions(),
+                'roles' => [BusinessRole::Owner->value],
+                'permissions' => [
+                    BusinessRole::Owner->value => BusinessRole::Owner->defaultPermissions(),
+                ],
             ]);
 
             return;
@@ -167,8 +171,10 @@ class BusinessForm extends Form
         BusinessUser::create([
             'business_id' => $business->id,
             'user_id' => $ownerId,
-            'role' => BusinessRole::Owner,
-            'permissions' => BusinessRole::Owner->defaultPermissions(),
+            'roles' => [BusinessRole::Owner->value],
+            'permissions' => [
+                BusinessRole::Owner->value => BusinessRole::Owner->defaultPermissions(),
+            ],
         ]);
     }
 

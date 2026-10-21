@@ -70,8 +70,10 @@ class CreateBusinessAction
             BusinessUser::query()->create([
                 'business_id' => $business->id,
                 'user_id' => $user->id,
-                'role' => BusinessRole::Owner,
-                'permissions' => BusinessRole::Owner->defaultPermissions(),
+                'roles' => [BusinessRole::Owner->value],
+                'permissions' => [
+                    BusinessRole::Owner->value => BusinessRole::Owner->defaultPermissions(),
+                ],
             ]);
 
             $user->forceFill([

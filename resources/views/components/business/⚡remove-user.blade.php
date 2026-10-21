@@ -24,7 +24,7 @@ new class extends Component
             return;
         }
 
-        if ($this->membership->role === BusinessRole::Owner) {
+        if ($this->membership->isOwner()) {
             Flux::modals()->close();
             Flux::toast(__('general.cannot_remove_business_owner'), variant: 'danger');
 
