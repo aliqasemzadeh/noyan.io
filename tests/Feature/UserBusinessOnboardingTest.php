@@ -9,6 +9,7 @@ use App\Enums\Business\BusinessType;
 use App\Enums\CurrencyType;
 use App\Models\Accounting\Account;
 use App\Models\Business;
+use App\Models\BusinessUser;
 use App\Models\Currency;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
