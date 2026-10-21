@@ -235,7 +235,7 @@ class AccountManagementTest extends TestCase
             ->call('delete')
             ->assertHasNoErrors();
 
-        $this->assertDatabaseMissing('accounting_accounts', [
+        $this->assertSoftDeleted('accounting_accounts', [
             'id' => $account->id,
         ]);
     }
