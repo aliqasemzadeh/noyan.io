@@ -15,6 +15,6 @@ final class PreviewDocumentItem
 
     public function titleHtml(): string
     {
-        return RichText::fromPlain($this->title);
+        return RichText::sanitize(RichText::fromPlain($this->title));
     }
 }
