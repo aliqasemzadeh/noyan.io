@@ -151,7 +151,7 @@ new class extends Component
         </div>
     @endif
 
-    <div class="grid gap-4 sm:grid-cols-2">
+    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <a href="{{ route('accounting.invoices.create', ['type' => 'sale']) }}" wire:navigate class="block">
             <flux:card class="h-full transition hover:border-teal-300 dark:hover:border-teal-700">
                 <div class="flex items-start gap-3">
@@ -175,6 +175,18 @@ new class extends Component
                 </div>
             </flux:card>
         </a>
+
+        <a href="{{ route('accounting.quotes.create') }}" wire:navigate class="block">
+            <flux:card class="h-full transition hover:border-sky-300 dark:hover:border-sky-700">
+                <div class="flex items-start gap-3">
+                    <flux:icon.file-pen-line class="size-6 text-sky-600 dark:text-sky-400" />
+                    <div>
+                        <flux:heading size="lg">{{ __('general.new_quote') }}</flux:heading>
+                        <flux:text class="mt-1">{{ __('general.quick_quote_hint') }}</flux:text>
+                    </div>
+                </div>
+            </flux:card>
+        </a>
     </div>
 
     <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -185,6 +197,18 @@ new class extends Component
                     <div>
                         <flux:heading size="lg">{{ __('general.invoices') }}</flux:heading>
                         <flux:text class="mt-1">{{ __('general.invoices_page_hint') }}</flux:text>
+                    </div>
+                </div>
+            </flux:card>
+        </a>
+
+        <a href="{{ route('accounting.quotes.index') }}" wire:navigate class="block">
+            <flux:card class="h-full transition hover:border-sky-300 dark:hover:border-sky-700">
+                <div class="flex items-start gap-3">
+                    <flux:icon.file-pen-line class="size-6 text-sky-600 dark:text-sky-400" />
+                    <div>
+                        <flux:heading size="lg">{{ __('general.quotes') }}</flux:heading>
+                        <flux:text class="mt-1">{{ __('general.quotes_page_hint') }}</flux:text>
                     </div>
                 </div>
             </flux:card>

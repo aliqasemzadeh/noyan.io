@@ -4,6 +4,7 @@ namespace Database\Factories\Accounting;
 
 use App\Models\Accounting\Invoice;
 use App\Models\Accounting\InvoiceItem;
+use App\Support\RichText;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -28,7 +29,7 @@ class InvoiceItemFactory extends Factory
         return [
             'invoice_id' => Invoice::factory(),
             'product_id' => null,
-            'title' => fake()->words(3, true),
+            'title' => RichText::fromPlain(fake()->words(3, true)),
             'sort_order' => 0,
             'quantity' => $quantity,
             'unit_price' => $unitPrice,

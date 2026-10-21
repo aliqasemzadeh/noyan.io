@@ -19,6 +19,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'created_by',
     'party_id',
     'party_name',
+    'quote_id',
     'invoice_number',
     'type',
     'issue_date',
@@ -78,6 +79,16 @@ class Invoice extends Model
                 ])->saveQuietly();
             }
 
+            if ($invoice->quote_id !== null) {
+                Quote::query()
+                    ->whereKey($invoice->quote_id)
+                    ->where('invoice_id', $invoice->id)
+                    ->update([
+                        'invoice_id' => null,
+                        'converted_at' => null,
+                    ]);
+            }
+
             $invoice->items()->each(function (InvoiceItem $item): void {
                 $item->delete();
             });
@@ -97,6 +108,11 @@ class Invoice extends Model
     public function party(): BelongsTo
     {
         return $this->belongsTo(Party::class);
+    }
+
+    public function quote(): BelongsTo
+    {
+        return $this->belongsTo(Quote::class);
     }
 
     /**

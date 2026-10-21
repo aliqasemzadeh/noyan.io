@@ -2,12 +2,11 @@
 
 namespace App\Actions\Invoices;
 
+use App\Actions\Concerns\NormalizesLineItems;
 use App\Enums\Accounting\InvoicePaymentStatus;
 use App\Enums\Accounting\InvoiceType;
 use App\Models\Accounting\Invoice;
 use App\Models\Accounting\InvoiceItem;
-use App\Models\Accounting\Party;
-use App\Models\Catalog\Product;
 use App\Models\User;
 use App\Services\InvoiceNumberGenerator;
 use Illuminate\Support\Facades\DB;
@@ -16,6 +15,8 @@ use RuntimeException;
 
 class SaveInvoiceAction
 {
+    use NormalizesLineItems;
+
     public function __construct(
         private InvoiceNumberGenerator $invoiceNumberGenerator,
     ) {}
@@ -31,6 +32,7 @@ class SaveInvoiceAction
      *     global_tax?: string|float|int,
      *     note?: string|null,
      *     meta?: array<string, mixed>|null,
+     *     quote_id?: int|null,
      *     items: list<array{
      *         product_id?: int|null,
      *         title: string,
@@ -90,6 +92,10 @@ class SaveInvoiceAction
                 'note' => $data['note'] ?? null,
             ];
 
+            if (array_key_exists('quote_id', $data)) {
+                $attributes['quote_id'] = $data['quote_id'];
+            }
+
             if ($invoice === null) {
                 $invoice = Invoice::query()->create([
                     ...$attributes,
@@ -108,125 +114,6 @@ class SaveInvoiceAction
 
             return $invoice->fresh(['items', 'party']);
         });
-    }
-
-    /**
-     * @param  array{party_id?: int|null, party_name?: string|null}  $data
-     * @return array{0: int|null, 1: string|null}
-     */
-    protected function resolveParty(int $businessId, array $data): array
-    {
-        $partyId = isset($data['party_id']) ? (int) $data['party_id'] : null;
-        $partyName = filled($data['party_name'] ?? null) ? trim((string) $data['party_name']) : null;
-
-        if ($partyId) {
-            $party = Party::query()
-                ->where('business_id', $businessId)
-                ->whereKey($partyId)
-                ->first();
-
-            if ($party === null) {
-                throw ValidationException::withMessages([
-                    'party_id' => [__('general.invoice_party_invalid')],
-                ]);
-            }
-
-            return [$party->id, $partyName ?: $party->displayName()];
-        }
-
-        if ($partyName === null || $partyName === '') {
-            throw ValidationException::withMessages([
-                'party_name' => [__('general.invoice_party_required')],
-            ]);
-        }
-
-        return [null, $partyName];
-    }
-
-    /**
-     * @param  list<array<string, mixed>>  $items
-     * @return list<array{
-     *     product_id: int|null,
-     *     title: string,
-     *     quantity: string,
-     *     unit_price: string,
-     *     discount_amount: string,
-     *     tax_amount: string,
-     *     total: string,
-     *     sort_order: int,
-     *     meta: array<string, mixed>|null
-     * }>
-     */
-    protected function normalizeItems(int $businessId, array $items): array
-    {
-        $normalized = [];
-
-        foreach (array_values($items) as $index => $item) {
-            $title = trim((string) ($item['title'] ?? ''));
-
-            if ($title === '') {
-                continue;
-            }
-
-            $productId = isset($item['product_id']) && filled($item['product_id'])
-                ? (int) $item['product_id']
-                : null;
-
-            if ($productId !== null) {
-                $exists = Product::query()
-                    ->where('business_id', $businessId)
-                    ->whereKey($productId)
-                    ->exists();
-
-                if (! $exists) {
-                    throw ValidationException::withMessages([
-                        "items.{$index}.product_id" => [__('general.invoice_product_invalid')],
-                    ]);
-                }
-            }
-
-            $quantity = $this->normalizeAmount((string) ($item['quantity'] ?? '1'));
-            $unitPrice = $this->normalizeAmount((string) ($item['unit_price'] ?? '0'));
-            $discount = $this->normalizeAmount((string) ($item['discount_amount'] ?? '0'));
-            $tax = $this->normalizeAmount((string) ($item['tax_amount'] ?? '0'));
-            $line = bcmul($quantity, $unitPrice, 18);
-            $total = bcadd(bcsub($line, $discount, 18), $tax, 18);
-
-            $normalized[] = [
-                'product_id' => $productId,
-                'title' => $title,
-                'quantity' => $quantity,
-                'unit_price' => $unitPrice,
-                'discount_amount' => $discount,
-                'tax_amount' => $tax,
-                'total' => $total,
-                'sort_order' => (int) ($item['sort_order'] ?? $index),
-                'meta' => $item['meta'] ?? null,
-            ];
-        }
-
-        return $normalized;
-    }
-
-    /**
-     * @param  list<array{total: string, sort_order: int}>  $items
-     * @return array{0: string, 1: string}
-     */
-    protected function calculateTotals(array $items, string $globalDiscount, string $globalTax): array
-    {
-        $itemsTotal = '0';
-
-        foreach ($items as $item) {
-            $itemsTotal = bcadd($itemsTotal, $item['total'], 18);
-        }
-
-        $totalAmount = bcadd(
-            bcsub($itemsTotal, $this->normalizeAmount($globalDiscount), 18),
-            $this->normalizeAmount($globalTax),
-            18,
-        );
-
-        return [$itemsTotal, $totalAmount];
     }
 
     /**
@@ -251,16 +138,5 @@ class SaveInvoiceAction
         foreach ($items as $item) {
             $invoice->items()->create($item);
         }
-    }
-
-    protected function normalizeAmount(string $value): string
-    {
-        $value = trim(str_replace(',', '', $value));
-
-        if ($value === '' || ! is_numeric($value)) {
-            return '0';
-        }
-
-        return bcadd($value, '0', 18);
     }
 }

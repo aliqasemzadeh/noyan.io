@@ -173,6 +173,15 @@ new class extends Component
             </flux:sidebar.item>
 
             <flux:sidebar.item
+                icon="file-pen-line"
+                :href="route('accounting.quotes.index')"
+                wire:navigate
+                :current="request()->routeIs('accounting.quotes.*')"
+            >
+                {{ __('general.quotes') }}
+            </flux:sidebar.item>
+
+            <flux:sidebar.item
                 icon="arrow-left-right"
                 :href="route('accounting.transactions.index')"
                 wire:navigate

@@ -10,6 +10,7 @@ use App\Models\Accounting\BusinessCurrency;
 use App\Models\Accounting\Invoice;
 use App\Models\Accounting\Loan;
 use App\Models\Accounting\Party;
+use App\Models\Accounting\Quote;
 use App\Models\Catalog\Brand;
 use App\Models\Catalog\Product;
 use Database\Factories\BusinessFactory;
@@ -131,6 +132,14 @@ class Business extends Model implements HasMedia
     public function invoices(): HasMany
     {
         return $this->hasMany(Invoice::class);
+    }
+
+    /**
+     * @return HasMany<Quote, $this>
+     */
+    public function quotes(): HasMany
+    {
+        return $this->hasMany(Quote::class);
     }
 
     /**

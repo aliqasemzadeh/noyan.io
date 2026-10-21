@@ -31,6 +31,10 @@ Route::livewire('/invoices/public/{invoice}', 'pages::public.invoice.show')
     ->middleware('signed')
     ->name('invoices.public');
 
+Route::livewire('/quotes/public/{quote}', 'pages::public.quote.show')
+    ->middleware('signed')
+    ->name('quotes.public');
+
 Route::middleware('guest')->group(function () {
     Route::livewire('/login', 'pages::auth.login')->name('login');
 });
@@ -116,6 +120,9 @@ Route::middleware('auth')->group(function () {
         Route::livewire('/invoices', 'pages::panel.accounting.invoice.index')->name('invoices.index');
         Route::livewire('/invoices/create/{type}', 'pages::panel.accounting.invoice.form')->name('invoices.create');
         Route::livewire('/invoices/{invoice}/edit', 'pages::panel.accounting.invoice.form')->name('invoices.edit');
+        Route::livewire('/quotes', 'pages::panel.accounting.quote.index')->name('quotes.index');
+        Route::livewire('/quotes/create', 'pages::panel.accounting.quote.form')->name('quotes.create');
+        Route::livewire('/quotes/{quote}/edit', 'pages::panel.accounting.quote.form')->name('quotes.edit');
         Route::livewire('/transactions', 'pages::panel.accounting.transaction.index')->name('transactions.index');
         Route::livewire('/loans', 'pages::panel.accounting.loan.index')->name('loans.index');
         Route::livewire('/loans/{loan}', 'pages::panel.accounting.loan.show')->name('loans.show');

@@ -30,6 +30,7 @@ new class extends Component
             abort_unless((int) $invoice->business_id === (int) Auth::user()?->current_business_id, 404);
             abort_unless($invoice->isDraft(), 403);
 
+            $invoice->loadMissing('quote');
             $this->form->setInvoice($invoice);
 
             return;
@@ -66,8 +67,7 @@ new class extends Component
         if (str_ends_with($key, 'quantity')
             || str_ends_with($key, 'unit_price')
             || str_ends_with($key, 'discount_amount')
-            || str_ends_with($key, 'tax_amount')
-            || str_ends_with($key, 'title')) {
+            || str_ends_with($key, 'tax_amount')) {
             $this->form->recalculate();
         }
     }
@@ -257,6 +257,15 @@ new class extends Component
     </div>
 
     <form wire:submit="saveAsDraft" class="space-y-6">
+        @if ($form->invoice?->quote)
+            <flux:callout icon="file-pen-line" variant="secondary" inline>
+                {{ __('general.invoice_created_from_quote', ['number' => $form->invoice->quote->quote_number]) }}
+                <flux:link class="ms-2" :href="route('accounting.quotes.index', ['search' => $form->invoice->quote->quote_number])" wire:navigate>
+                    {{ $form->invoice->quote->quote_number }}
+                </flux:link>
+            </flux:callout>
+        @endif
+
         <flux:card class="space-y-4">
             <div class="grid gap-4 md:grid-cols-2">
                 <flux:field>
@@ -349,7 +358,7 @@ new class extends Component
                                         <flux:icon.grip-vertical class="size-4" />
                                     </div>
                                 </td>
-                                <td class="min-w-64 px-2 py-2 align-top" wire:sort:ignore>
+                                <td class="min-w-80 px-2 py-2 align-top" wire:sort:ignore>
                                     <flux:select
                                         wire:model.live="form.items.{{ $index }}.product_id"
                                         variant="combobox"
@@ -375,11 +384,12 @@ new class extends Component
                                         </flux:select.option.create>
                                     </flux:select>
 
-                                    @if (empty($item['product_id']) && filled($item['title']))
-                                        <flux:input class="mt-2" wire:model.live="form.items.{{ $index }}.title" />
-                                    @elseif (filled($item['title']))
-                                        <flux:text class="mt-1 block text-xs">{{ $item['title'] }}</flux:text>
-                                    @endif
+                                    <flux:editor
+                                        class="mt-2 **:data-[slot=content]:min-h-[100px]!"
+                                        wire:model="form.items.{{ $index }}.title"
+                                        toolbar="heading | bold italic underline | align ~ undo redo"
+                                        placeholder="{{ __('general.item_description_placeholder') }}"
+                                    />
                                     <flux:error name="form.items.{{ $index }}.title" />
                                 </td>
                                 <td class="px-2 py-2 align-top" wire:sort:ignore>

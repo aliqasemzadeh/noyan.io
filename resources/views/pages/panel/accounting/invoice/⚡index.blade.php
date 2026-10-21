@@ -17,6 +17,7 @@ new class extends Component
 {
     use WithPagination;
 
+    #[Url]
     public string $search = '';
 
     #[Url]
@@ -100,7 +101,7 @@ new class extends Component
         $businessId = Auth::user()?->current_business_id;
 
         return Invoice::query()
-            ->with('party')
+            ->with(['party', 'quote:id,quote_number'])
             ->when($businessId === null, fn ($query) => $query->whereRaw('1 = 0'))
             ->when($businessId !== null, fn ($query) => $query->where('business_id', $businessId))
             ->when($this->search !== '', function ($query): void {
@@ -218,7 +219,16 @@ new class extends Component
             <flux:table.rows>
                 @forelse ($this->invoices as $invoice)
                     <flux:table.row :key="$invoice->id">
-                        <flux:table.cell class="font-medium">{{ $invoice->invoice_number }}</flux:table.cell>
+                        <flux:table.cell class="font-medium">
+                            <div>{{ $invoice->invoice_number }}</div>
+                            @if ($invoice->quote)
+                                <flux:badge size="sm" color="sky" class="mt-1">
+                                    <flux:link :href="route('accounting.quotes.index', ['search' => $invoice->quote->quote_number])" wire:navigate>
+                                        {{ __('general.from_quote', ['number' => $invoice->quote->quote_number]) }}
+                                    </flux:link>
+                                </flux:badge>
+                            @endif
+                        </flux:table.cell>
                         <flux:table.cell>
                             <flux:badge size="sm" :color="$invoice->type->badgeColor()">
                                 {{ $invoice->type->label() }}

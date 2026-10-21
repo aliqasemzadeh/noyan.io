@@ -1,0 +1,91 @@
+<?php
+
+use App\Models\Accounting\Quote;
+use App\Models\Business;
+use Livewire\Attributes\Layout;
+use Livewire\Component;
+use Morilog\Jalali\Jalalian;
+
+new #[Layout('layouts::invoice')] class extends Component
+{
+    public Quote $quote;
+
+    public function mount(Quote $quote): void
+    {
+        abort_unless($quote->isFinalized(), 404);
+
+        $this->quote = $quote->loadMissing(['items', 'party', 'business.media']);
+    }
+
+    public function business(): Business
+    {
+        return $this->quote->business;
+    }
+
+    public function formatDate(?\DateTimeInterface $date): string
+    {
+        if ($date === null) {
+            return '—';
+        }
+
+        return Jalalian::fromDateTime($date)->format('Y/m/d');
+    }
+
+    public function formatAmount(string $amount): string
+    {
+        return number_format((float) $amount, 0, '.', ',');
+    }
+};
+?>
+
+@php
+    $business = $this->business();
+@endphp
+
+<x-slot name="title">{{ __('general.quote') }} {{ $quote->quote_number }} - {{ $business->name }}</x-slot>
+
+<div class="mx-auto max-w-3xl px-4 py-8 sm:px-6">
+    <div class="no-print mb-4 flex justify-end">
+        <flux:button
+            type="button"
+            variant="primary"
+            color="teal"
+            icon="printer"
+            x-on:click="window.print()"
+        >
+            {{ __('general.print_quote') }}
+        </flux:button>
+    </div>
+
+    <x-accounting.printable-document
+        :business="$business"
+        :document-label="__('general.quote')"
+        :number="$quote->quote_number"
+        :party-name="$quote->displayPartyName()"
+        :dates="[
+            ['label' => __('general.issue_date'), 'value' => $this->formatDate($quote->issue_date)],
+            ['label' => __('general.valid_until'), 'value' => $this->formatDate($quote->valid_until)],
+        ]"
+        :items="$quote->items"
+        :items-total="$quote->items_total"
+        :global-discount="$quote->global_discount"
+        :global-tax="$quote->global_tax"
+        :total-amount="$quote->total_amount"
+        :note="$quote->note"
+        :format-amount="fn (string $amount): string => $this->formatAmount($amount)"
+    >
+        <x-slot:banner>
+            @if ($quote->isExpired())
+                <flux:callout icon="clock-alert" variant="danger" inline>
+                    {{ __('general.quote_expired_notice') }}
+                </flux:callout>
+            @endif
+
+            @if ($quote->isConverted())
+                <flux:callout icon="file-check" variant="secondary" inline class="mt-3">
+                    {{ __('general.quote_converted_notice') }}
+                </flux:callout>
+            @endif
+        </x-slot:banner>
+    </x-accounting.printable-document>
+</div>

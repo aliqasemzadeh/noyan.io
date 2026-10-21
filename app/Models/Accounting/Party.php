@@ -97,6 +97,14 @@ class Party extends Model
     }
 
     /**
+     * @return HasMany<Quote, $this>
+     */
+    public function quotes(): HasMany
+    {
+        return $this->hasMany(Quote::class);
+    }
+
+    /**
      * @return HasMany<Transaction, $this>
      */
     public function transactions(): HasMany
