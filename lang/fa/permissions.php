@@ -20,6 +20,7 @@ return [
         'business_edit' => 'ویرایش کسب‌وکار',
         'business_delete' => 'حذف کسب‌وکار',
         'business_user_manage' => 'مدیریت کاربران کسب‌وکار',
+        'business_sms_wallet_charge' => 'شارژ کیف‌پول پیامک کسب‌وکار',
         'currency_view' => 'مشاهده ارزها',
         'currency_create' => 'ایجاد ارز',
         'currency_edit' => 'ویرایش ارز',

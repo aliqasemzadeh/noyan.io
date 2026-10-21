@@ -20,6 +20,7 @@ return [
         'business_edit' => 'Edit business',
         'business_delete' => 'Delete business',
         'business_user_manage' => 'Manage business users',
+        'business_sms_wallet_charge' => 'Charge business SMS wallet',
         'currency_view' => 'View currencies',
         'currency_create' => 'Create currency',
         'currency_edit' => 'Edit currency',
