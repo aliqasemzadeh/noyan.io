@@ -8,10 +8,12 @@ use App\Enums\Business\InvoiceOrientation;
 use App\Enums\CategoryType;
 use App\Models\Accounting\Account;
 use App\Models\Accounting\BusinessCurrency;
+use App\Models\Accounting\BusinessSaleKind;
 use App\Models\Accounting\Invoice;
 use App\Models\Accounting\Loan;
 use App\Models\Accounting\Party;
 use App\Models\Accounting\Quote;
+use App\Models\Accounting\SaleKind;
 use App\Models\Catalog\Brand;
 use App\Models\Catalog\Product;
 use Database\Factories\BusinessFactory;
@@ -30,11 +32,16 @@ use Spatie\MediaLibrary\InteractsWithMedia;
 #[Fillable([
     'owner_id',
     'name',
+    'legal_name',
     'slug',
     'type',
     'category',
     'phone',
     'address',
+    'national_id',
+    'economic_code',
+    'postal_code',
+    'tax_memory_id',
     'invoice_primary_color',
     'invoice_secondary_color',
     'invoice_orientation',
@@ -95,9 +102,81 @@ class Business extends Model implements HasMedia
         return $this->invoice_orientation ?? InvoiceOrientation::Portrait;
     }
 
+    public function displayLegalName(): string
+    {
+        return filled($this->legal_name) ? (string) $this->legal_name : (string) $this->name;
+    }
+
     public function owner(): BelongsTo
     {
         return $this->belongsTo(User::class, 'owner_id');
+    }
+
+    /**
+     * @return HasMany<BusinessSaleKind, $this>
+     */
+    public function businessSaleKinds(): HasMany
+    {
+        return $this->hasMany(BusinessSaleKind::class);
+    }
+
+    public function activateSaleKind(SaleKind $saleKind, bool $asDefault = false): BusinessSaleKind
+    {
+        return DB::transaction(function () use ($saleKind, $asDefault): BusinessSaleKind {
+            $hasDefault = $this->businessSaleKinds()->where('is_default', true)->exists();
+            $shouldBeDefault = $asDefault || ! $hasDefault;
+
+            $businessSaleKind = BusinessSaleKind::query()->firstOrCreate(
+                [
+                    'business_id' => $this->id,
+                    'sale_kind_id' => $saleKind->id,
+                ],
+                [
+                    'is_default' => $shouldBeDefault,
+                ],
+            );
+
+            if ($shouldBeDefault && ! $businessSaleKind->is_default) {
+                $businessSaleKind->setAsDefault();
+            }
+
+            return $businessSaleKind->fresh(['saleKind']);
+        });
+    }
+
+    public function deactivateSaleKind(SaleKind $saleKind): void
+    {
+        $businessSaleKind = $this->businessSaleKinds()
+            ->where('sale_kind_id', $saleKind->id)
+            ->first();
+
+        if ($businessSaleKind === null) {
+            return;
+        }
+
+        $wasDefault = $businessSaleKind->is_default;
+        $businessSaleKind->delete();
+
+        if ($wasDefault) {
+            $this->businessSaleKinds()->first()?->setAsDefault();
+        }
+    }
+
+    public function defaultSaleKind(): ?SaleKind
+    {
+        $default = $this->businessSaleKinds()
+            ->with('saleKind')
+            ->where('is_default', true)
+            ->first();
+
+        if ($default?->saleKind !== null) {
+            return $default->saleKind;
+        }
+
+        return $this->businessSaleKinds()
+            ->with('saleKind')
+            ->first()
+            ?->saleKind;
     }
 
     /**
