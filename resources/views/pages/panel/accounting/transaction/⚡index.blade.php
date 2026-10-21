@@ -160,6 +160,7 @@ new class extends Component
                 <flux:table.column>{{ __('general.category') }}</flux:table.column>
                 <flux:table.column>{{ __('general.amount') }}</flux:table.column>
                 <flux:table.column>{{ __('general.reference_number') }}</flux:table.column>
+                <flux:table.column align="end">{{ __('general.actions') }}</flux:table.column>
             </flux:table.columns>
 
             <flux:table.rows>
@@ -191,10 +192,33 @@ new class extends Component
                         <flux:table.cell>
                             {{ $transaction->reference_number ?: '—' }}
                         </flux:table.cell>
+                        <flux:table.cell align="end">
+                            <div class="flex justify-end gap-2">
+                                <flux:tooltip content="{{ __('general.edit') }}">
+                                    <flux:button
+                                        size="xs"
+                                        variant="primary"
+                                        color="blue"
+                                        icon="pencil"
+                                        icon:variant="outline"
+                                        wire:click="$dispatch('panels.accounting.transaction.edit.assign-data', { transaction: {{ $transaction->id }} })"
+                                    />
+                                </flux:tooltip>
+                                <flux:tooltip content="{{ __('general.delete') }}">
+                                    <flux:button
+                                        size="xs"
+                                        variant="danger"
+                                        icon="trash"
+                                        icon:variant="outline"
+                                        wire:click="$dispatch('panels.accounting.transaction.delete.assign-data', { transaction: {{ $transaction->id }} })"
+                                    />
+                                </flux:tooltip>
+                            </div>
+                        </flux:table.cell>
                     </flux:table.row>
                 @empty
                     <flux:table.row>
-                        <flux:table.cell colspan="7">
+                        <flux:table.cell colspan="8">
                             {{ __('general.no_transactions') }}
                         </flux:table.cell>
                     </flux:table.row>
@@ -204,4 +228,6 @@ new class extends Component
     </flux:card>
 
     <livewire:accounting.transaction.create :key="'transaction-create'" />
+    <livewire:accounting.transaction.edit :key="'transaction-edit'" />
+    <livewire:accounting.transaction.delete :key="'transaction-delete'" />
 </div>

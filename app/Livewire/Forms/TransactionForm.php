@@ -3,6 +3,7 @@
 namespace App\Livewire\Forms;
 
 use App\Actions\Transactions\ProcessTransactionAction;
+use App\Actions\Transactions\UpdateTransactionAction;
 use App\Enums\Accounting\TransactionType;
 use App\Models\Accounting\Account;
 use App\Models\Accounting\BusinessCurrency;
@@ -10,6 +11,7 @@ use App\Models\Accounting\Transaction;
 use App\Models\Category;
 use App\Support\Concerns\NormalizesLocaleFormValues;
 use App\Support\LocaleDate;
+use App\Support\Money;
 use Closure;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
@@ -19,6 +21,8 @@ use Livewire\Form;
 class TransactionForm extends Form
 {
     use NormalizesLocaleFormValues;
+
+    public ?Transaction $transaction = null;
 
     public string $type = TransactionType::Income->value;
 
@@ -43,9 +47,24 @@ class TransactionForm extends Form
         $this->transaction_date = $this->todayInput();
     }
 
+    public function setTransaction(Transaction $transaction): void
+    {
+        $this->transaction = $transaction;
+        $this->type = $transaction->type->value;
+        $this->account_id = $transaction->account_id;
+        $this->destination_account_id = $transaction->destination_account_id;
+        $this->party_id = $transaction->party_id;
+        $this->category_id = $transaction->category_id;
+        $this->amount = Money::normalize((string) $transaction->amount);
+        $this->transaction_date = LocaleDate::formatInput($transaction->transaction_date);
+        $this->reference_number = (string) ($transaction->reference_number ?? '');
+        $this->note = (string) ($transaction->note ?? '');
+    }
+
     public function resetForm(): void
     {
         $this->reset();
+        $this->transaction = null;
         $this->type = TransactionType::Income->value;
         $this->transaction_date = $this->todayInput();
     }
@@ -63,14 +82,20 @@ class TransactionForm extends Form
             'account_id' => [
                 'required',
                 'integer',
-                Rule::exists('accounting_accounts', 'id')->where(fn ($query) => $query->where('business_id', $businessId)->where('is_active', true)),
+                Rule::exists('accounting_accounts', 'id')->where(fn ($query) => $query
+                    ->where('business_id', $businessId)
+                    ->where('is_active', true)
+                    ->whereNull('deleted_at')),
             ],
             'destination_account_id' => [
                 Rule::requiredIf($isTransfer),
                 'nullable',
                 'integer',
                 'different:account_id',
-                Rule::exists('accounting_accounts', 'id')->where(fn ($query) => $query->where('business_id', $businessId)->where('is_active', true)),
+                Rule::exists('accounting_accounts', 'id')->where(fn ($query) => $query
+                    ->where('business_id', $businessId)
+                    ->where('is_active', true)
+                    ->whereNull('deleted_at')),
             ],
             'party_id' => [
                 'nullable',
@@ -167,6 +192,57 @@ class TransactionForm extends Form
             ->value('exchange_rate_to_base') ?? '1';
 
         $transaction = app(ProcessTransactionAction::class)->handle($user, [
+            'type' => $validated['type'],
+            'account_id' => (int) $validated['account_id'],
+            'destination_account_id' => $validated['destination_account_id'] ?? null,
+            'party_id' => $validated['party_id'] ?? null,
+            'category_id' => $validated['category_id'] ?? null,
+            'transaction_date' => LocaleDate::toStorageDate($validated['transaction_date']) ?? $validated['transaction_date'],
+            'currency' => $account->currency?->code ?? 'IRR',
+            'exchange_rate' => (string) $exchangeRate,
+            'amount' => $validated['amount'],
+            'reference_number' => ($validated['reference_number'] ?? '') !== '' ? $validated['reference_number'] : null,
+            'note' => ($validated['note'] ?? '') !== '' ? $validated['note'] : null,
+        ]);
+
+        $this->resetForm();
+
+        return $transaction;
+    }
+
+    public function update(UpdateTransactionAction $action): Transaction
+    {
+        $user = Auth::user();
+
+        if ($user?->current_business_id === null) {
+            throw ValidationException::withMessages([
+                'account_id' => __('general.business_required'),
+            ]);
+        }
+
+        if ($this->transaction === null) {
+            throw ValidationException::withMessages([
+                'amount' => __('general.transaction_not_found'),
+            ]);
+        }
+
+        $this->normalizeMoneyFields('amount');
+        $this->normalizeDateFields('transaction_date');
+
+        $validated = $this->validate();
+
+        $account = Account::query()
+            ->with('currency')
+            ->where('business_id', $user->current_business_id)
+            ->whereKey($validated['account_id'])
+            ->firstOrFail();
+
+        $exchangeRate = BusinessCurrency::query()
+            ->where('business_id', $user->current_business_id)
+            ->where('currency_id', $account->currency_id)
+            ->value('exchange_rate_to_base') ?? '1';
+
+        $transaction = $action->handle($user, $this->transaction, [
             'type' => $validated['type'],
             'account_id' => (int) $validated['account_id'],
             'destination_account_id' => $validated['destination_account_id'] ?? null,

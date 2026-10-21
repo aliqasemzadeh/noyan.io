@@ -85,17 +85,8 @@ class RecordLoanPaymentAction
                 'amount' => $amount,
                 'reference_number' => $data['reference_number'] ?? null,
                 'note' => $data['note'] ?? $lockedLoan->title,
+                'apply_loan_payment' => true,
             ]);
-
-            $paidAmount = bcadd((string) $lockedLoan->paid_amount, $amount, 18);
-            $status = bccomp($paidAmount, (string) $lockedLoan->total_amount, 18) >= 0
-                ? LoanStatus::Completed
-                : LoanStatus::Active;
-
-            $lockedLoan->forceFill([
-                'paid_amount' => $paidAmount,
-                'status' => $status,
-            ])->save();
 
             return $lockedLoan->fresh(['party', 'account', 'transactions']);
         });
