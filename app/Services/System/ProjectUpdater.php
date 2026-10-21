@@ -64,18 +64,16 @@ class ProjectUpdater
             }
         }
 
-        if ($mode === UpdateMode::Full) {
-            $npmExit = $this->runner->runProcess(
-                [$this->npmCommand(), 'run', 'build'],
-                $onOutput,
-                $this->npmCommand().' run build',
-            );
+        $npmExit = $this->runner->runProcess(
+            [$this->npmCommand(), 'run', 'build'],
+            $onOutput,
+            $this->npmCommand().' run build',
+        );
 
-            if ($npmExit !== 0) {
-                $onOutput(PHP_EOL.__('general.system_update_failed').PHP_EOL);
+        if ($npmExit !== 0) {
+            $onOutput(PHP_EOL.__('general.system_update_failed').PHP_EOL);
 
-                return $npmExit;
-            }
+            return $npmExit;
         }
 
         $queueExit = $this->runner->artisan(

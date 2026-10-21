@@ -96,7 +96,7 @@ class SystemFunctionsPageTest extends TestCase
         });
     }
 
-    public function test_quick_update_skips_composer_and_npm(): void
+    public function test_quick_update_skips_composer_but_runs_npm(): void
     {
         Process::fake([
             '*' => Process::result(output: 'ok'),
@@ -115,7 +115,13 @@ class SystemFunctionsPageTest extends TestCase
         Process::assertDidntRun(function ($process): bool {
             $command = collect($process->command)->implode(' ');
 
-            return str_contains($command, 'composer') || str_contains($command, 'npm');
+            return str_contains($command, 'composer');
+        });
+
+        Process::assertRan(function ($process): bool {
+            $command = collect($process->command)->implode(' ');
+
+            return str_contains($command, 'npm');
         });
     }
 
