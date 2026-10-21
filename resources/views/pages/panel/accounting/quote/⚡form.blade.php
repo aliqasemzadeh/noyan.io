@@ -6,6 +6,7 @@ use App\Enums\Business\BusinessPermission;
 use App\Livewire\Forms\Accounting\QuoteForm;
 use App\Models\Accounting\Party;
 use App\Models\Accounting\Quote;
+use App\Models\Accounting\SaleKind;
 use App\Models\Catalog\Product;
 use App\Support\Business\BusinessPanelContext;
 use Flux\Flux;
@@ -173,6 +174,23 @@ new class extends Component
     }
 
     /**
+     * @return Collection<int, SaleKind>
+     */
+    #[Computed]
+    public function saleKinds(): Collection
+    {
+        $businessId = Auth::user()?->current_business_id;
+
+        if ($businessId === null) {
+            return collect();
+        }
+
+        return SaleKind::query()
+            ->enabledForBusiness($businessId)
+            ->get();
+    }
+
+    /**
      * @return Collection<int, Party>
      */
     #[Computed]
@@ -262,19 +280,38 @@ new class extends Component
             </flux:breadcrumbs.item>
         </flux:breadcrumbs>
 
-        <div class="mt-4 flex items-center justify-between gap-4">
-            <div>
+        <div class="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div class="min-w-0">
                 <flux:heading size="xl">{{ $this->heading() }}</flux:heading>
                 <flux:text class="mt-1">{{ __('general.quote_form_hint') }}</flux:text>
             </div>
 
-            <flux:badge size="sm" color="sky">{{ __('general.quote') }}</flux:badge>
+            <flux:badge size="sm" color="sky" class="self-start sm:self-auto">{{ __('general.quote') }}</flux:badge>
         </div>
     </div>
 
     <form wire:submit="saveAsDraft" class="space-y-6">
         <flux:card class="space-y-4">
             <div class="grid gap-4 md:grid-cols-2">
+                @if ($this->saleKinds->isNotEmpty())
+                    <flux:field>
+                        <flux:label>{{ __('general.sale_kind') }}</flux:label>
+                        <flux:select
+                            wire:model="form.sale_kind_id"
+                            searchable
+                            clearable
+                            placeholder="{{ __('general.select_sale_kind') }}"
+                        >
+                            @foreach ($this->saleKinds as $saleKind)
+                                <flux:select.option value="{{ $saleKind->id }}" wire:key="quote-sale-kind-{{ $saleKind->id }}">
+                                    {{ $saleKind->name }}
+                                </flux:select.option>
+                            @endforeach
+                        </flux:select>
+                        <flux:error name="form.sale_kind_id" />
+                    </flux:field>
+                @endif
+
                 <flux:field>
                     <flux:label>{{ __('general.party') }}</flux:label>
                     <flux:select
@@ -326,106 +363,18 @@ new class extends Component
         </flux:card>
 
         <flux:card class="space-y-4">
-            <div class="flex items-center justify-between gap-3">
+            <div class="flex flex-wrap items-center justify-between gap-3">
                 <flux:heading size="lg">{{ __('general.quote_items') }}</flux:heading>
-                <flux:button type="button" size="sm" variant="primary" color="zinc" icon="plus" wire:click="addItem">
+                <flux:button type="button" size="sm" variant="primary" color="zinc" icon="plus" wire:click="addItem" class="w-full sm:w-auto">
                     {{ __('general.add_item') }}
                 </flux:button>
             </div>
 
-            <div class="overflow-x-auto">
-                <table class="min-w-full text-sm">
-                    <thead>
-                        <tr class="border-b border-zinc-200 text-start dark:border-zinc-700">
-                            <th class="w-10 px-2 py-2"></th>
-                            <th class="px-2 py-2 text-start">{{ __('general.item_title') }}</th>
-                            <th class="w-28 px-2 py-2 text-start">{{ __('general.quantity') }}</th>
-                            <th class="w-36 px-2 py-2 text-start">{{ __('general.unit_price') }}</th>
-                            <th class="w-32 px-2 py-2 text-start">{{ __('general.discount_amount') }}</th>
-                            <th class="w-32 px-2 py-2 text-start">{{ __('general.tax_amount') }}</th>
-                            <th class="w-36 px-2 py-2 text-start">{{ __('general.row_total') }}</th>
-                            <th class="w-12 px-2 py-2"></th>
-                        </tr>
-                    </thead>
-                    <tbody wire:sort="updateSortOrder">
-                        @foreach ($form->items as $index => $item)
-                            <tr
-                                wire:key="quote-item-{{ $item['id'] }}"
-                                wire:sort:item="{{ $item['id'] }}"
-                                class="border-b border-zinc-100 dark:border-zinc-800"
-                            >
-                                <td class="px-2 py-2 align-top">
-                                    <div wire:sort:handle class="cursor-grab pt-2 text-zinc-400">
-                                        <flux:icon.grip-vertical class="size-4" />
-                                    </div>
-                                </td>
-                                <td class="min-w-80 px-2 py-2 align-top" wire:sort:ignore>
-                                    <flux:select
-                                        wire:model.live="form.items.{{ $index }}.product_id"
-                                        variant="combobox"
-                                        clearable
-                                        placeholder="{{ __('general.select_or_type_item') }}"
-                                    >
-                                        <flux:select.input
-                                            wire:model.live.debounce.300ms="itemSearches.{{ $index }}"
-                                            placeholder="{{ __('general.select_or_type_item') }}"
-                                        />
-
-                                        @foreach ($this->productsFor($index) as $product)
-                                            <flux:select.option
-                                                value="{{ $product->id }}"
-                                                wire:key="quote-item-product-{{ $index }}-{{ $product->id }}"
-                                            >
-                                                {{ $product->name }}
-                                            </flux:select.option>
-                                        @endforeach
-
-                                        <flux:select.option.create wire:click="useFreeTextItem({{ $index }})" min-length="1">
-                                            {{ __('general.use_as_free_text_item') }}
-                                        </flux:select.option.create>
-                                    </flux:select>
-
-                                    <flux:editor
-                                        class="mt-2 **:data-[slot=content]:min-h-[100px]!"
-                                        wire:model="form.items.{{ $index }}.title"
-                                        toolbar="heading | bold italic underline | align ~ undo redo"
-                                        placeholder="{{ __('general.item_description_placeholder') }}"
-                                    />
-                                    <flux:error name="form.items.{{ $index }}.title" />
-                                </td>
-                                <td class="px-2 py-2 align-top" wire:sort:ignore>
-                                    <flux:input type="number" step="any" wire:model.live.blur="form.items.{{ $index }}.quantity" />
-                                </td>
-                                <td class="px-2 py-2 align-top" wire:sort:ignore>
-                                    <flux:input wire:model.live.blur="form.items.{{ $index }}.unit_price" mask:dynamic="$money($input)" dir="ltr" />
-                                </td>
-                                <td class="px-2 py-2 align-top" wire:sort:ignore>
-                                    <flux:input wire:model.live.blur="form.items.{{ $index }}.discount_amount" mask:dynamic="$money($input)" dir="ltr" />
-                                </td>
-                                <td class="px-2 py-2 align-top" wire:sort:ignore>
-                                    <flux:input wire:model.live.blur="form.items.{{ $index }}.tax_amount" mask:dynamic="$money($input)" dir="ltr" />
-                                </td>
-                                <td class="px-2 py-2 align-top">
-                                    <flux:input readonly :value="$item['total']" dir="ltr" />
-                                </td>
-                                <td class="px-2 py-2 align-top" wire:sort:ignore>
-                                    <flux:tooltip content="{{ __('general.delete') }}">
-                                        <flux:button
-                                            type="button"
-                                            size="xs"
-                                            variant="danger"
-                                            icon="trash"
-                                            icon:variant="outline"
-                                            wire:click="removeItem({{ $index }})"
-                                        />
-                                    </flux:tooltip>
-                                </td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
-            <flux:error name="form.items" />
+            <x-accounting.document-line-items
+                :items="$form->items"
+                wire-key-prefix="quote-item"
+                :products-for="fn (int $index) => $this->productsFor($index)"
+            />
         </flux:card>
 
         <flux:card>
@@ -451,16 +400,18 @@ new class extends Component
             </div>
         </flux:card>
 
-        <div class="flex flex-col gap-3 sm:flex-row">
-            <flux:button type="submit" variant="primary" color="zinc" class="w-full sm:w-auto">
-                {{ $form->quote !== null ? __('general.update') : __('general.save_as_draft') }}
-            </flux:button>
-            <flux:button type="button" variant="primary" color="sky" class="w-full sm:w-auto" wire:click="recalculateTotals">
-                {{ __('general.recalculate_totals') }}
-            </flux:button>
-            <flux:button type="button" variant="primary" color="teal" class="w-full sm:w-auto" wire:click="saveAndFinalize">
-                {{ __('general.save_and_finalize') }}
-            </flux:button>
+        <div class="sticky bottom-0 z-10 -mx-1 border-t border-zinc-200 bg-white/95 px-1 py-3 backdrop-blur dark:border-zinc-700 dark:bg-zinc-900/95 sm:static sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none dark:sm:bg-transparent">
+            <div class="flex flex-col gap-3 sm:flex-row">
+                <flux:button type="submit" variant="primary" color="zinc" class="w-full sm:w-auto">
+                    {{ $form->quote !== null ? __('general.update') : __('general.save_as_draft') }}
+                </flux:button>
+                <flux:button type="button" variant="primary" color="sky" class="w-full sm:w-auto" wire:click="recalculateTotals">
+                    {{ __('general.recalculate_totals') }}
+                </flux:button>
+                <flux:button type="button" variant="primary" color="teal" class="w-full sm:w-auto" wire:click="saveAndFinalize">
+                    {{ __('general.save_and_finalize') }}
+                </flux:button>
+            </div>
         </div>
     </form>
 

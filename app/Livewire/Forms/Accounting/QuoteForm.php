@@ -221,7 +221,7 @@ class QuoteForm extends Form
             'global_tax' => __('general.global_tax'),
             'items' => __('general.quote_items'),
             'items.*.title' => __('general.item_title'),
-            'items.*.sku' => __('general.product_sku'),
+            'items.*.sku' => __('general.sku'),
             'items.*.unit' => __('general.unit'),
             'items.*.quantity' => __('general.quantity'),
             'items.*.unit_price' => __('general.unit_price'),

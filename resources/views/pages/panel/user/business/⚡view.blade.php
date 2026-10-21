@@ -97,12 +97,32 @@ new class extends Component
                 </div>
             </div>
             <div>
+                <flux:text class="text-sm text-zinc-500">{{ __('general.legal_name') }}</flux:text>
+                <flux:heading size="sm" class="mt-1">{{ $business->legal_name ?: '—' }}</flux:heading>
+            </div>
+            <div>
+                <flux:text class="text-sm text-zinc-500">{{ __('general.national_id') }}</flux:text>
+                <flux:heading size="sm" class="mt-1" dir="ltr">{{ $business->national_id ?: '—' }}</flux:heading>
+            </div>
+            <div>
+                <flux:text class="text-sm text-zinc-500">{{ __('general.economic_code') }}</flux:text>
+                <flux:heading size="sm" class="mt-1" dir="ltr">{{ $business->economic_code ?: '—' }}</flux:heading>
+            </div>
+            <div>
                 <flux:text class="text-sm text-zinc-500">{{ __('general.phone') }}</flux:text>
                 <flux:heading size="sm" class="mt-1" dir="ltr">{{ $business->phone ?: '—' }}</flux:heading>
             </div>
             <div class="sm:col-span-2">
                 <flux:text class="text-sm text-zinc-500">{{ __('general.address') }}</flux:text>
                 <flux:heading size="sm" class="mt-1">{{ $business->address ?: '—' }}</flux:heading>
+            </div>
+            <div>
+                <flux:text class="text-sm text-zinc-500">{{ __('general.postal_code') }}</flux:text>
+                <flux:heading size="sm" class="mt-1" dir="ltr">{{ $business->postal_code ?: '—' }}</flux:heading>
+            </div>
+            <div>
+                <flux:text class="text-sm text-zinc-500">{{ __('general.tax_memory_id') }}</flux:text>
+                <flux:heading size="sm" class="mt-1" dir="ltr">{{ $business->tax_memory_id ?: '—' }}</flux:heading>
             </div>
             <div>
                 <flux:text class="text-sm text-zinc-500">{{ __('general.logo') }}</flux:text>

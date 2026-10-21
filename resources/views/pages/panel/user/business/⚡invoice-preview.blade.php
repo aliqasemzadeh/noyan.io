@@ -29,8 +29,26 @@ new #[Layout('layouts::invoice')] class extends Component
     public function sampleItems(): Collection
     {
         return collect([
-            new PreviewDocumentItem(__('general.invoice_preview_sample_item_1'), '2', '150000', '300000'),
-            new PreviewDocumentItem(__('general.invoice_preview_sample_item_2'), '1', '250000', '250000'),
+            new PreviewDocumentItem(
+                __('general.invoice_preview_sample_item_1'),
+                '2',
+                '150000',
+                '300000',
+                sku: 'SKU-001',
+                unit: 'piece',
+                discount_amount: '0',
+                tax_amount: '0',
+            ),
+            new PreviewDocumentItem(
+                __('general.invoice_preview_sample_item_2'),
+                '1',
+                '250000',
+                '250000',
+                sku: 'SKU-002',
+                unit: 'piece',
+                discount_amount: '0',
+                tax_amount: '0',
+            ),
         ]);
     }
 

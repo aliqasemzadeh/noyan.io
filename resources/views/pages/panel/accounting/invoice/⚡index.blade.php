@@ -239,20 +239,20 @@ new class extends Component
             </flux:breadcrumbs.item>
         </flux:breadcrumbs>
 
-        <div class="mt-4 flex items-center justify-between gap-4">
-            <div>
+        <div class="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div class="min-w-0">
                 <flux:heading size="xl">{{ __('general.invoices') }}</flux:heading>
                 <flux:text class="mt-1">{{ __('general.invoices_page_hint') }}</flux:text>
             </div>
 
             @if (auth()->user()?->canInBusiness(BusinessPermission::InvoiceCreate) || ! $this->isSalePanel())
                 @if ($this->isSalePanel())
-                    <flux:button variant="primary" color="teal" icon="plus" :href="$this->panelRoute('invoices.create', ['type' => 'sale'])" wire:navigate>
+                    <flux:button variant="primary" color="teal" icon="plus" class="w-full sm:w-auto" :href="$this->panelRoute('invoices.create', ['type' => 'sale'])" wire:navigate>
                         {{ __('general.new_sale_invoice') }}
                     </flux:button>
                 @else
-                    <flux:dropdown>
-                        <flux:button variant="primary" color="teal" icon:trailing="chevron-down">
+                    <flux:dropdown class="w-full sm:w-auto">
+                        <flux:button variant="primary" color="teal" icon:trailing="chevron-down" class="w-full sm:w-auto">
                             {{ __('general.create_invoice') }}
                         </flux:button>
                         <flux:menu>
@@ -296,113 +296,195 @@ new class extends Component
             </flux:select>
         </div>
 
-        <flux:table :paginate="$this->invoices">
-            <flux:table.columns>
-                <flux:table.column>{{ __('general.invoice_number') }}</flux:table.column>
-                <flux:table.column>{{ __('general.type') }}</flux:table.column>
-                <flux:table.column>{{ __('general.party') }}</flux:table.column>
-                <flux:table.column>{{ __('general.issue_date') }}</flux:table.column>
-                <flux:table.column>{{ __('general.total_amount') }}</flux:table.column>
-                <flux:table.column>{{ __('general.status') }}</flux:table.column>
-                <flux:table.column align="end">{{ __('general.actions') }}</flux:table.column>
-            </flux:table.columns>
+        {{-- Mobile cards --}}
+        <div class="space-y-3 md:hidden">
+            @forelse ($this->invoices as $invoice)
+                <div wire:key="invoice-mobile-{{ $invoice->id }}" class="rounded-xl border border-zinc-200 p-4 dark:border-zinc-700">
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="min-w-0 space-y-1">
+                            <div class="font-medium">{{ $invoice->invoice_number }}</div>
+                            <flux:text class="truncate">{{ $invoice->displayPartyName() }}</flux:text>
+                        </div>
 
-            <flux:table.rows>
-                @forelse ($this->invoices as $invoice)
-                    <flux:table.row :key="$invoice->id">
-                        <flux:table.cell class="font-medium">
-                            <div>{{ $invoice->invoice_number }}</div>
-                            @if ($invoice->quote)
-                                <flux:badge size="sm" color="sky" class="mt-1">
-                                    <flux:link :href="$this->panelRoute('quotes.index', ['search' => $invoice->quote->quote_number])" wire:navigate>
-                                        {{ __('general.from_quote', ['number' => $invoice->quote->quote_number]) }}
-                                    </flux:link>
-                                </flux:badge>
-                            @endif
-                        </flux:table.cell>
-                        <flux:table.cell>
-                            <flux:badge size="sm" :color="$invoice->type->badgeColor()">
-                                {{ $invoice->type->label() }}
-                            </flux:badge>
-                        </flux:table.cell>
-                        <flux:table.cell>{{ $invoice->displayPartyName() }}</flux:table.cell>
-                        <flux:table.cell>{{ $this->formatDate($invoice->issue_date) }}</flux:table.cell>
-                        <flux:table.cell dir="ltr">{{ $this->formatAmount((string) $invoice->total_amount) }}</flux:table.cell>
-                        <flux:table.cell>
+                        <div class="flex shrink-0 items-center gap-2">
                             @if ($invoice->isFinalized())
                                 <flux:badge size="sm" color="green">{{ __('general.finalized') }}</flux:badge>
                             @else
                                 <flux:badge size="sm" color="zinc">{{ __('general.draft') }}</flux:badge>
                             @endif
-                        </flux:table.cell>
-                        <flux:table.cell align="end">
-                            <div class="flex justify-end gap-2">
-                                @if ($invoice->isDraft())
-                                    @if (auth()->user()?->canInBusiness(BusinessPermission::InvoiceEdit) || ! $this->isSalePanel())
-                                        <flux:tooltip content="{{ __('general.edit') }}">
+
+                            <flux:dropdown>
+                                <flux:button size="xs" variant="ghost" icon="ellipsis-vertical" />
+                                <flux:menu>
+                                    @if ($invoice->isDraft())
+                                        @if (auth()->user()?->canInBusiness(BusinessPermission::InvoiceEdit) || ! $this->isSalePanel())
+                                            <flux:menu.item icon="pencil" :href="$this->panelRoute('invoices.edit', $invoice)" wire:navigate>
+                                                {{ __('general.edit') }}
+                                            </flux:menu.item>
+                                        @endif
+
+                                        @if (auth()->user()?->canInBusiness(BusinessPermission::InvoiceDelete) || ! $this->isSalePanel())
+                                            <flux:modal.trigger name="invoice.delete.{{ $invoice->id }}">
+                                                <flux:menu.item variant="danger" icon="trash">
+                                                    {{ __('general.delete') }}
+                                                </flux:menu.item>
+                                            </flux:modal.trigger>
+                                        @endif
+                                    @else
+                                        <flux:menu.item icon="link" wire:click="copyShareLink({{ $invoice->id }})">
+                                            {{ __('general.copy_invoice_link') }}
+                                        </flux:menu.item>
+                                        <flux:menu.item icon="mail" wire:click="sendEmail({{ $invoice->id }})">
+                                            {{ __('general.send_invoice_email') }}
+                                        </flux:menu.item>
+                                        <flux:menu.item icon="message-square" wire:click="sendSms({{ $invoice->id }})">
+                                            {{ __('general.send_invoice_sms') }}
+                                        </flux:menu.item>
+                                    @endif
+                                </flux:menu>
+                            </flux:dropdown>
+                        </div>
+                    </div>
+
+                    <div class="mt-3 flex flex-wrap items-center gap-2">
+                        <flux:badge size="sm" :color="$invoice->type->badgeColor()">
+                            {{ $invoice->type->label() }}
+                        </flux:badge>
+                        @if ($invoice->quote)
+                            <flux:badge size="sm" color="sky">
+                                <flux:link :href="$this->panelRoute('quotes.index', ['search' => $invoice->quote->quote_number])" wire:navigate>
+                                    {{ __('general.from_quote', ['number' => $invoice->quote->quote_number]) }}
+                                </flux:link>
+                            </flux:badge>
+                        @endif
+                    </div>
+
+                    <div class="mt-3 flex items-center justify-between gap-3 text-sm">
+                        <flux:text>{{ $this->formatDate($invoice->issue_date) }}</flux:text>
+                        <span class="font-medium" dir="ltr">{{ $this->formatAmount((string) $invoice->total_amount) }}</span>
+                    </div>
+                </div>
+            @empty
+                <flux:text class="py-6 text-center">{{ __('general.no_invoices') }}</flux:text>
+            @endforelse
+
+            @if ($this->invoices->hasPages())
+                <div class="pt-2">
+                    <flux:pagination :paginator="$this->invoices" />
+                </div>
+            @endif
+        </div>
+
+        {{-- Desktop table --}}
+        <div class="hidden md:block">
+            <flux:table :paginate="$this->invoices">
+                <flux:table.columns>
+                    <flux:table.column>{{ __('general.invoice_number') }}</flux:table.column>
+                    <flux:table.column>{{ __('general.type') }}</flux:table.column>
+                    <flux:table.column>{{ __('general.party') }}</flux:table.column>
+                    <flux:table.column>{{ __('general.issue_date') }}</flux:table.column>
+                    <flux:table.column>{{ __('general.total_amount') }}</flux:table.column>
+                    <flux:table.column>{{ __('general.status') }}</flux:table.column>
+                    <flux:table.column align="end">{{ __('general.actions') }}</flux:table.column>
+                </flux:table.columns>
+
+                <flux:table.rows>
+                    @forelse ($this->invoices as $invoice)
+                        <flux:table.row :key="$invoice->id">
+                            <flux:table.cell class="font-medium">
+                                <div>{{ $invoice->invoice_number }}</div>
+                                @if ($invoice->quote)
+                                    <flux:badge size="sm" color="sky" class="mt-1">
+                                        <flux:link :href="$this->panelRoute('quotes.index', ['search' => $invoice->quote->quote_number])" wire:navigate>
+                                            {{ __('general.from_quote', ['number' => $invoice->quote->quote_number]) }}
+                                        </flux:link>
+                                    </flux:badge>
+                                @endif
+                            </flux:table.cell>
+                            <flux:table.cell>
+                                <flux:badge size="sm" :color="$invoice->type->badgeColor()">
+                                    {{ $invoice->type->label() }}
+                                </flux:badge>
+                            </flux:table.cell>
+                            <flux:table.cell>{{ $invoice->displayPartyName() }}</flux:table.cell>
+                            <flux:table.cell>{{ $this->formatDate($invoice->issue_date) }}</flux:table.cell>
+                            <flux:table.cell dir="ltr">{{ $this->formatAmount((string) $invoice->total_amount) }}</flux:table.cell>
+                            <flux:table.cell>
+                                @if ($invoice->isFinalized())
+                                    <flux:badge size="sm" color="green">{{ __('general.finalized') }}</flux:badge>
+                                @else
+                                    <flux:badge size="sm" color="zinc">{{ __('general.draft') }}</flux:badge>
+                                @endif
+                            </flux:table.cell>
+                            <flux:table.cell align="end">
+                                <div class="flex justify-end gap-2">
+                                    @if ($invoice->isDraft())
+                                        @if (auth()->user()?->canInBusiness(BusinessPermission::InvoiceEdit) || ! $this->isSalePanel())
+                                            <flux:tooltip content="{{ __('general.edit') }}">
+                                                <flux:button
+                                                    size="xs"
+                                                    variant="primary"
+                                                    color="blue"
+                                                    icon="pencil"
+                                                    icon:variant="outline"
+                                                    :href="$this->panelRoute('invoices.edit', $invoice)"
+                                                    wire:navigate
+                                                />
+                                            </flux:tooltip>
+                                        @endif
+
+                                        @if (auth()->user()?->canInBusiness(BusinessPermission::InvoiceDelete) || ! $this->isSalePanel())
+                                            <flux:tooltip content="{{ __('general.delete') }}">
+                                                <flux:modal.trigger name="invoice.delete.{{ $invoice->id }}">
+                                                    <flux:button size="xs" variant="danger" icon="trash" icon:variant="outline" />
+                                                </flux:modal.trigger>
+                                            </flux:tooltip>
+                                        @endif
+                                    @else
+                                        <flux:tooltip content="{{ __('general.copy_invoice_link') }}">
+                                            <flux:button
+                                                size="xs"
+                                                variant="primary"
+                                                color="teal"
+                                                icon="link"
+                                                icon:variant="outline"
+                                                wire:click="copyShareLink({{ $invoice->id }})"
+                                            />
+                                        </flux:tooltip>
+                                        <flux:tooltip content="{{ __('general.send_invoice_email') }}">
                                             <flux:button
                                                 size="xs"
                                                 variant="primary"
                                                 color="blue"
-                                                icon="pencil"
+                                                icon="mail"
                                                 icon:variant="outline"
-                                                :href="$this->panelRoute('invoices.edit', $invoice)"
-                                                wire:navigate
+                                                wire:click="sendEmail({{ $invoice->id }})"
+                                            />
+                                        </flux:tooltip>
+                                        <flux:tooltip content="{{ __('general.send_invoice_sms') }}">
+                                            <flux:button
+                                                size="xs"
+                                                variant="primary"
+                                                color="amber"
+                                                icon="message-square"
+                                                icon:variant="outline"
+                                                wire:click="sendSms({{ $invoice->id }})"
                                             />
                                         </flux:tooltip>
                                     @endif
-
-                                    @if (auth()->user()?->canInBusiness(BusinessPermission::InvoiceDelete) || ! $this->isSalePanel())
-                                        <flux:tooltip content="{{ __('general.delete') }}">
-                                            <flux:modal.trigger name="invoice.delete.{{ $invoice->id }}">
-                                                <flux:button size="xs" variant="danger" icon="trash" icon:variant="outline" />
-                                            </flux:modal.trigger>
-                                        </flux:tooltip>
-                                    @endif
-                                @else
-                                    <flux:tooltip content="{{ __('general.copy_invoice_link') }}">
-                                        <flux:button
-                                            size="xs"
-                                            variant="primary"
-                                            color="teal"
-                                            icon="link"
-                                            icon:variant="outline"
-                                            wire:click="copyShareLink({{ $invoice->id }})"
-                                        />
-                                    </flux:tooltip>
-                                    <flux:tooltip content="{{ __('general.send_invoice_email') }}">
-                                        <flux:button
-                                            size="xs"
-                                            variant="primary"
-                                            color="blue"
-                                            icon="mail"
-                                            icon:variant="outline"
-                                            wire:click="sendEmail({{ $invoice->id }})"
-                                        />
-                                    </flux:tooltip>
-                                    <flux:tooltip content="{{ __('general.send_invoice_sms') }}">
-                                        <flux:button
-                                            size="xs"
-                                            variant="primary"
-                                            color="amber"
-                                            icon="message-square"
-                                            icon:variant="outline"
-                                            wire:click="sendSms({{ $invoice->id }})"
-                                        />
-                                    </flux:tooltip>
-                                @endif
-                            </div>
-                        </flux:table.cell>
-                    </flux:table.row>
-                @empty
-                    <flux:table.row>
-                        <flux:table.cell colspan="7">
-                            <flux:text class="py-6 text-center">{{ __('general.no_invoices') }}</flux:text>
-                        </flux:table.cell>
-                    </flux:table.row>
-                @endforelse
-            </flux:table.rows>
-        </flux:table>
+                                </div>
+                            </flux:table.cell>
+                        </flux:table.row>
+                    @empty
+                        <flux:table.row>
+                            <flux:table.cell colspan="7">
+                                <flux:text class="py-6 text-center">{{ __('general.no_invoices') }}</flux:text>
+                            </flux:table.cell>
+                        </flux:table.row>
+                    @endforelse
+                </flux:table.rows>
+            </flux:table>
+        </div>
     </flux:card>
 
     @foreach ($this->invoices as $invoice)

@@ -19,6 +19,7 @@ new #[Layout('layouts::invoice')] class extends Component
         $this->invoice = $invoice->loadMissing([
             'items',
             'party',
+            'saleKind',
             'accounts',
             'business.media',
             'business.invoiceSettings',
@@ -92,6 +93,13 @@ new #[Layout('layouts::invoice')] class extends Component
         :document-label="__('general.invoice')"
         :number="$invoice->invoice_number"
         :party-name="$invoice->displayPartyName()"
+        :sale-kind-name="$invoice->saleKind?->name"
+        :buyer-legal-name="$invoice->buyer_legal_name ?? $invoice->party?->legal_name"
+        :buyer-national-id="$invoice->buyer_national_id ?? $invoice->party?->national_id"
+        :buyer-economic-code="$invoice->buyer_economic_code ?? $invoice->party?->economic_code"
+        :buyer-postal-code="$invoice->buyer_postal_code ?? $invoice->party?->postal_code"
+        :buyer-phone="$invoice->buyer_phone ?? ($invoice->party?->mobile ?: $invoice->party?->phone)"
+        :buyer-address="$invoice->buyer_address ?? $invoice->party?->address"
         :dates="$dates"
         :items="$invoice->items"
         :items-total="$invoice->items_total"

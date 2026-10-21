@@ -369,6 +369,14 @@ new class extends Component
                 >
                     {{ __('general.business_currencies') }}
                 </flux:sidebar.item>
+
+                <flux:sidebar.item
+                    :href="route('accounting.sale-kinds.index')"
+                    wire:navigate
+                    :current="request()->routeIs('accounting.sale-kinds.*')"
+                >
+                    {{ __('general.sale_kinds') }}
+                </flux:sidebar.item>
             </flux:sidebar.group>
         @endif
     </flux:sidebar.nav>

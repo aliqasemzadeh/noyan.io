@@ -11,6 +11,10 @@ final class PreviewDocumentItem
         public string $quantity,
         public string $unit_price,
         public string $total,
+        public ?string $sku = null,
+        public ?string $unit = null,
+        public string $discount_amount = '0',
+        public string $tax_amount = '0',
     ) {}
 
     public function titleHtml(): string

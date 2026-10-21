@@ -254,7 +254,7 @@ class InvoiceForm extends Form
             'account_ids.*' => __('general.account'),
             'items' => __('general.invoice_items'),
             'items.*.title' => __('general.item_title'),
-            'items.*.sku' => __('general.product_sku'),
+            'items.*.sku' => __('general.sku'),
             'items.*.unit' => __('general.unit'),
             'items.*.quantity' => __('general.quantity'),
             'items.*.unit_price' => __('general.unit_price'),

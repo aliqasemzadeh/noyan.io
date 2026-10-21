@@ -16,7 +16,7 @@ new #[Layout('layouts::invoice')] class extends Component
     {
         abort_unless($quote->isFinalized(), 404);
 
-        $this->quote = $quote->loadMissing(['items', 'party', 'business.media', 'business.invoiceSettings']);
+        $this->quote = $quote->loadMissing(['items', 'party', 'saleKind', 'business.media', 'business.invoiceSettings']);
     }
 
     public function business(): Business
@@ -79,6 +79,13 @@ new #[Layout('layouts::invoice')] class extends Component
         :document-label="__('general.quote')"
         :number="$quote->quote_number"
         :party-name="$quote->displayPartyName()"
+        :sale-kind-name="$quote->saleKind?->name"
+        :buyer-legal-name="$quote->party?->legal_name"
+        :buyer-national-id="$quote->party?->national_id"
+        :buyer-economic-code="$quote->party?->economic_code"
+        :buyer-postal-code="$quote->party?->postal_code"
+        :buyer-phone="$quote->party?->mobile ?: $quote->party?->phone"
+        :buyer-address="$quote->party?->address"
         :dates="[
             ['label' => __('general.issue_date'), 'value' => $this->formatDate($quote->issue_date)],
             ['label' => __('general.valid_until'), 'value' => $this->formatDate($quote->valid_until)],
