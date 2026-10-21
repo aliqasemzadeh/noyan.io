@@ -14,6 +14,8 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Validation\Rule;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Livewire\Form;
+use Sadegh19b\LaravelPersianValidation\Rules\IranianNationalId;
+use Sadegh19b\LaravelPersianValidation\Rules\IranianPostalCode;
 
 class UserBusinessForm extends Form
 {
@@ -25,9 +27,19 @@ class UserBusinessForm extends Form
 
     public string $category = '';
 
+    public string $legal_name = '';
+
     public string $phone = '';
 
     public string $address = '';
+
+    public string $national_id = '';
+
+    public string $economic_code = '';
+
+    public string $postal_code = '';
+
+    public string $tax_memory_id = '';
 
     public string $invoice_primary_color = '';
 
@@ -50,8 +62,13 @@ class UserBusinessForm extends Form
         $this->name = $business->name;
         $this->type = $business->type?->value ?? '';
         $this->category = $business->category?->value ?? '';
+        $this->legal_name = $business->legal_name ?? '';
         $this->phone = $business->phone ?? '';
         $this->address = $business->address ?? '';
+        $this->national_id = $business->national_id ?? '';
+        $this->economic_code = $business->economic_code ?? '';
+        $this->postal_code = $business->postal_code ?? '';
+        $this->tax_memory_id = $business->tax_memory_id ?? '';
         $this->invoice_primary_color = $business->invoice_primary_color ?? '';
         $this->invoice_secondary_color = $business->invoice_secondary_color ?? '';
         $this->invoice_orientation = $business->invoiceOrientation()->value;
@@ -65,12 +82,27 @@ class UserBusinessForm extends Form
      */
     public function rules(): array
     {
+        $nationalIdRules = ['nullable', 'string', 'max:20'];
+        if ($this->national_id !== '') {
+            $nationalIdRules[] = new IranianNationalId;
+        }
+
+        $postalRules = ['nullable', 'string', 'max:16'];
+        if ($this->postal_code !== '') {
+            $postalRules[] = new IranianPostalCode;
+        }
+
         $rules = [
             'name' => ['required', 'string', 'max:255'],
+            'legal_name' => ['nullable', 'string', 'max:255'],
             'type' => ['required', Rule::enum(BusinessType::class)],
             'category' => ['required', Rule::enum(BusinessCategory::class)],
             'phone' => ['nullable', 'string', 'max:50'],
             'address' => ['nullable', 'string', 'max:1000'],
+            'national_id' => $nationalIdRules,
+            'economic_code' => ['nullable', 'string', 'regex:/^\d{12}$/'],
+            'postal_code' => $postalRules,
+            'tax_memory_id' => ['nullable', 'string', 'max:64'],
             'invoice_primary_color' => ['nullable', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'invoice_secondary_color' => ['nullable', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'invoice_orientation' => ['required', Rule::enum(InvoiceOrientation::class)],
