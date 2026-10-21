@@ -235,24 +235,6 @@
             </div>
         @endif
 
-        <div class="rounded-lg border border-dashed border-zinc-300 p-4 dark:border-zinc-600">
-            <p class="text-sm font-medium text-zinc-700 dark:text-zinc-200">{{ __('general.document_business_details') }}</p>
-            <div class="mt-3 space-y-1.5 text-sm text-zinc-700 dark:text-zinc-300">
-                @if (filled($business->phone))
-                    <p>{{ __('general.phone') }}: <span dir="ltr">{{ $business->phone }}</span></p>
-                @endif
-                @if (filled($business->address))
-                    <p>{{ __('general.address') }}: {{ $business->address }}</p>
-                @endif
-                @if (filled($business->postal_code))
-                    <p>{{ __('general.postal_code') }}: <span dir="ltr">{{ $business->postal_code }}</span></p>
-                @endif
-                @if (! filled($business->phone) && ! filled($business->address) && ! filled($business->postal_code))
-                    <p>—</p>
-                @endif
-            </div>
-        </div>
-
         <div class="grid gap-4 sm:grid-cols-2">
             <div class="flex h-28 flex-col justify-between rounded-lg border border-zinc-200 p-4 dark:border-zinc-700">
                 <p class="text-sm text-zinc-500">{{ __('general.seller_stamp_signature') }}</p>
