@@ -208,6 +208,9 @@ class UserBusinessOnboardingTest extends TestCase
 
         Livewire::actingAs($user)
             ->test('pages::panel.user.business.edit', ['business' => $business])
+            ->assertSet('tab', 'general')
+            ->set('tab', 'branding')
+            ->assertSet('tab', 'branding')
             ->set('form.name', 'New Name')
             ->set('form.type', BusinessType::Service->value)
             ->set('form.category', BusinessCategory::Education->value)
