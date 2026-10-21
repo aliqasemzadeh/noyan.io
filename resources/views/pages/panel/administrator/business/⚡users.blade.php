@@ -56,9 +56,15 @@ new class extends Component
         return Jalalian::fromDateTime($membership->created_at)->format('Y/m/d H:i');
     }
 
-    public function roleLabel(BusinessRole $role): string
+    /**
+     * @return list<string>
+     */
+    public function roleLabels(BusinessUser $membership): array
     {
-        return __('general.business_role_'.$role->value);
+        return array_map(
+            fn (BusinessRole $role): string => $role->label(),
+            $membership->roleEnums(),
+        );
     }
 };
 ?>
@@ -125,10 +131,16 @@ new class extends Component
                         <flux:table.cell>
                             <span dir="ltr">{{ $membership->user?->mobile }}</span>
                         </flux:table.cell>
-                        <flux:table.cell>{{ $this->roleLabel($membership->role) }}</flux:table.cell>
+                        <flux:table.cell>
+                            <div class="flex flex-wrap gap-1">
+                                @foreach ($this->roleLabels($membership) as $roleLabel)
+                                    <flux:badge size="sm" color="zinc">{{ $roleLabel }}</flux:badge>
+                                @endforeach
+                            </div>
+                        </flux:table.cell>
                         <flux:table.cell>{{ $this->formatCreatedAt($membership) }}</flux:table.cell>
                         <flux:table.cell align="end">
-                            @if ($membership->role !== BusinessRole::Owner)
+                            @if (! $membership->isOwner())
                                 <div class="flex justify-end gap-2">
                                     <flux:tooltip content="{{ __('general.edit') }}">
                                         <flux:button
