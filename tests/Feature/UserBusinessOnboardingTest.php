@@ -6,6 +6,7 @@ use App\Enums\AccountSubType;
 use App\Enums\Business\BusinessCategory;
 use App\Enums\Business\BusinessRole;
 use App\Enums\Business\BusinessType;
+use App\Enums\Business\InvoiceOrientation;
 use App\Enums\CurrencyType;
 use App\Models\Accounting\Account;
 use App\Models\Business;
