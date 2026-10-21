@@ -209,7 +209,8 @@
 
                         <tr style="background-color: {{ $headerTint }};">
                             <td colspan="6" class="border px-1 py-1 text-start font-bold text-black" style="border-color: {{ $borderColor }};">
-                                {{ __('general.column_totals') }}
+                                {{ __('general.column_totals') }}:
+                                {{ PersianAmountInWords::convert((string) $totalAmount) }}
                             </td>
                             <td class="border px-0.5 py-1 font-bold text-black" style="border-color: {{ $borderColor }};" dir="ltr">{{ $formatAmount($columnTotals['line_total']) }}</td>
                             <td class="border px-0.5 py-1 font-bold text-black" style="border-color: {{ $borderColor }};" dir="ltr">{{ $formatAmount($columnTotals['discount_amount']) }}</td>
@@ -220,31 +221,6 @@
                     </tbody>
                 </table>
             </div>
-        </div>
-
-        {{-- Total in words + grand adjustments --}}
-        <div class="border px-2 py-1.5 text-black" style="border-color: {{ $borderColor }}; background-color: {{ $stripeTint }};">
-            <p>
-                <span class="font-bold">{{ __('general.total_in_words') }}:</span>
-                {{ PersianAmountInWords::convert((string) $totalAmount) }}
-            </p>
-            @if ((float) $globalDiscount > 0 || (float) $globalTax > 0)
-                <div class="mt-1 flex flex-wrap gap-x-4 gap-y-0.5">
-                    <span>{{ __('general.items_total') }}: <span dir="ltr">{{ $formatAmount((string) $itemsTotal) }}</span></span>
-                    @if ((float) $globalDiscount > 0)
-                        <span>{{ __('general.global_discount') }}: <span dir="ltr">{{ $formatAmount((string) $globalDiscount) }}</span></span>
-                    @endif
-                    @if ((float) $globalTax > 0)
-                        <span>{{ __('general.global_tax') }}: <span dir="ltr">{{ $formatAmount((string) $globalTax) }}</span></span>
-                    @endif
-                    <span class="font-bold">{{ __('general.total_amount') }}: <span dir="ltr">{{ $formatAmount((string) $totalAmount) }}</span></span>
-                </div>
-            @else
-                <p class="mt-0.5 font-bold">
-                    {{ __('general.total_amount') }}:
-                    <span dir="ltr">{{ $formatAmount((string) $totalAmount) }}</span>
-                </p>
-            @endif
         </div>
 
         {{-- Sale kind + note | accounts --}}
