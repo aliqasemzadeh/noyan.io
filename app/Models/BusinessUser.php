@@ -14,7 +14,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 #[Table('business_user')]
-#[Fillable(['business_id', 'user_id', 'role', 'permissions'])]
+#[Fillable(['business_id', 'user_id', 'roles', 'permissions'])]
 class BusinessUser extends Model
 {
     /** @use HasFactory<BusinessUserFactory> */
@@ -26,7 +26,7 @@ class BusinessUser extends Model
     protected function casts(): array
     {
         return [
-            'role' => BusinessRole::class,
+            'roles' => 'array',
             'permissions' => 'array',
         ];
     }
@@ -41,30 +41,111 @@ class BusinessUser extends Model
         return $this->belongsTo(User::class);
     }
 
+    public function isOwner(): bool
+    {
+        return $this->hasRole(BusinessRole::Owner);
+    }
+
+    public function hasRole(BusinessRole|string $role): bool
+    {
+        $value = $role instanceof BusinessRole ? $role->value : $role;
+
+        return in_array($value, $this->roleValues(), true);
+    }
+
+    /**
+     * @return list<BusinessRole>
+     */
+    public function roleEnums(): array
+    {
+        $roles = [];
+
+        foreach ($this->roleValues() as $value) {
+            $role = BusinessRole::tryFrom($value);
+
+            if ($role !== null) {
+                $roles[] = $role;
+            }
+        }
+
+        return $roles;
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function roleValues(): array
+    {
+        $roles = $this->roles;
+
+        if (! is_array($roles)) {
+            return [];
+        }
+
+        return array_values(array_filter(array_map('strval', $roles)));
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function permissionsFor(BusinessRole|string $role): array
+    {
+        $roleValue = $role instanceof BusinessRole ? $role->value : $role;
+        $roleEnum = $role instanceof BusinessRole ? $role : BusinessRole::tryFrom($roleValue);
+
+        if ($roleEnum === BusinessRole::Owner || $this->isOwner()) {
+            return BusinessPermission::values();
+        }
+
+        $map = $this->permissions;
+
+        if (! is_array($map)) {
+            return $roleEnum?->defaultPermissions() ?? [];
+        }
+
+        // Legacy flat list support during transition.
+        if (array_is_list($map)) {
+            return array_values(array_intersect(
+                BusinessPermission::values(),
+                array_map('strval', $map),
+            ));
+        }
+
+        $rolePermissions = $map[$roleValue] ?? null;
+
+        if (! is_array($rolePermissions)) {
+            return $roleEnum?->defaultPermissions() ?? [];
+        }
+
+        $allowed = $roleEnum?->applicablePermissionValues() ?? BusinessPermission::values();
+
+        return array_values(array_intersect(
+            $allowed,
+            array_map('strval', $rolePermissions),
+        ));
+    }
+
     /**
      * @return list<string>
      */
     public function permissionNames(): array
     {
-        if ($this->role->hasFullBusinessAccess()) {
+        if ($this->isOwner()) {
             return BusinessPermission::values();
         }
 
-        $permissions = $this->permissions;
+        $permissions = [];
 
-        if (! is_array($permissions)) {
-            return $this->role->defaultPermissions();
+        foreach ($this->roleEnums() as $role) {
+            $permissions = array_merge($permissions, $this->permissionsFor($role));
         }
 
-        return array_values(array_intersect(
-            BusinessPermission::values(),
-            array_map('strval', $permissions),
-        ));
+        return array_values(array_unique($permissions));
     }
 
     public function hasPermission(BusinessPermission|string $permission): bool
     {
-        if ($this->role->hasFullBusinessAccess()) {
+        if ($this->isOwner()) {
             return true;
         }
 
@@ -77,12 +158,22 @@ class BusinessUser extends Model
 
     public function canAccessPanel(BusinessPanel $panel): bool
     {
-        if ($this->role->canAccessPanel($panel)) {
+        if ($this->isOwner()) {
             return true;
+        }
+
+        foreach ($this->roleEnums() as $role) {
+            if ($role->canAccessPanel($panel)) {
+                return true;
+            }
         }
 
         if ($panel === BusinessPanel::Sale) {
             return $this->hasAnySalePermission();
+        }
+
+        if ($panel === BusinessPanel::Accounting) {
+            return $this->hasAnyAccountingPermission();
         }
 
         return false;
@@ -91,9 +182,22 @@ class BusinessUser extends Model
     public function hasAnySalePermission(): bool
     {
         foreach ($this->permissionNames() as $permission) {
-            if (str_starts_with($permission, 'quote_')
-                || str_starts_with($permission, 'invoice_')
-                || str_starts_with($permission, 'party_')) {
+            $enum = BusinessPermission::tryFrom($permission);
+
+            if ($enum?->isSaleRelated()) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public function hasAnyAccountingPermission(): bool
+    {
+        foreach ($this->permissionNames() as $permission) {
+            $enum = BusinessPermission::tryFrom($permission);
+
+            if ($enum !== null && ! $enum->isSaleRelated()) {
                 return true;
             }
         }
