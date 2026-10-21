@@ -54,8 +54,8 @@ new #[Layout('layouts::invoice')] class extends Component
     $business = $this->business();
     $orientation = $this->orientation();
     $containerClass = $orientation === InvoiceOrientation::Landscape
-        ? 'mx-auto max-w-5xl px-4 py-8 sm:px-6'
-        : 'mx-auto max-w-3xl px-4 py-8 sm:px-6';
+        ? 'mx-auto max-w-6xl px-3 py-4 sm:px-4'
+        : 'mx-auto max-w-5xl px-3 py-4 sm:px-4';
 @endphp
 
 <x-slot name="title">{{ __('general.quote') }} {{ $quote->quote_number }} - {{ $business->name }}</x-slot>
