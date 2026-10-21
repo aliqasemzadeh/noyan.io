@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Enums\Business\BusinessPanel;
+use App\Enums\Business\BusinessPermission;
 use Database\Factories\UserFactory;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -121,5 +123,51 @@ class User extends Authenticatable
         ])->save();
 
         $this->forgetBusinessesCache();
+    }
+
+    public function currentMembership(): ?BusinessUser
+    {
+        if ($this->current_business_id === null) {
+            return null;
+        }
+
+        return $this->memberships()
+            ->where('business_id', $this->current_business_id)
+            ->first();
+    }
+
+    public function canInBusiness(BusinessPermission|string $permission): bool
+    {
+        $membership = $this->currentMembership();
+
+        if ($membership === null) {
+            return false;
+        }
+
+        return $membership->hasPermission($permission);
+    }
+
+    public function canAccessPanel(BusinessPanel $panel): bool
+    {
+        $membership = $this->currentMembership();
+
+        if ($membership === null) {
+            return false;
+        }
+
+        return $membership->canAccessPanel($panel);
+    }
+
+    public function defaultPanel(): BusinessPanel
+    {
+        if ($this->canAccessPanel(BusinessPanel::Accounting)) {
+            return BusinessPanel::Accounting;
+        }
+
+        if ($this->canAccessPanel(BusinessPanel::Sale)) {
+            return BusinessPanel::Sale;
+        }
+
+        return BusinessPanel::Accounting;
     }
 }

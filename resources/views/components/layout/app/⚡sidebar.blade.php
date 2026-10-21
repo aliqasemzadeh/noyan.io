@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\Business\BusinessPermission;
 use Livewire\Component;
 
 new class extends Component
@@ -153,6 +154,48 @@ new class extends Component
             >
                 {{ __('general.my_businesses') }}
             </flux:sidebar.item>
+        @elseif (request()->routeIs('sale.*'))
+            <flux:sidebar.item
+                icon="home"
+                :href="route('sale.dashboard')"
+                wire:navigate
+                :current="request()->routeIs('sale.dashboard')"
+            >
+                {{ __('general.dashboard') }}
+            </flux:sidebar.item>
+
+            @if (auth()->user()?->canInBusiness(BusinessPermission::InvoiceView))
+                <flux:sidebar.item
+                    icon="file-text"
+                    :href="route('sale.invoices.index')"
+                    wire:navigate
+                    :current="request()->routeIs('sale.invoices.*')"
+                >
+                    {{ __('general.invoices') }}
+                </flux:sidebar.item>
+            @endif
+
+            @if (auth()->user()?->canInBusiness(BusinessPermission::QuoteView))
+                <flux:sidebar.item
+                    icon="file-pen-line"
+                    :href="route('sale.quotes.index')"
+                    wire:navigate
+                    :current="request()->routeIs('sale.quotes.*')"
+                >
+                    {{ __('general.quotes') }}
+                </flux:sidebar.item>
+            @endif
+
+            @if (auth()->user()?->canInBusiness(BusinessPermission::PartyView))
+                <flux:sidebar.item
+                    icon="users"
+                    :href="route('sale.parties.index')"
+                    wire:navigate
+                    :current="request()->routeIs('sale.parties.*')"
+                >
+                    {{ __('general.parties') }}
+                </flux:sidebar.item>
+            @endif
         @elseif (request()->routeIs('accounting.*'))
             <flux:sidebar.item
                 icon="home"

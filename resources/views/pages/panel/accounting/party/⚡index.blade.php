@@ -1,7 +1,9 @@
 <?php
 
+use App\Enums\Business\BusinessPermission;
 use App\Enums\PartyType;
 use App\Models\Accounting\Party;
+use App\Support\Business\BusinessPanelContext;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
@@ -29,6 +31,25 @@ new class extends Component
     public function mount(): void
     {
         Auth::user()?->ensureCurrentBusiness();
+
+        if (BusinessPanelContext::isSale()) {
+            abort_unless(Auth::user()?->canInBusiness(BusinessPermission::PartyView), 403);
+        }
+    }
+
+    public function panelRoute(string $name, mixed $parameters = []): string
+    {
+        return BusinessPanelContext::route($name, $parameters);
+    }
+
+    public function panelLabel(): string
+    {
+        return BusinessPanelContext::current()->label();
+    }
+
+    public function isSalePanel(): bool
+    {
+        return BusinessPanelContext::isSale();
     }
 
     public function updatedSearch(): void
@@ -118,8 +139,8 @@ new class extends Component
             <flux:breadcrumbs.item :href="route('user.dashboard')" wire:navigate>
                 {{ __('general.dashboard') }}
             </flux:breadcrumbs.item>
-            <flux:breadcrumbs.item :href="route('accounting.dashboard')" wire:navigate>
-                {{ __('general.accounting') }}
+            <flux:breadcrumbs.item :href="$this->panelRoute('dashboard')" wire:navigate>
+                {{ $this->panelLabel() }}
             </flux:breadcrumbs.item>
             <flux:breadcrumbs.item>
                 {{ __('general.parties') }}
@@ -132,11 +153,13 @@ new class extends Component
                 <flux:text class="mt-1">{{ __('general.parties_page_hint') }}</flux:text>
             </div>
 
-            <flux:modal.trigger name="party.create">
-                <flux:button variant="primary" color="teal" icon="plus">
-                    {{ __('general.create_party') }}
-                </flux:button>
-            </flux:modal.trigger>
+            @if (auth()->user()?->canInBusiness(BusinessPermission::PartyCreate) || ! $this->isSalePanel())
+                <flux:modal.trigger name="party.create">
+                    <flux:button variant="primary" color="teal" icon="plus">
+                        {{ __('general.create_party') }}
+                    </flux:button>
+                </flux:modal.trigger>
+            @endif
         </div>
     </div>
 
@@ -185,7 +208,9 @@ new class extends Component
                 <flux:table.column>{{ __('general.party_type') }}</flux:table.column>
                 <flux:table.column>{{ __('general.roles') }}</flux:table.column>
                 <flux:table.column>{{ __('general.mobile') }}</flux:table.column>
-                <flux:table.column>{{ __('general.balance') }}</flux:table.column>
+                @unless ($this->isSalePanel())
+                    <flux:table.column>{{ __('general.balance') }}</flux:table.column>
+                @endunless
                 <flux:table.column>{{ __('general.contacts') }}</flux:table.column>
                 <flux:table.column>{{ __('general.is_active') }}</flux:table.column>
                 <flux:table.column>{{ __('general.created_at') }}</flux:table.column>
@@ -197,7 +222,7 @@ new class extends Component
                     <flux:table.row :key="$party->id">
                         <flux:table.cell>
                             <a
-                                href="{{ route('accounting.parties.view', $party) }}"
+                                href="{{ $this->panelRoute('parties.view', $party) }}"
                                 wire:navigate
                                 class="font-medium text-teal-700 hover:underline dark:text-teal-400"
                             >
@@ -225,9 +250,11 @@ new class extends Component
                         <flux:table.cell>
                             <span dir="ltr">{{ $party->mobile ?: '—' }}</span>
                         </flux:table.cell>
-                        <flux:table.cell>
-                            <span dir="ltr">{{ $this->formatAmount((string) $party->balance) }}</span>
-                        </flux:table.cell>
+                        @unless ($this->isSalePanel())
+                            <flux:table.cell>
+                                <span dir="ltr">{{ $this->formatAmount((string) $party->balance) }}</span>
+                            </flux:table.cell>
+                        @endunless
                         <flux:table.cell>
                             {{ $party->contacts_count }}
                         </flux:table.cell>
@@ -246,35 +273,39 @@ new class extends Component
                                         color="zinc"
                                         icon="eye"
                                         icon:variant="outline"
-                                        :href="route('accounting.parties.view', $party)"
+                                        :href="$this->panelRoute('parties.view', $party)"
                                         wire:navigate
                                     />
                                 </flux:tooltip>
-                                <flux:tooltip content="{{ __('general.edit') }}">
-                                    <flux:button
-                                        size="xs"
-                                        variant="primary"
-                                        color="blue"
-                                        icon="pencil"
-                                        icon:variant="outline"
-                                        wire:click="$dispatch('panels.accounting.party.edit.assign-data', { party: {{ $party->id }} })"
-                                    />
-                                </flux:tooltip>
-                                <flux:tooltip content="{{ __('general.delete') }}">
-                                    <flux:button
-                                        size="xs"
-                                        variant="danger"
-                                        icon="trash"
-                                        icon:variant="outline"
-                                        wire:click="$dispatch('panels.accounting.party.delete.assign-data', { party: {{ $party->id }} })"
-                                    />
-                                </flux:tooltip>
+                                @if (auth()->user()?->canInBusiness(BusinessPermission::PartyEdit) || ! $this->isSalePanel())
+                                    <flux:tooltip content="{{ __('general.edit') }}">
+                                        <flux:button
+                                            size="xs"
+                                            variant="primary"
+                                            color="blue"
+                                            icon="pencil"
+                                            icon:variant="outline"
+                                            wire:click="$dispatch('panels.accounting.party.edit.assign-data', { party: {{ $party->id }} })"
+                                        />
+                                    </flux:tooltip>
+                                @endif
+                                @if (auth()->user()?->canInBusiness(BusinessPermission::PartyDelete) || ! $this->isSalePanel())
+                                    <flux:tooltip content="{{ __('general.delete') }}">
+                                        <flux:button
+                                            size="xs"
+                                            variant="danger"
+                                            icon="trash"
+                                            icon:variant="outline"
+                                            wire:click="$dispatch('panels.accounting.party.delete.assign-data', { party: {{ $party->id }} })"
+                                        />
+                                    </flux:tooltip>
+                                @endif
                             </div>
                         </flux:table.cell>
                     </flux:table.row>
                 @empty
                     <flux:table.row>
-                        <flux:table.cell colspan="9">
+                        <flux:table.cell colspan="{{ $this->isSalePanel() ? 8 : 9 }}">
                             {{ __('general.no_parties') }}
                         </flux:table.cell>
                     </flux:table.row>

@@ -22,6 +22,7 @@ class BusinessUserFactory extends Factory
             'business_id' => Business::factory(),
             'user_id' => User::factory(),
             'role' => BusinessRole::Viewer,
+            'permissions' => BusinessRole::Viewer->defaultPermissions(),
         ];
     }
 
@@ -29,6 +30,7 @@ class BusinessUserFactory extends Factory
     {
         return $this->state(fn (): array => [
             'role' => BusinessRole::Owner,
+            'permissions' => BusinessRole::Owner->defaultPermissions(),
         ]);
     }
 
@@ -36,6 +38,25 @@ class BusinessUserFactory extends Factory
     {
         return $this->state(fn (): array => [
             'role' => BusinessRole::Admin,
+            'permissions' => BusinessRole::Admin->defaultPermissions(),
+        ]);
+    }
+
+    public function seller(): static
+    {
+        return $this->state(fn (): array => [
+            'role' => BusinessRole::Seller,
+            'permissions' => BusinessRole::Seller->defaultPermissions(),
+        ]);
+    }
+
+    /**
+     * @param  list<string>  $permissions
+     */
+    public function withPermissions(array $permissions): static
+    {
+        return $this->state(fn (): array => [
+            'permissions' => $permissions,
         ]);
     }
 }

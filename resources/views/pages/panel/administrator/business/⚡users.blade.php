@@ -130,6 +130,16 @@ new class extends Component
                         <flux:table.cell align="end">
                             @if ($membership->role !== BusinessRole::Owner)
                                 <div class="flex justify-end gap-2">
+                                    <flux:tooltip content="{{ __('general.edit') }}">
+                                        <flux:button
+                                            size="xs"
+                                            variant="primary"
+                                            color="blue"
+                                            icon="pencil"
+                                            icon:variant="outline"
+                                            wire:click="$dispatch('panels.administrator.business.edit-user.assign-data', { membership: {{ $membership->id }} })"
+                                        />
+                                    </flux:tooltip>
                                     <flux:tooltip content="{{ __('general.delete') }}">
                                         <flux:button
                                             size="xs"
@@ -155,5 +165,6 @@ new class extends Component
     </flux:card>
 
     <livewire:business.create-user :key="'business-create-user-'.$business->id" />
+    <livewire:business.edit-user :key="'business-edit-user-'.$business->id" />
     <livewire:business.remove-user :key="'business-remove-user-'.$business->id" />
 </div>

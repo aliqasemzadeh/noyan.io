@@ -71,6 +71,7 @@ class CreateBusinessAction
                 'business_id' => $business->id,
                 'user_id' => $user->id,
                 'role' => BusinessRole::Owner,
+                'permissions' => BusinessRole::Owner->defaultPermissions(),
             ]);
 
             $user->forceFill([

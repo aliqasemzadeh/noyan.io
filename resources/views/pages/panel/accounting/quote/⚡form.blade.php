@@ -2,10 +2,12 @@
 
 use App\Actions\Quotes\FinalizeQuoteAction;
 use App\Actions\Quotes\SaveQuoteAction;
+use App\Enums\Business\BusinessPermission;
 use App\Livewire\Forms\Accounting\QuoteForm;
 use App\Models\Accounting\Party;
 use App\Models\Accounting\Quote;
 use App\Models\Catalog\Product;
+use App\Support\Business\BusinessPanelContext;
 use Flux\Flux;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
@@ -25,6 +27,14 @@ new class extends Component
     public function mount(?Quote $quote = null): void
     {
         Auth::user()?->ensureCurrentBusiness();
+
+        if (BusinessPanelContext::isSale()) {
+            $permission = ($quote !== null && $quote->exists)
+                ? BusinessPermission::QuoteEdit
+                : BusinessPermission::QuoteCreate;
+
+            abort_unless(Auth::user()?->canInBusiness($permission), 403);
+        }
 
         if ($quote !== null && $quote->exists) {
             abort_unless((int) $quote->business_id === (int) Auth::user()?->current_business_id, 404);
@@ -140,7 +150,7 @@ new class extends Component
 
         Flux::toast(__('general.quote_draft_saved', ['number' => $quote->quote_number]));
 
-        $this->redirect(route('accounting.quotes.edit', $quote), navigate: true);
+        $this->redirect(BusinessPanelContext::route('quotes.edit', $quote), navigate: true);
     }
 
     public function saveAndFinalize(SaveQuoteAction $saveAction, FinalizeQuoteAction $finalizeAction): void
@@ -149,7 +159,17 @@ new class extends Component
 
         Flux::toast(__('general.quote_finalized', ['number' => $quote->quote_number]));
 
-        $this->redirect(route('accounting.quotes.index'), navigate: true);
+        $this->redirect(BusinessPanelContext::route('quotes.index'), navigate: true);
+    }
+
+    public function panelRoute(string $name, mixed $parameters = []): string
+    {
+        return BusinessPanelContext::route($name, $parameters);
+    }
+
+    public function panelLabel(): string
+    {
+        return BusinessPanelContext::current()->label();
     }
 
     /**
@@ -231,10 +251,10 @@ new class extends Component
             <flux:breadcrumbs.item :href="route('user.dashboard')" wire:navigate>
                 {{ __('general.dashboard') }}
             </flux:breadcrumbs.item>
-            <flux:breadcrumbs.item :href="route('accounting.dashboard')" wire:navigate>
-                {{ __('general.accounting') }}
+            <flux:breadcrumbs.item :href="$this->panelRoute('dashboard')" wire:navigate>
+                {{ $this->panelLabel() }}
             </flux:breadcrumbs.item>
-            <flux:breadcrumbs.item :href="route('accounting.quotes.index')" wire:navigate>
+            <flux:breadcrumbs.item :href="$this->panelRoute('quotes.index')" wire:navigate>
                 {{ __('general.quotes') }}
             </flux:breadcrumbs.item>
             <flux:breadcrumbs.item>

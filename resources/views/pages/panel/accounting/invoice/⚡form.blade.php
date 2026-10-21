@@ -3,10 +3,12 @@
 use App\Actions\Invoices\FinalizeInvoiceAction;
 use App\Actions\Invoices\SaveInvoiceAction;
 use App\Enums\Accounting\InvoiceType;
+use App\Enums\Business\BusinessPermission;
 use App\Livewire\Forms\Accounting\InvoiceForm;
 use App\Models\Accounting\Invoice;
 use App\Models\Accounting\Party;
 use App\Models\Catalog\Product;
+use App\Support\Business\BusinessPanelContext;
 use Flux\Flux;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
@@ -27,9 +29,21 @@ new class extends Component
     {
         Auth::user()?->ensureCurrentBusiness();
 
+        if (BusinessPanelContext::isSale()) {
+            $permission = $invoice !== null
+                ? BusinessPermission::InvoiceEdit
+                : BusinessPermission::InvoiceCreate;
+
+            abort_unless(Auth::user()?->canInBusiness($permission), 403);
+        }
+
         if ($invoice !== null) {
             abort_unless((int) $invoice->business_id === (int) Auth::user()?->current_business_id, 404);
             abort_unless($invoice->isDraft(), 403);
+
+            if (BusinessPanelContext::isSale()) {
+                abort_unless($invoice->type === InvoiceType::Sale, 403);
+            }
 
             $invoice->loadMissing('quote');
             $this->form->setInvoice($invoice);
@@ -41,6 +55,10 @@ new class extends Component
 
         if ($resolvedType === null || ! in_array($resolvedType, InvoiceType::creatable(), true)) {
             abort(404);
+        }
+
+        if (BusinessPanelContext::isSale() && $resolvedType !== InvoiceType::Sale) {
+            abort(403);
         }
 
         $this->form->setType($resolvedType->value);
@@ -155,7 +173,7 @@ new class extends Component
 
         Flux::toast(__('general.invoice_draft_saved', ['number' => $invoice->invoice_number]));
 
-        $this->redirect(route('accounting.invoices.edit', $invoice), navigate: true);
+        $this->redirect(BusinessPanelContext::route('invoices.edit', $invoice), navigate: true);
     }
 
     public function saveAndFinalize(SaveInvoiceAction $saveAction, FinalizeInvoiceAction $finalizeAction): void
@@ -164,7 +182,17 @@ new class extends Component
 
         Flux::toast(__('general.invoice_finalized', ['number' => $invoice->invoice_number]));
 
-        $this->redirect(route('accounting.invoices.index'), navigate: true);
+        $this->redirect(BusinessPanelContext::route('invoices.index'), navigate: true);
+    }
+
+    public function panelRoute(string $name, mixed $parameters = []): string
+    {
+        return BusinessPanelContext::route($name, $parameters);
+    }
+
+    public function panelLabel(): string
+    {
+        return BusinessPanelContext::current()->label();
     }
 
     /**
@@ -251,10 +279,10 @@ new class extends Component
             <flux:breadcrumbs.item :href="route('user.dashboard')" wire:navigate>
                 {{ __('general.dashboard') }}
             </flux:breadcrumbs.item>
-            <flux:breadcrumbs.item :href="route('accounting.dashboard')" wire:navigate>
-                {{ __('general.accounting') }}
+            <flux:breadcrumbs.item :href="$this->panelRoute('dashboard')" wire:navigate>
+                {{ $this->panelLabel() }}
             </flux:breadcrumbs.item>
-            <flux:breadcrumbs.item :href="route('accounting.invoices.index')" wire:navigate>
+            <flux:breadcrumbs.item :href="$this->panelRoute('invoices.index')" wire:navigate>
                 {{ __('general.invoices') }}
             </flux:breadcrumbs.item>
             <flux:breadcrumbs.item>
@@ -278,7 +306,7 @@ new class extends Component
         @if ($form->invoice?->quote)
             <flux:callout icon="file-pen-line" variant="secondary" inline>
                 {{ __('general.invoice_created_from_quote', ['number' => $form->invoice->quote->quote_number]) }}
-                <flux:link class="ms-2" :href="route('accounting.quotes.index', ['search' => $form->invoice->quote->quote_number])" wire:navigate>
+                <flux:link class="ms-2" :href="$this->panelRoute('quotes.index', ['search' => $form->invoice->quote->quote_number])" wire:navigate>
                     {{ $form->invoice->quote->quote_number }}
                 </flux:link>
             </flux:callout>

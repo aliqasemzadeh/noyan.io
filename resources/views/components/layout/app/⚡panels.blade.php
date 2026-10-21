@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\Business\BusinessPanel;
 use Livewire\Component;
 
 new class extends Component
@@ -28,13 +29,26 @@ new class extends Component
             {{ __('general.user_settings') }}
         </flux:sidebar.item>
 
-        <flux:sidebar.item
-            icon="calculator"
-            :href="route('accounting.dashboard')"
-            wire:navigate
-            :current="request()->routeIs('accounting.*')"
-        >
-            {{ __('general.accounting') }}
-        </flux:sidebar.item>
+        @if (auth()->user()?->canAccessPanel(BusinessPanel::Accounting))
+            <flux:sidebar.item
+                icon="calculator"
+                :href="route('accounting.dashboard')"
+                wire:navigate
+                :current="request()->routeIs('accounting.*')"
+            >
+                {{ __('general.accounting') }}
+            </flux:sidebar.item>
+        @endif
+
+        @if (auth()->user()?->canAccessPanel(BusinessPanel::Sale))
+            <flux:sidebar.item
+                icon="shopping-bag"
+                :href="route('sale.dashboard')"
+                wire:navigate
+                :current="request()->routeIs('sale.*')"
+            >
+                {{ __('general.sale') }}
+            </flux:sidebar.item>
+        @endif
     </flux:sidebar.nav>
 </div>

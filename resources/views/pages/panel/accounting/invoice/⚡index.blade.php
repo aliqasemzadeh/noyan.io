@@ -2,7 +2,9 @@
 
 use App\Actions\Invoices\CreateInvoiceShareLinkAction;
 use App\Enums\Accounting\InvoiceType;
+use App\Enums\Business\BusinessPermission;
 use App\Models\Accounting\Invoice;
+use App\Support\Business\BusinessPanelContext;
 use Flux\Flux;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
@@ -29,6 +31,11 @@ new class extends Component
     public function mount(): void
     {
         Auth::user()?->ensureCurrentBusiness();
+
+        if (BusinessPanelContext::isSale()) {
+            abort_unless(Auth::user()?->canInBusiness(BusinessPermission::InvoiceView), 403);
+            $this->typeFilter = InvoiceType::Sale->value;
+        }
     }
 
     public function updatedSearch(): void
@@ -54,10 +61,16 @@ new class extends Component
 
     public function delete(Invoice $invoice): void
     {
+        abort_unless(Auth::user()?->canInBusiness(BusinessPermission::InvoiceDelete), 403);
+
         $businessId = Auth::user()?->current_business_id;
 
         if ($businessId === null || (int) $invoice->business_id !== (int) $businessId) {
             return;
+        }
+
+        if (BusinessPanelContext::isSale() && $invoice->type !== InvoiceType::Sale) {
+            abort(403);
         }
 
         if ($invoice->isFinalized()) {
@@ -116,12 +129,31 @@ new class extends Component
                         });
                 });
             })
-            ->when($this->typeFilter !== '', fn ($query) => $query->where('type', $this->typeFilter))
+            ->when(
+                BusinessPanelContext::isSale(),
+                fn ($query) => $query->where('type', InvoiceType::Sale),
+                fn ($query) => $query->when($this->typeFilter !== '', fn ($query) => $query->where('type', $this->typeFilter)),
+            )
             ->when($this->statusFilter === 'draft', fn ($query) => $query->whereNull('finalized_at'))
             ->when($this->statusFilter === 'finalized', fn ($query) => $query->whereNotNull('finalized_at'))
             ->latest('issue_date')
             ->latest('id')
             ->paginate(config('general.per_page', 15));
+    }
+
+    public function panelRoute(string $name, mixed $parameters = []): string
+    {
+        return BusinessPanelContext::route($name, $parameters);
+    }
+
+    public function panelLabel(): string
+    {
+        return BusinessPanelContext::current()->label();
+    }
+
+    public function isSalePanel(): bool
+    {
+        return BusinessPanelContext::isSale();
     }
 
     public function formatDate(?\DateTimeInterface $date): string
@@ -150,8 +182,8 @@ new class extends Component
             <flux:breadcrumbs.item :href="route('user.dashboard')" wire:navigate>
                 {{ __('general.dashboard') }}
             </flux:breadcrumbs.item>
-            <flux:breadcrumbs.item :href="route('accounting.dashboard')" wire:navigate>
-                {{ __('general.accounting') }}
+            <flux:breadcrumbs.item :href="$this->panelRoute('dashboard')" wire:navigate>
+                {{ $this->panelLabel() }}
             </flux:breadcrumbs.item>
             <flux:breadcrumbs.item>
                 {{ __('general.invoices') }}
@@ -164,24 +196,32 @@ new class extends Component
                 <flux:text class="mt-1">{{ __('general.invoices_page_hint') }}</flux:text>
             </div>
 
-            <flux:dropdown>
-                <flux:button variant="primary" color="teal" icon:trailing="chevron-down">
-                    {{ __('general.create_invoice') }}
-                </flux:button>
-                <flux:menu>
-                    <flux:menu.item icon="trending-up" :href="route('accounting.invoices.create', ['type' => 'sale'])" wire:navigate>
+            @if (auth()->user()?->canInBusiness(BusinessPermission::InvoiceCreate) || ! $this->isSalePanel())
+                @if ($this->isSalePanel())
+                    <flux:button variant="primary" color="teal" icon="plus" :href="$this->panelRoute('invoices.create', ['type' => 'sale'])" wire:navigate>
                         {{ __('general.new_sale_invoice') }}
-                    </flux:menu.item>
-                    <flux:menu.item icon="trending-down" :href="route('accounting.invoices.create', ['type' => 'purchase'])" wire:navigate>
-                        {{ __('general.new_purchase_invoice') }}
-                    </flux:menu.item>
-                </flux:menu>
-            </flux:dropdown>
+                    </flux:button>
+                @else
+                    <flux:dropdown>
+                        <flux:button variant="primary" color="teal" icon:trailing="chevron-down">
+                            {{ __('general.create_invoice') }}
+                        </flux:button>
+                        <flux:menu>
+                            <flux:menu.item icon="trending-up" :href="$this->panelRoute('invoices.create', ['type' => 'sale'])" wire:navigate>
+                                {{ __('general.new_sale_invoice') }}
+                            </flux:menu.item>
+                            <flux:menu.item icon="trending-down" :href="$this->panelRoute('invoices.create', ['type' => 'purchase'])" wire:navigate>
+                                {{ __('general.new_purchase_invoice') }}
+                            </flux:menu.item>
+                        </flux:menu>
+                    </flux:dropdown>
+                @endif
+            @endif
         </div>
     </div>
 
     <flux:card>
-        <div class="mb-4 grid gap-3 md:grid-cols-3">
+        <div class="mb-4 grid gap-3 {{ $this->isSalePanel() ? 'md:grid-cols-2' : 'md:grid-cols-3' }}">
             <flux:input
                 wire:model.live.debounce.300ms="search"
                 icon="search"
@@ -189,14 +229,16 @@ new class extends Component
                 clearable
             />
 
-            <flux:select wire:model.live="typeFilter" searchable variant="listbox" placeholder="{{ __('general.all_invoice_types') }}">
-                <flux:select.option value="">{{ __('general.all_invoice_types') }}</flux:select.option>
-                @foreach (InvoiceType::creatable() as $type)
-                    <flux:select.option value="{{ $type->value }}" wire:key="filter-invoice-type-{{ $type->value }}">
-                        {{ $type->label() }}
-                    </flux:select.option>
-                @endforeach
-            </flux:select>
+            @unless ($this->isSalePanel())
+                <flux:select wire:model.live="typeFilter" searchable variant="listbox" placeholder="{{ __('general.all_invoice_types') }}">
+                    <flux:select.option value="">{{ __('general.all_invoice_types') }}</flux:select.option>
+                    @foreach (InvoiceType::creatable() as $type)
+                        <flux:select.option value="{{ $type->value }}" wire:key="filter-invoice-type-{{ $type->value }}">
+                            {{ $type->label() }}
+                        </flux:select.option>
+                    @endforeach
+                </flux:select>
+            @endunless
 
             <flux:select wire:model.live="statusFilter" searchable variant="listbox" placeholder="{{ __('general.all_statuses') }}">
                 <flux:select.option value="">{{ __('general.all_statuses') }}</flux:select.option>
@@ -223,7 +265,7 @@ new class extends Component
                             <div>{{ $invoice->invoice_number }}</div>
                             @if ($invoice->quote)
                                 <flux:badge size="sm" color="sky" class="mt-1">
-                                    <flux:link :href="route('accounting.quotes.index', ['search' => $invoice->quote->quote_number])" wire:navigate>
+                                    <flux:link :href="$this->panelRoute('quotes.index', ['search' => $invoice->quote->quote_number])" wire:navigate>
                                         {{ __('general.from_quote', ['number' => $invoice->quote->quote_number]) }}
                                     </flux:link>
                                 </flux:badge>
@@ -247,23 +289,27 @@ new class extends Component
                         <flux:table.cell align="end">
                             <div class="flex justify-end gap-2">
                                 @if ($invoice->isDraft())
-                                    <flux:tooltip content="{{ __('general.edit') }}">
-                                        <flux:button
-                                            size="xs"
-                                            variant="primary"
-                                            color="blue"
-                                            icon="pencil"
-                                            icon:variant="outline"
-                                            :href="route('accounting.invoices.edit', $invoice)"
-                                            wire:navigate
-                                        />
-                                    </flux:tooltip>
+                                    @if (auth()->user()?->canInBusiness(BusinessPermission::InvoiceEdit) || ! $this->isSalePanel())
+                                        <flux:tooltip content="{{ __('general.edit') }}">
+                                            <flux:button
+                                                size="xs"
+                                                variant="primary"
+                                                color="blue"
+                                                icon="pencil"
+                                                icon:variant="outline"
+                                                :href="$this->panelRoute('invoices.edit', $invoice)"
+                                                wire:navigate
+                                            />
+                                        </flux:tooltip>
+                                    @endif
 
-                                    <flux:tooltip content="{{ __('general.delete') }}">
-                                        <flux:modal.trigger name="invoice.delete.{{ $invoice->id }}">
-                                            <flux:button size="xs" variant="danger" icon="trash" icon:variant="outline" />
-                                        </flux:modal.trigger>
-                                    </flux:tooltip>
+                                    @if (auth()->user()?->canInBusiness(BusinessPermission::InvoiceDelete) || ! $this->isSalePanel())
+                                        <flux:tooltip content="{{ __('general.delete') }}">
+                                            <flux:modal.trigger name="invoice.delete.{{ $invoice->id }}">
+                                                <flux:button size="xs" variant="danger" icon="trash" icon:variant="outline" />
+                                            </flux:modal.trigger>
+                                        </flux:tooltip>
+                                    @endif
                                 @else
                                     <flux:tooltip content="{{ __('general.copy_invoice_link') }}">
                                         <flux:button

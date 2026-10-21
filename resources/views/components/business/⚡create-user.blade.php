@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\Business\BusinessPermission;
 use App\Enums\Business\BusinessRole;
 use App\Livewire\Forms\BusinessUserForm;
 use App\Models\Business;
@@ -28,6 +29,11 @@ new class extends Component
         unset($this->users);
 
         Flux::modal('business.create-user')->show();
+    }
+
+    public function updatedFormRole(): void
+    {
+        $this->form->syncPermissionsFromRole();
     }
 
     #[Computed]
@@ -74,6 +80,14 @@ new class extends Component
             BusinessRole::cases(),
             fn (BusinessRole $role): bool => $role !== BusinessRole::Owner,
         ));
+    }
+
+    /**
+     * @return array<string, list<BusinessPermission>>
+     */
+    public function permissionGroups(): array
+    {
+        return BusinessPermission::grouped();
     }
 
     public function save(): void
@@ -130,7 +144,7 @@ new class extends Component
 
         <flux:field>
             <flux:label>{{ __('general.role') }}</flux:label>
-            <flux:select wire:model="form.role" searchable variant="listbox">
+            <flux:select wire:model.live="form.role" searchable variant="listbox">
                 @foreach ($this->availableRoles() as $role)
                     <flux:select.option value="{{ $role->value }}">
                         {{ __('general.business_role_'.$role->value) }}
@@ -139,6 +153,31 @@ new class extends Component
             </flux:select>
             <flux:error name="form.role" />
         </flux:field>
+
+        <div class="space-y-4">
+            <div>
+                <flux:heading size="sm">{{ __('general.business_permissions') }}</flux:heading>
+                <flux:text size="sm" class="mt-1">{{ __('general.business_permissions_hint') }}</flux:text>
+            </div>
+
+            @foreach ($this->permissionGroups() as $group => $permissions)
+                <div class="space-y-2 rounded-lg border border-zinc-200 p-3 dark:border-zinc-700">
+                    <flux:heading size="sm">{{ __('general.business_permission_group_'.$group) }}</flux:heading>
+                    <div class="grid gap-2">
+                        @foreach ($permissions as $permission)
+                            <flux:field variant="inline" wire:key="create-perm-{{ $permission->value }}">
+                                <flux:checkbox
+                                    wire:model="form.permissions"
+                                    value="{{ $permission->value }}"
+                                />
+                                <flux:label>{{ $permission->label() }}</flux:label>
+                            </flux:field>
+                        @endforeach
+                    </div>
+                </div>
+            @endforeach
+            <flux:error name="form.permissions" />
+        </div>
 
         <flux:button type="submit" variant="primary" color="teal" class="w-full">
             {{ __('general.save') }}

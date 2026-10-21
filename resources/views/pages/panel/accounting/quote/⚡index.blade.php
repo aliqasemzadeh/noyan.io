@@ -4,7 +4,9 @@ use App\Actions\Quotes\ConvertQuoteToInvoiceAction;
 use App\Actions\Quotes\CreateQuoteShareLinkAction;
 use App\Actions\Quotes\DeleteQuoteAction;
 use App\Enums\Accounting\QuoteStatus;
+use App\Enums\Business\BusinessPermission;
 use App\Models\Accounting\Quote;
+use App\Support\Business\BusinessPanelContext;
 use Flux\Flux;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
@@ -29,6 +31,10 @@ new class extends Component
     public function mount(): void
     {
         Auth::user()?->ensureCurrentBusiness();
+
+        if (BusinessPanelContext::isSale()) {
+            abort_unless(Auth::user()?->canInBusiness(BusinessPermission::QuoteView), 403);
+        }
     }
 
     public function updatedSearch(): void
@@ -49,6 +55,10 @@ new class extends Component
 
     public function delete(Quote $quote, DeleteQuoteAction $action): void
     {
+        if (BusinessPanelContext::isSale()) {
+            abort_unless(Auth::user()?->canInBusiness(BusinessPermission::QuoteDelete), 403);
+        }
+
         $businessId = Auth::user()?->current_business_id;
 
         if ($businessId === null || (int) $quote->business_id !== (int) $businessId) {
@@ -89,6 +99,10 @@ new class extends Component
 
     public function convert(Quote $quote, ConvertQuoteToInvoiceAction $action): void
     {
+        if (BusinessPanelContext::isSale()) {
+            abort_unless(Auth::user()?->canInBusiness(BusinessPermission::InvoiceCreate), 403);
+        }
+
         $businessId = Auth::user()?->current_business_id;
 
         if ($businessId === null || (int) $quote->business_id !== (int) $businessId) {
@@ -100,7 +114,22 @@ new class extends Component
         Flux::modals()->close();
         Flux::toast(__('general.quote_converted', ['number' => $invoice->invoice_number]));
 
-        $this->redirect(route('accounting.invoices.edit', $invoice), navigate: true);
+        $this->redirect(BusinessPanelContext::route('invoices.edit', $invoice), navigate: true);
+    }
+
+    public function panelRoute(string $name, mixed $parameters = []): string
+    {
+        return BusinessPanelContext::route($name, $parameters);
+    }
+
+    public function panelLabel(): string
+    {
+        return BusinessPanelContext::current()->label();
+    }
+
+    public function isSalePanel(): bool
+    {
+        return BusinessPanelContext::isSale();
     }
 
     /**
@@ -173,8 +202,8 @@ new class extends Component
             <flux:breadcrumbs.item :href="route('user.dashboard')" wire:navigate>
                 {{ __('general.dashboard') }}
             </flux:breadcrumbs.item>
-            <flux:breadcrumbs.item :href="route('accounting.dashboard')" wire:navigate>
-                {{ __('general.accounting') }}
+            <flux:breadcrumbs.item :href="$this->panelRoute('dashboard')" wire:navigate>
+                {{ $this->panelLabel() }}
             </flux:breadcrumbs.item>
             <flux:breadcrumbs.item>
                 {{ __('general.quotes') }}
@@ -187,9 +216,11 @@ new class extends Component
                 <flux:text class="mt-1">{{ __('general.quotes_page_hint') }}</flux:text>
             </div>
 
-            <flux:button variant="primary" color="teal" icon="plus" :href="route('accounting.quotes.create')" wire:navigate>
-                {{ __('general.create_quote') }}
-            </flux:button>
+            @if (auth()->user()?->canInBusiness(BusinessPermission::QuoteCreate) || ! $this->isSalePanel())
+                <flux:button variant="primary" color="teal" icon="plus" :href="$this->panelRoute('quotes.create')" wire:navigate>
+                    {{ __('general.create_quote') }}
+                </flux:button>
+            @endif
         </div>
     </div>
 
@@ -246,11 +277,11 @@ new class extends Component
                         <flux:table.cell>
                             @if ($quote->invoice)
                                 @if ($quote->invoice->isDraft())
-                                    <flux:link :href="route('accounting.invoices.edit', $quote->invoice)" wire:navigate>
+                                    <flux:link :href="$this->panelRoute('invoices.edit', $quote->invoice)" wire:navigate>
                                         {{ $quote->invoice->invoice_number }}
                                     </flux:link>
                                 @else
-                                    <flux:link :href="route('accounting.invoices.index', ['search' => $quote->invoice->invoice_number])" wire:navigate>
+                                    <flux:link :href="$this->panelRoute('invoices.index', ['search' => $quote->invoice->invoice_number])" wire:navigate>
                                         {{ $quote->invoice->invoice_number }}
                                     </flux:link>
                                 @endif
@@ -260,7 +291,7 @@ new class extends Component
                         </flux:table.cell>
                         <flux:table.cell align="end">
                             <div class="flex justify-end gap-2">
-                                @if ($quote->isEditable())
+                                @if ($quote->isEditable() && (auth()->user()?->canInBusiness(BusinessPermission::QuoteEdit) || ! $this->isSalePanel()))
                                     <flux:tooltip content="{{ __('general.edit') }}">
                                         <flux:button
                                             size="xs"
@@ -268,7 +299,7 @@ new class extends Component
                                             color="blue"
                                             icon="pencil"
                                             icon:variant="outline"
-                                            :href="route('accounting.quotes.edit', $quote)"
+                                            :href="$this->panelRoute('quotes.edit', $quote)"
                                             wire:navigate
                                         />
                                     </flux:tooltip>
@@ -299,7 +330,7 @@ new class extends Component
                                     </flux:tooltip>
                                 @endif
 
-                                @if ($quote->canBeConverted())
+                                @if ($quote->canBeConverted() && (auth()->user()?->canInBusiness(BusinessPermission::InvoiceCreate) || ! $this->isSalePanel()))
                                     <flux:tooltip content="{{ __('general.convert_to_invoice') }}">
                                         <flux:modal.trigger name="quote.convert.{{ $quote->id }}">
                                             <flux:button size="xs" variant="primary" color="green" icon="file-check" icon:variant="outline" />
@@ -307,7 +338,7 @@ new class extends Component
                                     </flux:tooltip>
                                 @endif
 
-                                @if ($quote->isDeletable())
+                                @if ($quote->isDeletable() && (auth()->user()?->canInBusiness(BusinessPermission::QuoteDelete) || ! $this->isSalePanel()))
                                     <flux:tooltip content="{{ __('general.delete') }}">
                                         <flux:modal.trigger name="quote.delete.{{ $quote->id }}">
                                             <flux:button size="xs" variant="danger" icon="trash" icon:variant="outline" />

@@ -107,7 +107,7 @@ Route::middleware('auth')->group(function () {
         });
     });
 
-    Route::prefix('accounting')->name('accounting.')->middleware('business.selected')->group(function () {
+    Route::prefix('accounting')->name('accounting.')->middleware(['business.selected', 'business.panel:accounting'])->group(function () {
         Route::livewire('/', 'pages::panel.accounting.dashboard.index')->name('dashboard');
         Route::livewire('/accounts', 'pages::panel.accounting.account.index')->name('accounts.index');
         Route::livewire('/accounts/{account}', 'pages::panel.accounting.account.view')->name('accounts.view');
@@ -135,5 +135,36 @@ Route::middleware('auth')->group(function () {
         Route::livewire('/fiscal-years', 'pages::panel.accounting.fiscal-year.index')->name('fiscal-years.index');
         Route::livewire('/cost-centers', 'pages::panel.accounting.cost-center.index')->name('cost-centers.index');
         Route::livewire('/projects', 'pages::panel.accounting.project.index')->name('projects.index');
+    });
+
+    Route::prefix('sale')->name('sale.')->middleware(['business.selected', 'business.panel:sale'])->group(function () {
+        Route::livewire('/', 'pages::panel.sale.dashboard.index')->name('dashboard');
+
+        Route::livewire('/invoices', 'pages::panel.accounting.invoice.index')
+            ->middleware('business.permission:invoice_view')
+            ->name('invoices.index');
+        Route::livewire('/invoices/create/{type}', 'pages::panel.accounting.invoice.form')
+            ->middleware('business.permission:invoice_create')
+            ->name('invoices.create');
+        Route::livewire('/invoices/{invoice}/edit', 'pages::panel.accounting.invoice.form')
+            ->middleware('business.permission:invoice_edit')
+            ->name('invoices.edit');
+
+        Route::livewire('/quotes', 'pages::panel.accounting.quote.index')
+            ->middleware('business.permission:quote_view')
+            ->name('quotes.index');
+        Route::livewire('/quotes/create', 'pages::panel.accounting.quote.form')
+            ->middleware('business.permission:quote_create')
+            ->name('quotes.create');
+        Route::livewire('/quotes/{quote}/edit', 'pages::panel.accounting.quote.form')
+            ->middleware('business.permission:quote_edit')
+            ->name('quotes.edit');
+
+        Route::livewire('/parties', 'pages::panel.accounting.party.index')
+            ->middleware('business.permission:party_view')
+            ->name('parties.index');
+        Route::livewire('/parties/{party}', 'pages::panel.accounting.party.view')
+            ->middleware('business.permission:party_view')
+            ->name('parties.view');
     });
 });

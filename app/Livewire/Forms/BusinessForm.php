@@ -141,6 +141,7 @@ class BusinessForm extends Form
 
                 $previousMembership->update([
                     'role' => BusinessRole::Admin,
+                    'permissions' => BusinessRole::Admin->defaultPermissions(),
                 ]);
             }
         }
@@ -157,6 +158,7 @@ class BusinessForm extends Form
 
             $membership->update([
                 'role' => BusinessRole::Owner,
+                'permissions' => BusinessRole::Owner->defaultPermissions(),
             ]);
 
             return;
@@ -166,6 +168,7 @@ class BusinessForm extends Form
             'business_id' => $business->id,
             'user_id' => $ownerId,
             'role' => BusinessRole::Owner,
+            'permissions' => BusinessRole::Owner->defaultPermissions(),
         ]);
     }
 
