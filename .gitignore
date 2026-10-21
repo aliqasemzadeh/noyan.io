@@ -31,3 +31,6 @@ Thumbs.db
 /storage/framework/views/*
 
 
+
+# EnvKit — never commit .env backups (they contain secrets)
+.env.bkp*
