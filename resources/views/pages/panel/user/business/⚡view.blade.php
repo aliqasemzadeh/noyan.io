@@ -38,48 +38,78 @@ new class extends Component
                 {{ $business->name }}
             </flux:breadcrumbs.item>
         </flux:breadcrumbs>
-
-        <div class="mt-4 flex items-center justify-between gap-3">
-            <flux:heading size="xl" level="1">
-                {{ $business->name }}
-            </flux:heading>
-
-            <div class="flex items-center gap-2">
-                @if (auth()->user()->owns($business))
-                    <flux:button
-                        variant="primary"
-                        color="teal"
-                        icon="users"
-                        :href="route('user.businesses.users', $business)"
-                        wire:navigate
-                    >
-                        {{ __('general.business_users') }}
-                    </flux:button>
-                @endif
-
-                <flux:button
-                    variant="primary"
-                    color="blue"
-                    icon="pencil"
-                    :href="route('user.businesses.edit', $business)"
-                    wire:navigate
-                >
-                    {{ __('general.edit_business') }}
-                </flux:button>
-            </div>
-        </div>
     </div>
 
     <flux:card>
+        <div class="flex flex-col items-center gap-5 text-center sm:flex-row sm:items-start sm:text-start">
+            <div class="flex size-24 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-zinc-50 ring-1 ring-zinc-200 dark:bg-zinc-800 dark:ring-zinc-700">
+                @if ($business->logoUrl())
+                    <img
+                        src="{{ $business->logoUrl() }}"
+                        alt="{{ $business->name }}"
+                        class="size-full object-contain p-2"
+                    />
+                @else
+                    <flux:icon.building-storefront class="size-10 text-zinc-400" />
+                @endif
+            </div>
+
+            <div class="min-w-0 flex-1 space-y-2">
+                <div class="flex flex-col items-center gap-2 sm:flex-row sm:items-center sm:gap-3">
+                    <flux:heading size="xl" level="1" class="truncate">
+                        {{ $business->name }}
+                    </flux:heading>
+                    <flux:badge :color="$business->is_active ? 'teal' : 'zinc'">
+                        {{ $business->is_active ? __('general.active') : __('general.inactive') }}
+                    </flux:badge>
+                </div>
+                <flux:text class="text-sm text-zinc-500" dir="ltr">
+                    {{ $business->slug }}
+                </flux:text>
+            </div>
+
+            <div class="shrink-0">
+                @if (auth()->user()->owns($business))
+                    <flux:dropdown>
+                        <flux:button icon:trailing="chevron-down">
+                            {{ __('general.options') }}
+                        </flux:button>
+                        <flux:menu>
+                            <flux:menu.item
+                                icon="users"
+                                :href="route('user.businesses.users', $business)"
+                                wire:navigate
+                            >
+                                {{ __('general.business_users') }}
+                            </flux:menu.item>
+                            <flux:menu.separator />
+                            <flux:menu.item
+                                icon="pencil"
+                                :href="route('user.businesses.edit', $business)"
+                                wire:navigate
+                            >
+                                {{ __('general.edit_business') }}
+                            </flux:menu.item>
+                        </flux:menu>
+                    </flux:dropdown>
+                @else
+                    <flux:button
+                        variant="primary"
+                        color="blue"
+                        icon="pencil"
+                        :href="route('user.businesses.edit', $business)"
+                        wire:navigate
+                    >
+                        {{ __('general.edit_business') }}
+                    </flux:button>
+                @endif
+            </div>
+        </div>
+    </flux:card>
+
+    <flux:card>
+        <flux:heading size="lg" class="mb-4">{{ __('general.business_tab_general') }}</flux:heading>
         <div class="grid gap-4 sm:grid-cols-2">
-            <div>
-                <flux:text class="text-sm text-zinc-500">{{ __('general.slug') }}</flux:text>
-                <flux:heading size="sm" class="mt-1">{{ $business->slug }}</flux:heading>
-            </div>
-            <div>
-                <flux:text class="text-sm text-zinc-500">{{ __('general.created_at') }}</flux:text>
-                <flux:heading size="sm" class="mt-1">{{ $this->formatCreatedAt() }}</flux:heading>
-            </div>
             <div>
                 <flux:text class="text-sm text-zinc-500">{{ __('general.business_type') }}</flux:text>
                 <flux:heading size="sm" class="mt-1">{{ $business->type?->label() ?? '—' }}</flux:heading>
@@ -89,16 +119,22 @@ new class extends Component
                 <flux:heading size="sm" class="mt-1">{{ $business->category?->label() ?? '—' }}</flux:heading>
             </div>
             <div>
-                <flux:text class="text-sm text-zinc-500">{{ __('general.is_active') }}</flux:text>
-                <div class="mt-1">
-                    <flux:badge :color="$business->is_active ? 'teal' : 'zinc'">
-                        {{ $business->is_active ? __('general.active') : __('general.inactive') }}
-                    </flux:badge>
-                </div>
+                <flux:text class="text-sm text-zinc-500">{{ __('general.created_at') }}</flux:text>
+                <flux:heading size="sm" class="mt-1">{{ $this->formatCreatedAt() }}</flux:heading>
             </div>
+        </div>
+    </flux:card>
+
+    <flux:card>
+        <flux:heading size="lg" class="mb-4">{{ __('general.contact_info') }}</flux:heading>
+        <div class="grid gap-4 sm:grid-cols-2">
             <div>
                 <flux:text class="text-sm text-zinc-500">{{ __('general.legal_name') }}</flux:text>
                 <flux:heading size="sm" class="mt-1">{{ $business->legal_name ?: '—' }}</flux:heading>
+            </div>
+            <div>
+                <flux:text class="text-sm text-zinc-500">{{ __('general.phone') }}</flux:text>
+                <flux:heading size="sm" class="mt-1" dir="ltr">{{ $business->phone ?: '—' }}</flux:heading>
             </div>
             <div>
                 <flux:text class="text-sm text-zinc-500">{{ __('general.national_id') }}</flux:text>
@@ -109,14 +145,6 @@ new class extends Component
                 <flux:heading size="sm" class="mt-1" dir="ltr">{{ $business->economic_code ?: '—' }}</flux:heading>
             </div>
             <div>
-                <flux:text class="text-sm text-zinc-500">{{ __('general.phone') }}</flux:text>
-                <flux:heading size="sm" class="mt-1" dir="ltr">{{ $business->phone ?: '—' }}</flux:heading>
-            </div>
-            <div class="sm:col-span-2">
-                <flux:text class="text-sm text-zinc-500">{{ __('general.address') }}</flux:text>
-                <flux:heading size="sm" class="mt-1">{{ $business->address ?: '—' }}</flux:heading>
-            </div>
-            <div>
                 <flux:text class="text-sm text-zinc-500">{{ __('general.postal_code') }}</flux:text>
                 <flux:heading size="sm" class="mt-1" dir="ltr">{{ $business->postal_code ?: '—' }}</flux:heading>
             </div>
@@ -124,62 +152,36 @@ new class extends Component
                 <flux:text class="text-sm text-zinc-500">{{ __('general.tax_memory_id') }}</flux:text>
                 <flux:heading size="sm" class="mt-1" dir="ltr">{{ $business->tax_memory_id ?: '—' }}</flux:heading>
             </div>
-            <div>
-                <flux:text class="text-sm text-zinc-500">{{ __('general.logo') }}</flux:text>
-                <div class="mt-2">
-                    @if ($business->logoUrl())
-                        <img
-                            src="{{ $business->logoUrl() }}"
-                            alt="{{ $business->name }}"
-                            class="h-16 w-16 rounded-xl object-contain ring-1 ring-zinc-200 dark:ring-zinc-700"
-                        />
-                    @else
-                        <flux:heading size="sm">—</flux:heading>
-                    @endif
-                </div>
-            </div>
-            <div>
-                <flux:text class="text-sm text-zinc-500">{{ __('general.invoice_colors') }}</flux:text>
-                <div class="mt-2 flex items-center gap-2">
-                    <span
-                        class="size-8 rounded-full ring-1 ring-zinc-200 dark:ring-zinc-700"
-                        style="background-color: {{ $business->invoicePrimaryColor() }}"
-                        title="{{ $business->invoicePrimaryColor() }}"
-                    ></span>
-                    <span
-                        class="size-8 rounded-full ring-1 ring-zinc-200 dark:ring-zinc-700"
-                        style="background-color: {{ $business->invoiceSecondaryColor() }}"
-                        title="{{ $business->invoiceSecondaryColor() }}"
-                    ></span>
-                </div>
-            </div>
-            <div>
-                <flux:text class="text-sm text-zinc-500">{{ __('general.invoice_orientation') }}</flux:text>
-                <flux:heading size="sm" class="mt-1">{{ $business->invoiceOrientation()->label() }}</flux:heading>
-            </div>
             <div class="sm:col-span-2">
-                <flux:text class="text-sm text-zinc-500">{{ __('general.invoice_preview') }}</flux:text>
-                <div class="mt-2 flex flex-wrap gap-2">
-                    <flux:button
-                        size="sm"
-                        variant="primary"
-                        color="teal"
-                        icon="eye"
-                        :href="route('user.businesses.invoice-preview', $business)"
-                        target="_blank"
-                    >
-                        {{ __('general.preview_invoice') }}
-                    </flux:button>
-                    <flux:button
-                        size="sm"
-                        variant="primary"
-                        color="sky"
-                        icon="eye"
-                        :href="route('user.businesses.quote-preview', $business)"
-                        target="_blank"
-                    >
-                        {{ __('general.preview_quote') }}
-                    </flux:button>
+                <flux:text class="text-sm text-zinc-500">{{ __('general.address') }}</flux:text>
+                <flux:heading size="sm" class="mt-1">{{ $business->address ?: '—' }}</flux:heading>
+            </div>
+        </div>
+    </flux:card>
+
+    <flux:card>
+        <flux:heading size="lg" class="mb-4">{{ __('general.invoice_colors') }}</flux:heading>
+        <div class="flex items-center gap-4">
+            <div class="flex items-center gap-2">
+                <span
+                    class="size-10 rounded-full ring-1 ring-zinc-200 dark:ring-zinc-700"
+                    style="background-color: {{ $business->invoicePrimaryColor() }}"
+                    title="{{ $business->invoicePrimaryColor() }}"
+                ></span>
+                <div>
+                    <flux:text class="text-sm text-zinc-500">{{ __('general.invoice_primary_color') }}</flux:text>
+                    <flux:heading size="sm" class="mt-0.5" dir="ltr">{{ $business->invoicePrimaryColor() }}</flux:heading>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <span
+                    class="size-10 rounded-full ring-1 ring-zinc-200 dark:ring-zinc-700"
+                    style="background-color: {{ $business->invoiceSecondaryColor() }}"
+                    title="{{ $business->invoiceSecondaryColor() }}"
+                ></span>
+                <div>
+                    <flux:text class="text-sm text-zinc-500">{{ __('general.invoice_secondary_color') }}</flux:text>
+                    <flux:heading size="sm" class="mt-0.5" dir="ltr">{{ $business->invoiceSecondaryColor() }}</flux:heading>
                 </div>
             </div>
         </div>
