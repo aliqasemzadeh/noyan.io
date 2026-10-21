@@ -137,6 +137,7 @@ new class extends Component
 };
 ?>
 
+<div>
 <flux:modal name="business.edit-user" flyout position="right" class="space-y-6">
     <div>
         <flux:heading size="lg">{{ __('general.edit_business_user') }}</flux:heading>
@@ -243,3 +244,4 @@ new class extends Component
         @endforelse
     </div>
 </flux:modal>
+</div>
