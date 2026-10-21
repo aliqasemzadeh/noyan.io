@@ -2,7 +2,10 @@
 
 namespace App\Services;
 
+use App\Enums\Accounting\InvoiceNumberFormat;
 use App\Models\Accounting\Quote;
+use App\Models\Business;
+use App\Models\BusinessInvoiceSetting;
 use Morilog\Jalali\Jalalian;
 
 class QuoteNumberGenerator
@@ -10,8 +13,12 @@ class QuoteNumberGenerator
     public function generate(int $businessId, ?Jalalian $at = null): string
     {
         $jalali = $at ?? Jalalian::now();
-        $period = $jalali->format('Y-m');
-        $pattern = 'QT-'.$period.'-';
+        $settings = $this->settingsFor($businessId);
+        $format = $settings->number_format ?? InvoiceNumberFormat::YearMonth;
+        $period = $format->periodPattern($jalali);
+        $prefix = $settings->quotePrefix();
+        $pad = max(1, (int) ($settings->number_pad ?? 4));
+        $pattern = $prefix.'-'.$period.'-';
 
         $latest = Quote::query()
             ->where('business_id', $businessId)
@@ -31,6 +38,17 @@ class QuoteNumberGenerator
             }
         }
 
-        return $pattern.str_pad((string) $next, 4, '0', STR_PAD_LEFT);
+        return $pattern.str_pad((string) $next, $pad, '0', STR_PAD_LEFT);
+    }
+
+    protected function settingsFor(int $businessId): BusinessInvoiceSetting
+    {
+        $business = Business::query()->find($businessId);
+
+        if ($business === null) {
+            return new BusinessInvoiceSetting(BusinessInvoiceSetting::defaultAttributes());
+        }
+
+        return BusinessInvoiceSetting::forBusiness($business);
     }
 }

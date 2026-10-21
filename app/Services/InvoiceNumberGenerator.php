@@ -2,8 +2,11 @@
 
 namespace App\Services;
 
+use App\Enums\Accounting\InvoiceNumberFormat;
 use App\Enums\Accounting\InvoiceType;
 use App\Models\Accounting\Invoice;
+use App\Models\Business;
+use App\Models\BusinessInvoiceSetting;
 use Morilog\Jalali\Jalalian;
 
 class InvoiceNumberGenerator
@@ -11,8 +14,11 @@ class InvoiceNumberGenerator
     public function generate(int $businessId, InvoiceType $type, ?Jalalian $at = null): string
     {
         $jalali = $at ?? Jalalian::now();
-        $period = $jalali->format('Y-m');
-        $prefix = $type->prefix();
+        $settings = $this->settingsFor($businessId);
+        $format = $settings->number_format ?? InvoiceNumberFormat::YearMonth;
+        $period = $format->periodPattern($jalali);
+        $prefix = $settings->prefixForInvoiceType($type);
+        $pad = max(1, (int) ($settings->number_pad ?? 4));
         $pattern = $prefix.'-'.$period.'-';
 
         $latest = Invoice::query()
@@ -34,6 +40,17 @@ class InvoiceNumberGenerator
             }
         }
 
-        return $pattern.str_pad((string) $next, 4, '0', STR_PAD_LEFT);
+        return $pattern.str_pad((string) $next, $pad, '0', STR_PAD_LEFT);
+    }
+
+    protected function settingsFor(int $businessId): BusinessInvoiceSetting
+    {
+        $business = Business::query()->find($businessId);
+
+        if ($business === null) {
+            return new BusinessInvoiceSetting(BusinessInvoiceSetting::defaultAttributes());
+        }
+
+        return BusinessInvoiceSetting::forBusiness($business);
     }
 }
