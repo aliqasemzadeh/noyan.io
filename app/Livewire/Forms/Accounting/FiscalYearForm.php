@@ -50,7 +50,7 @@ class FiscalYearForm extends Form
                     ->ignore($this->fiscalYear?->id),
             ],
             'start_date' => $this->localeDateRules(),
-            'end_date' => [...$this->localeDateRules(), 'after_or_equal:start_date'],
+            'end_date' => [...$this->localeDateRules(), $this->localeDateAfterOrEqual('start_date')],
             'is_closed' => ['boolean'],
         ];
     }
@@ -71,7 +71,6 @@ class FiscalYearForm extends Form
     public function store(): FiscalYear
     {
         $businessId = $this->requireBusinessId();
-        $this->normalizeDateFields('start_date', 'end_date');
         $validated = $this->validate();
         $validated['business_id'] = $businessId;
         $validated['start_date'] = LocaleDate::toStorageDate($validated['start_date']) ?? $validated['start_date'];
@@ -86,7 +85,6 @@ class FiscalYearForm extends Form
     public function update(): void
     {
         $this->requireBusinessId();
-        $this->normalizeDateFields('start_date', 'end_date');
         $validated = $this->validate();
         $validated['start_date'] = LocaleDate::toStorageDate($validated['start_date']) ?? $validated['start_date'];
         $validated['end_date'] = LocaleDate::toStorageDate($validated['end_date']) ?? $validated['end_date'];

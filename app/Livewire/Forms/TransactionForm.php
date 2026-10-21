@@ -176,7 +176,6 @@ class TransactionForm extends Form
         }
 
         $this->normalizeMoneyFields('amount');
-        $this->normalizeDateFields('transaction_date');
 
         $validated = $this->validate();
 
@@ -227,7 +226,6 @@ class TransactionForm extends Form
         }
 
         $this->normalizeMoneyFields('amount');
-        $this->normalizeDateFields('transaction_date');
 
         $validated = $this->validate();
 

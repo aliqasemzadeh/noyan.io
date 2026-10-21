@@ -169,8 +169,6 @@ class JournalEntryForm extends Form
 
     public function saveAsDraft(CreateJournalEntryAction $createAction, UpdateJournalEntryAction $updateAction): JournalEntry
     {
-        $this->normalizeDateFields('entry_date');
-
         foreach ($this->lines as $index => $line) {
             $this->lines[$index]['debit'] = Money::normalize((string) ($line['debit'] ?? '0'));
             $this->lines[$index]['credit'] = Money::normalize((string) ($line['credit'] ?? '0'));

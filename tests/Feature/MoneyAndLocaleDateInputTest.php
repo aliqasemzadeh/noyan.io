@@ -102,6 +102,67 @@ class MoneyAndLocaleDateInputTest extends TestCase
             ->assertSee(__('general.date_range_placeholder'));
     }
 
+    public function test_transaction_create_keeps_jalali_date_after_validation_error(): void
+    {
+        [$user] = $this->prepareContext();
+
+        App::setLocale('fa');
+        $jalaliDate = '1403/01/15';
+
+        Livewire::actingAs($user)
+            ->test('accounting.transaction.create')
+            ->set('form.type', TransactionType::Income->value)
+            ->set('form.transaction_date', $jalaliDate)
+            ->set('form.amount', '')
+            ->call('save')
+            ->assertHasErrors(['form.amount'])
+            ->assertSet('form.transaction_date', $jalaliDate);
+    }
+
+    public function test_fiscal_year_create_accepts_jalali_dates_and_stores_gregorian(): void
+    {
+        $user = User::factory()->create();
+        $business = Business::factory()->for($user, 'owner')->create();
+        $user->forceFill(['current_business_id' => $business->id])->save();
+
+        App::setLocale('fa');
+
+        Livewire::actingAs($user)
+            ->test('accounting.fiscal-year.create')
+            ->set('form.name', '1403')
+            ->set('form.start_date', '1403/01/01')
+            ->set('form.end_date', '1403/12/29')
+            ->set('form.is_closed', false)
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('fiscal_years', [
+            'business_id' => $business->id,
+            'name' => '1403',
+            'start_date' => '2024-03-20',
+            'end_date' => '2025-03-19',
+        ]);
+    }
+
+    public function test_fiscal_year_rejects_end_date_before_start_in_jalali(): void
+    {
+        $user = User::factory()->create();
+        $business = Business::factory()->for($user, 'owner')->create();
+        $user->forceFill(['current_business_id' => $business->id])->save();
+
+        App::setLocale('fa');
+
+        Livewire::actingAs($user)
+            ->test('accounting.fiscal-year.create')
+            ->set('form.name', '1403')
+            ->set('form.start_date', '1403/06/01')
+            ->set('form.end_date', '1403/01/01')
+            ->call('save')
+            ->assertHasErrors(['form.end_date'])
+            ->assertSet('form.start_date', '1403/06/01')
+            ->assertSet('form.end_date', '1403/01/01');
+    }
+
     /**
      * @return array{0: User, 1: Account, 2: Category}
      */

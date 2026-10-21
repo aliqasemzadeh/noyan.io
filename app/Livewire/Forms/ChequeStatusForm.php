@@ -86,7 +86,6 @@ class ChequeStatusForm extends Form
             ]);
         }
 
-        $this->normalizeDateFields('transaction_date');
         $validated = $this->validate();
         $status = ChequeStatus::from($validated['status']);
 

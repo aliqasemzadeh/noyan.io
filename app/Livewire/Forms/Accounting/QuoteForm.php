@@ -176,7 +176,7 @@ class QuoteForm extends Form
             ],
             'party_name' => ['nullable', 'string', 'max:150'],
             'issue_date' => $this->localeDateRules(),
-            'valid_until' => [...$this->localeDateRules(), 'after_or_equal:issue_date'],
+            'valid_until' => [...$this->localeDateRules(), $this->localeDateAfterOrEqual('issue_date')],
             'global_discount' => $amount,
             'global_tax' => $amount,
             'note' => ['nullable', 'string'],
@@ -265,7 +265,6 @@ class QuoteForm extends Form
     protected function prepareLocaleInputs(): void
     {
         $this->normalizeMoneyFields('global_discount', 'global_tax');
-        $this->normalizeDateFields('issue_date', 'valid_until');
 
         foreach ($this->items as $index => $item) {
             foreach (['quantity', 'unit_price', 'discount_amount', 'tax_amount'] as $field) {

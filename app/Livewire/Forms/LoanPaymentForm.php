@@ -87,7 +87,6 @@ class LoanPaymentForm extends Form
         }
 
         $this->normalizeMoneyFields('amount');
-        $this->normalizeDateFields('transaction_date');
         $validated = $this->validate();
 
         $loan = app(RecordLoanPaymentAction::class)->handle($user, $this->loan, [

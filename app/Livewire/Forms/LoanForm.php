@@ -112,7 +112,6 @@ class LoanForm extends Form
         }
 
         $this->normalizeMoneyFields('principal_amount', 'interest_amount', 'installment_amount');
-        $this->normalizeDateFields('issue_date', 'first_installment_date');
         $validated = $this->validate();
 
         $loan = app(CreateLoanAction::class)->handle($user, [

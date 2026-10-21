@@ -106,7 +106,7 @@ class ChequeForm extends Form
             'bank_branch' => ['nullable', 'string', 'max:100'],
             'amount' => [$isUpdate ? 'nullable' : 'required', 'string', 'regex:/^\d+(\.\d{1,18})?$/', 'gt:0'],
             'issue_date' => $isUpdate ? $this->localeDateRules(required: false) : $this->localeDateRules(),
-            'due_date' => [...$this->localeDateRules(), 'after_or_equal:issue_date'],
+            'due_date' => [...$this->localeDateRules(), $this->localeDateAfterOrEqual('issue_date')],
             'note' => ['nullable', 'string', 'max:2000'],
         ];
     }
@@ -143,7 +143,6 @@ class ChequeForm extends Form
         }
 
         $this->normalizeMoneyFields('amount');
-        $this->normalizeDateFields('issue_date', 'due_date');
         $validated = $this->validate();
 
         $cheque = app(RegisterChequeAction::class)->handle($user, [
@@ -177,7 +176,6 @@ class ChequeForm extends Form
         }
 
         $this->normalizeMoneyFields('amount');
-        $this->normalizeDateFields('issue_date', 'due_date');
         $validated = $this->validate();
 
         $cheque = app(UpdateChequeAction::class)->handle($user, $this->cheque, [

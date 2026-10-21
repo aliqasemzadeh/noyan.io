@@ -198,7 +198,7 @@ class InvoiceForm extends Form
             ],
             'party_name' => ['nullable', 'string', 'max:150'],
             'issue_date' => $this->localeDateRules(),
-            'due_date' => [...$this->localeDateRules(required: false), 'after_or_equal:issue_date'],
+            'due_date' => [...$this->localeDateRules(required: false), $this->localeDateAfterOrEqual('issue_date')],
             'global_discount' => $amount,
             'global_tax' => $amount,
             'note' => ['nullable', 'string'],
@@ -306,7 +306,6 @@ class InvoiceForm extends Form
     protected function prepareLocaleInputs(): void
     {
         $this->normalizeMoneyFields('global_discount', 'global_tax');
-        $this->normalizeDateFields('issue_date', 'due_date');
 
         foreach ($this->items as $index => $item) {
             foreach (['quantity', 'unit_price', 'discount_amount', 'tax_amount'] as $field) {
