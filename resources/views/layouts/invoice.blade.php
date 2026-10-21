@@ -19,25 +19,42 @@
         @fluxAppearance
 
         <style>
+            .invoice-sheet {
+                print-color-adjust: exact;
+                -webkit-print-color-adjust: exact;
+            }
+
             @media print {
                 @page {
                     size: {{ $orientation->pageSize() }};
-                    margin: 12mm;
+                    margin: 8mm;
                 }
 
                 .no-print {
                     display: none !important;
                 }
 
+                html,
                 body {
                     background: white !important;
+                    color: #000 !important;
                 }
 
                 .invoice-sheet {
                     box-shadow: none !important;
-                    border: none !important;
                     margin: 0 !important;
                     max-width: none !important;
+                    break-inside: avoid;
+                    page-break-inside: avoid;
+                }
+
+                .invoice-doc {
+                    font-size: 9pt !important;
+                    line-height: 1.25 !important;
+                }
+
+                .invoice-doc table {
+                    font-size: 8pt !important;
                 }
             }
         </style>
