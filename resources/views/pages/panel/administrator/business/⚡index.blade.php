@@ -98,6 +98,7 @@ new class extends Component
                 <flux:table.column>{{ __('general.slug') }}</flux:table.column>
                 <flux:table.column>{{ __('general.owner') }}</flux:table.column>
                 <flux:table.column>{{ __('general.is_active') }}</flux:table.column>
+                <flux:table.column>{{ __('general.sms_wallet_balance') }}</flux:table.column>
                 <flux:table.column>{{ __('general.members_count') }}</flux:table.column>
                 <flux:table.column>{{ __('general.created_at') }}</flux:table.column>
                 <flux:table.column align="end">{{ __('general.actions') }}</flux:table.column>
@@ -118,6 +119,9 @@ new class extends Component
                                 {{ $business->is_active ? __('general.active') : __('general.inactive') }}
                             </flux:badge>
                         </flux:table.cell>
+                        <flux:table.cell>
+                            <span dir="ltr">{{ number_format((float) $business->sms_wallet_balance) }}</span>
+                        </flux:table.cell>
                         <flux:table.cell>{{ $business->memberships_count }}</flux:table.cell>
                         <flux:table.cell>{{ $this->formatCreatedAt($business) }}</flux:table.cell>
                         <flux:table.cell align="end">
@@ -132,6 +136,30 @@ new class extends Component
                                         wire:click="$dispatch('panels.administrator.business.edit.assign-data', { business: {{ $business->id }} })"
                                     />
                                 </flux:tooltip>
+
+                                <flux:tooltip content="{{ __('general.invoice_settings') }}">
+                                    <flux:button
+                                        size="xs"
+                                        variant="primary"
+                                        color="violet"
+                                        icon="file-text"
+                                        icon:variant="outline"
+                                        wire:click="$dispatch('panels.administrator.business.invoice-settings.assign-data', { business: {{ $business->id }} })"
+                                    />
+                                </flux:tooltip>
+
+                                @can('business_sms_wallet_charge')
+                                    <flux:tooltip content="{{ __('general.sms_wallet_charge') }}">
+                                        <flux:button
+                                            size="xs"
+                                            variant="primary"
+                                            color="amber"
+                                            icon="wallet"
+                                            icon:variant="outline"
+                                            wire:click="$dispatch('panels.administrator.business.charge-sms-wallet.assign-data', { business: {{ $business->id }} })"
+                                        />
+                                    </flux:tooltip>
+                                @endcan
 
                                 <flux:tooltip content="{{ __('general.business_users') }}">
                                     <flux:button
@@ -159,7 +187,7 @@ new class extends Component
                     </flux:table.row>
                 @empty
                     <flux:table.row>
-                        <flux:table.cell colspan="7">
+                        <flux:table.cell colspan="8">
                             {{ __('general.no_businesses') }}
                         </flux:table.cell>
                     </flux:table.row>
@@ -171,4 +199,6 @@ new class extends Component
     <livewire:business.create :key="'business-create'" />
     <livewire:business.edit :key="'business-edit'" />
     <livewire:business.delete :key="'business-delete'" />
+    <livewire:business.invoice-settings :key="'business-invoice-settings'" />
+    <livewire:business.charge-sms-wallet :key="'business-charge-sms-wallet'" />
 </div>

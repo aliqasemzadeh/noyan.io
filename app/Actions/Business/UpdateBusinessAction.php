@@ -21,6 +21,7 @@ class UpdateBusinessAction
      *     address?: string|null,
      *     invoice_primary_color?: string|null,
      *     invoice_secondary_color?: string|null,
+     *     invoice_orientation?: string|InvoiceOrientation|null,
      *     logo?: TemporaryUploadedFile|UploadedFile|null,
      *     remove_logo?: bool
      * }  $data
@@ -34,6 +35,12 @@ class UpdateBusinessAction
         $category = $data['category'] instanceof BusinessCategory
             ? $data['category']
             : BusinessCategory::from($data['category']);
+
+        $orientation = isset($data['invoice_orientation'])
+            ? ($data['invoice_orientation'] instanceof InvoiceOrientation
+                ? $data['invoice_orientation']
+                : InvoiceOrientation::from((string) $data['invoice_orientation']))
+            : InvoiceOrientation::Portrait;
 
         $nameChanged = $business->name !== $data['name'];
 
@@ -49,6 +56,7 @@ class UpdateBusinessAction
             'invoice_secondary_color' => filled($data['invoice_secondary_color'] ?? null)
                 ? $data['invoice_secondary_color']
                 : null,
+            'invoice_orientation' => $orientation,
             'slug' => $nameChanged
                 ? $this->resolveUniqueSlug($data['name'], $business)
                 : $business->slug,

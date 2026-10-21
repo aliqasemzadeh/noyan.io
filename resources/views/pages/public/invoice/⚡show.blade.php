@@ -2,6 +2,7 @@
 
 use App\Models\Accounting\Invoice;
 use App\Models\Business;
+use App\Support\InvoiceDocumentFooter;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Morilog\Jalali\Jalalian;
@@ -14,12 +15,17 @@ new #[Layout('layouts::invoice')] class extends Component
     {
         abort_unless($invoice->isFinalized(), 404);
 
-        $this->invoice = $invoice->loadMissing(['items', 'party', 'business.media']);
+        $this->invoice = $invoice->loadMissing(['items', 'party', 'business.media', 'business.invoiceSettings']);
     }
 
     public function business(): Business
     {
         return $this->invoice->business;
+    }
+
+    public function documentFooter(): ?\Illuminate\Support\HtmlString
+    {
+        return InvoiceDocumentFooter::forBusiness($this->business());
     }
 
     public function formatDate(?\DateTimeInterface $date): string
@@ -77,5 +83,11 @@ new #[Layout('layouts::invoice')] class extends Component
         :total-amount="$invoice->total_amount"
         :note="$invoice->note"
         :format-amount="fn (string $amount): string => $this->formatAmount($amount)"
-    />
+    >
+        @if ($footer = $this->documentFooter())
+            <x-slot:footer>
+                {{ $footer }}
+            </x-slot:footer>
+        @endif
+    </x-accounting.printable-document>
 </div>
