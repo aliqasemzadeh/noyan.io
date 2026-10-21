@@ -64,7 +64,6 @@ class Account extends Model
             self::forgetBalanceCache((int) $account->business_id, (int) $account->id);
         };
 
-        static::saved($forgetCaches);
         static::deleted($forgetCaches);
         static::restored($forgetCaches);
     }
