@@ -7,6 +7,7 @@ use App\Enums\AccountType;
 use App\Enums\Business\BusinessCategory;
 use App\Enums\Business\BusinessRole;
 use App\Enums\Business\BusinessType;
+use App\Enums\Business\InvoiceOrientation;
 use App\Models\Business;
 use App\Models\BusinessInvoiceSetting;
 use App\Models\BusinessUser;
@@ -29,6 +30,7 @@ class CreateBusinessAction
      *     address?: string|null,
      *     invoice_primary_color?: string|null,
      *     invoice_secondary_color?: string|null,
+     *     invoice_orientation?: string|InvoiceOrientation|null,
      *     logo?: TemporaryUploadedFile|UploadedFile|null,
      *     currency_ids?: list<int|string>,
      *     currency_id?: int|null
@@ -45,6 +47,12 @@ class CreateBusinessAction
                 ? $data['category']
                 : BusinessCategory::from($data['category']);
 
+            $orientation = isset($data['invoice_orientation'])
+                ? ($data['invoice_orientation'] instanceof InvoiceOrientation
+                    ? $data['invoice_orientation']
+                    : InvoiceOrientation::from((string) $data['invoice_orientation']))
+                : InvoiceOrientation::Portrait;
+
             $business = Business::query()->create([
                 'owner_id' => $user->id,
                 'name' => $data['name'],
@@ -59,6 +67,7 @@ class CreateBusinessAction
                 'invoice_secondary_color' => filled($data['invoice_secondary_color'] ?? null)
                     ? $data['invoice_secondary_color']
                     : null,
+                'invoice_orientation' => $orientation,
                 'is_active' => true,
             ]);
 
