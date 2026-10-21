@@ -59,6 +59,9 @@ new class extends Component
         return match (true) {
             (bool) preg_match('#^/accounting/accounts/[^/]+$#', $path) => route('accounting.accounts.index'),
             (bool) preg_match('#^/accounting/parties/[^/]+$#', $path) => route('accounting.parties.index'),
+            (bool) preg_match('#^/sale/parties/[^/]+$#', $path) => route('sale.parties.index'),
+            (bool) preg_match('#^/sale/invoices/[^/]+#', $path) => route('sale.invoices.index'),
+            (bool) preg_match('#^/sale/quotes/[^/]+#', $path) => route('sale.quotes.index'),
             (bool) preg_match('#^/user/businesses/[^/]+(/edit)?$#', $path) => route('user.businesses.index'),
             $previous !== '' && ! str_contains($previous, '/livewire/') => $previous,
             default => route('dashboard'),

@@ -5,11 +5,13 @@ use App\Enums\Accounting\InvoiceType;
 use App\Enums\Accounting\LoanStatus;
 use App\Enums\Accounting\LoanType;
 use App\Enums\Accounting\TransactionType;
+use App\Enums\Business\BusinessPermission;
 use App\Models\Accounting\Invoice;
 use App\Models\Accounting\Loan;
 use App\Models\Accounting\Party;
 use App\Models\Accounting\PartyContact;
 use App\Models\Accounting\Transaction;
+use App\Support\Business\BusinessPanelContext;
 use App\Support\LocaleDate;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
@@ -60,7 +62,26 @@ new class extends Component
             403
         );
 
+        if (BusinessPanelContext::isSale()) {
+            abort_unless(Auth::user()?->canInBusiness(BusinessPermission::PartyView), 403);
+        }
+
         $this->party = $party;
+    }
+
+    public function panelRoute(string $name, mixed $parameters = []): string
+    {
+        return BusinessPanelContext::route($name, $parameters);
+    }
+
+    public function panelLabel(): string
+    {
+        return BusinessPanelContext::current()->label();
+    }
+
+    public function isSalePanel(): bool
+    {
+        return BusinessPanelContext::isSale();
     }
 
     public function updatedLedgerTab(): void
@@ -134,7 +155,7 @@ new class extends Component
     public function refreshParty(): void
     {
         if (! Party::query()->whereKey($this->party->id)->exists()) {
-            $this->redirect(route('accounting.parties.index'), navigate: true);
+            $this->redirect($this->panelRoute('parties.index'), navigate: true);
 
             return;
         }
@@ -162,7 +183,7 @@ new class extends Component
     public function handlePartyListChanged(): void
     {
         if (! Party::query()->whereKey($this->party->id)->exists()) {
-            $this->redirect(route('accounting.parties.index'), navigate: true);
+            $this->redirect($this->panelRoute('parties.index'), navigate: true);
         }
     }
 
@@ -325,10 +346,10 @@ new class extends Component
             <flux:breadcrumbs.item :href="route('user.dashboard')" wire:navigate>
                 {{ __('general.dashboard') }}
             </flux:breadcrumbs.item>
-            <flux:breadcrumbs.item :href="route('accounting.dashboard')" wire:navigate>
-                {{ __('general.accounting') }}
+            <flux:breadcrumbs.item :href="$this->panelRoute('dashboard')" wire:navigate>
+                {{ $this->panelLabel() }}
             </flux:breadcrumbs.item>
-            <flux:breadcrumbs.item :href="route('accounting.parties.index')" wire:navigate>
+            <flux:breadcrumbs.item :href="$this->panelRoute('parties.index')" wire:navigate>
                 {{ __('general.parties') }}
             </flux:breadcrumbs.item>
             <flux:breadcrumbs.item>
@@ -401,15 +422,17 @@ new class extends Component
                     <flux:text class="font-medium" dir="ltr">{{ $party->economic_code ?: '—' }}</flux:text>
                 </div>
 
-                <div class="flex items-center justify-between gap-4 border-b border-zinc-100 pb-3 dark:border-zinc-700">
-                    <flux:text class="text-zinc-500">{{ __('general.balance') }}</flux:text>
-                    <flux:text class="font-medium" dir="ltr">{{ $this->formattedBalance }}</flux:text>
-                </div>
+                @unless ($this->isSalePanel())
+                    <div class="flex items-center justify-between gap-4 border-b border-zinc-100 pb-3 dark:border-zinc-700">
+                        <flux:text class="text-zinc-500">{{ __('general.balance') }}</flux:text>
+                        <flux:text class="font-medium" dir="ltr">{{ $this->formattedBalance }}</flux:text>
+                    </div>
 
-                <div class="flex items-center justify-between gap-4 border-b border-zinc-100 pb-3 dark:border-zinc-700">
-                    <flux:text class="text-zinc-500">{{ __('general.credit_limit') }}</flux:text>
-                    <flux:text class="font-medium" dir="ltr">{{ $this->formattedCreditLimit }}</flux:text>
-                </div>
+                    <div class="flex items-center justify-between gap-4 border-b border-zinc-100 pb-3 dark:border-zinc-700">
+                        <flux:text class="text-zinc-500">{{ __('general.credit_limit') }}</flux:text>
+                        <flux:text class="font-medium" dir="ltr">{{ $this->formattedCreditLimit }}</flux:text>
+                    </div>
+                @endunless
 
                 <div class="flex items-center justify-between gap-4">
                     <flux:text class="text-zinc-500">{{ __('general.created_at') }}</flux:text>
@@ -530,6 +553,7 @@ new class extends Component
         </flux:table>
     </flux:card>
 
+    @unless ($this->isSalePanel())
     <flux:card class="space-y-4">
         <div>
             <flux:heading size="lg">{{ __('general.party_ledger') }}</flux:heading>
@@ -821,6 +845,7 @@ new class extends Component
             </flux:table>
         @endif
     </flux:card>
+    @endunless
 
     <livewire:accounting.party.edit :key="'party-edit-view-'.$party->id" />
     <livewire:accounting.party.delete :key="'party-delete-view-'.$party->id" />

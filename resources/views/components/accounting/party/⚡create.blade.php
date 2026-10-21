@@ -1,8 +1,11 @@
 <?php
 
+use App\Enums\Business\BusinessPermission;
 use App\Enums\PartyType;
 use App\Livewire\Forms\PartyForm;
+use App\Support\Business\BusinessPanelContext;
 use Flux\Flux;
+use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
 
 new class extends Component
@@ -11,6 +14,10 @@ new class extends Component
 
     public function save(): void
     {
+        if (BusinessPanelContext::isSale()) {
+            abort_unless(Auth::user()?->canInBusiness(BusinessPermission::PartyCreate), 403);
+        }
+
         $party = $this->form->store();
 
         $this->dispatch('panels.accounting.party.index.table');

@@ -43,6 +43,7 @@ class BusinessFactory extends Factory
                 ],
                 [
                     'role' => BusinessRole::Owner,
+                    'permissions' => BusinessRole::Owner->defaultPermissions(),
                 ],
             );
 
