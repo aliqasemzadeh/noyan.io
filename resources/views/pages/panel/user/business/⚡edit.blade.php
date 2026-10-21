@@ -1,8 +1,10 @@
 <?php
 
 use App\Actions\Business\UpdateBusinessAction;
+use App\Actions\Business\UpdateBusinessInvoiceSettingsAction;
 use App\Enums\Business\BusinessCategory;
 use App\Enums\Business\BusinessType;
+use App\Livewire\Forms\BusinessInvoiceSettingsForm;
 use App\Livewire\Forms\UserBusinessForm;
 use App\Models\Business;
 use Flux\Flux;
@@ -18,12 +20,15 @@ new class extends Component
 
     public UserBusinessForm $form;
 
+    public BusinessInvoiceSettingsForm $invoiceSettingsForm;
+
     public function mount(Business $business): void
     {
         abort_unless(Auth::user()?->belongsToBusiness($business), 403);
 
         $this->business = $business;
         $this->form->setModel($business);
+        $this->invoiceSettingsForm->setModel($business);
     }
 
     public function save(UpdateBusinessAction $action): void
@@ -33,6 +38,13 @@ new class extends Component
         Flux::toast(__('general.business_updated'));
 
         $this->redirect(route('user.businesses.view', $this->business), navigate: true);
+    }
+
+    public function saveInvoiceSettings(UpdateBusinessInvoiceSettingsAction $action): void
+    {
+        $this->invoiceSettingsForm->update($action);
+
+        Flux::toast(__('general.invoice_settings_saved'));
     }
 };
 ?>
@@ -63,7 +75,7 @@ new class extends Component
         </div>
     </div>
 
-    <div class="mx-auto max-w-2xl">
+    <div class="mx-auto max-w-2xl space-y-6">
         <flux:card>
             <form wire:submit="save" class="space-y-6">
                 <flux:field>
@@ -108,6 +120,25 @@ new class extends Component
                     :existing-logo-url="$business->logoUrl()"
                     :remove-logo="$form->remove_logo"
                 />
+
+                <flux:button type="submit" variant="primary" color="teal" class="w-full">
+                    {{ __('general.save') }}
+                </flux:button>
+            </form>
+        </flux:card>
+
+        <flux:card>
+            <div class="mb-4 flex items-center justify-between gap-3">
+                <div>
+                    <flux:heading size="lg">{{ __('general.sms_wallet_balance') }}</flux:heading>
+                    <flux:text class="mt-1" dir="ltr">
+                        {{ number_format((float) $business->sms_wallet_balance) }}
+                    </flux:text>
+                </div>
+            </div>
+
+            <form wire:submit="saveInvoiceSettings" class="space-y-6">
+                <x-business.invoice-settings-fields form-prefix="invoiceSettingsForm" />
 
                 <flux:button type="submit" variant="primary" color="teal" class="w-full">
                     {{ __('general.save') }}

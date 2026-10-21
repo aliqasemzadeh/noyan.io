@@ -6,6 +6,7 @@ use App\Actions\Business\CreateBusinessAction;
 use App\Actions\Business\UpdateBusinessAction;
 use App\Enums\Business\BusinessCategory;
 use App\Enums\Business\BusinessType;
+use App\Enums\Business\InvoiceOrientation;
 use App\Models\Business;
 use App\Models\Currency;
 use App\Models\User;
@@ -32,6 +33,8 @@ class UserBusinessForm extends Form
 
     public string $invoice_secondary_color = '';
 
+    public string $invoice_orientation = InvoiceOrientation::Portrait->value;
+
     public TemporaryUploadedFile|UploadedFile|null $logo = null;
 
     public bool $remove_logo = false;
@@ -51,6 +54,7 @@ class UserBusinessForm extends Form
         $this->address = $business->address ?? '';
         $this->invoice_primary_color = $business->invoice_primary_color ?? '';
         $this->invoice_secondary_color = $business->invoice_secondary_color ?? '';
+        $this->invoice_orientation = $business->invoiceOrientation()->value;
         $this->logo = null;
         $this->remove_logo = false;
         $this->currency_ids = [];
@@ -69,6 +73,7 @@ class UserBusinessForm extends Form
             'address' => ['nullable', 'string', 'max:1000'],
             'invoice_primary_color' => ['nullable', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'invoice_secondary_color' => ['nullable', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'invoice_orientation' => ['required', Rule::enum(InvoiceOrientation::class)],
             'logo' => ['nullable', 'image', 'max:5120'],
             'remove_logo' => ['boolean'],
         ];
@@ -102,6 +107,7 @@ class UserBusinessForm extends Form
             'address' => __('general.address'),
             'invoice_primary_color' => __('general.invoice_primary_color'),
             'invoice_secondary_color' => __('general.invoice_secondary_color'),
+            'invoice_orientation' => __('general.invoice_orientation'),
             'logo' => __('general.logo'),
             'currency_ids' => __('general.currencies'),
             'currency_ids.*' => __('general.currency'),

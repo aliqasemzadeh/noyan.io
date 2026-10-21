@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\Business\BusinessCategory;
 use App\Enums\Business\BusinessType;
+use App\Enums\Business\InvoiceOrientation;
 use App\Enums\CategoryType;
 use App\Models\Accounting\Account;
 use App\Models\Accounting\BusinessCurrency;
@@ -36,6 +37,7 @@ use Spatie\MediaLibrary\InteractsWithMedia;
     'address',
     'invoice_primary_color',
     'invoice_secondary_color',
+    'invoice_orientation',
     'is_active',
     'sms_wallet_balance',
 ])]
@@ -56,6 +58,7 @@ class Business extends Model implements HasMedia
         return [
             'type' => BusinessType::class,
             'category' => BusinessCategory::class,
+            'invoice_orientation' => InvoiceOrientation::class,
             'is_active' => 'boolean',
             'sms_wallet_balance' => 'decimal:2',
         ];
@@ -85,6 +88,11 @@ class Business extends Model implements HasMedia
         return filled($this->invoice_secondary_color)
             ? $this->invoice_secondary_color
             : self::DEFAULT_INVOICE_SECONDARY_COLOR;
+    }
+
+    public function invoiceOrientation(): InvoiceOrientation
+    {
+        return $this->invoice_orientation ?? InvoiceOrientation::Portrait;
     }
 
     public function owner(): BelongsTo
