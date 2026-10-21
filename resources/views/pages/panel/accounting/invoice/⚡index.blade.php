@@ -370,6 +370,26 @@ new class extends Component
                                             wire:click="copyShareLink({{ $invoice->id }})"
                                         />
                                     </flux:tooltip>
+                                    <flux:tooltip content="{{ __('general.send_invoice_email') }}">
+                                        <flux:button
+                                            size="xs"
+                                            variant="primary"
+                                            color="blue"
+                                            icon="mail"
+                                            icon:variant="outline"
+                                            wire:click="sendEmail({{ $invoice->id }})"
+                                        />
+                                    </flux:tooltip>
+                                    <flux:tooltip content="{{ __('general.send_invoice_sms') }}">
+                                        <flux:button
+                                            size="xs"
+                                            variant="primary"
+                                            color="amber"
+                                            icon="message-square"
+                                            icon:variant="outline"
+                                            wire:click="sendSms({{ $invoice->id }})"
+                                        />
+                                    </flux:tooltip>
                                 @endif
                             </div>
                         </flux:table.cell>

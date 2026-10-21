@@ -105,6 +105,10 @@ Route::middleware('auth')->group(function () {
             Route::livewire('/businesses/{business}/users', 'pages::panel.user.business.users')->name('businesses.users');
             Route::livewire('/businesses/{business}', 'pages::panel.user.business.view')->name('businesses.view');
             Route::livewire('/businesses/{business}/edit', 'pages::panel.user.business.edit')->name('businesses.edit');
+            Route::livewire('/businesses/{business}/invoice-preview', 'pages::panel.user.business.invoice-preview')
+                ->name('businesses.invoice-preview');
+            Route::livewire('/businesses/{business}/quote-preview', 'pages::panel.user.business.quote-preview')
+                ->name('businesses.quote-preview');
         });
     });
 

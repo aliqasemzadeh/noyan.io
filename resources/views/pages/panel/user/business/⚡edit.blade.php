@@ -119,6 +119,7 @@ new class extends Component
                     :logo="$form->logo"
                     :existing-logo-url="$business->logoUrl()"
                     :remove-logo="$form->remove_logo"
+                    :business="$business"
                 />
 
                 <flux:button type="submit" variant="primary" color="teal" class="w-full">
