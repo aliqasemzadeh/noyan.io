@@ -4,6 +4,7 @@ namespace App\Mail;
 
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
+use Illuminate\Mail\Mailables\Address;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
@@ -22,7 +23,7 @@ class InvoiceNotificationMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            from: new \Illuminate\Mail\Mailables\Address($this->fromAddress, $this->fromName),
+            from: new Address($this->fromAddress, $this->fromName),
             subject: $this->emailSubject,
         );
     }
@@ -30,7 +31,11 @@ class InvoiceNotificationMail extends Mailable
     public function content(): Content
     {
         return new Content(
-            htmlString: nl2br(e($this->emailBody)),
+            view: 'mail.invoice-notification',
+            with: [
+                'subject' => $this->emailSubject,
+                'body' => $this->emailBody,
+            ],
         );
     }
 }

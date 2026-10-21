@@ -2,8 +2,10 @@
 
 namespace App\Actions\Invoices;
 
+use App\Enums\Accounting\InvoiceNotificationType;
 use App\Enums\Accounting\InvoiceType;
 use App\Enums\Catalog\StockMovementType;
+use App\Jobs\Notifications\SendInvoiceNotificationJob;
 use App\Models\Accounting\Invoice;
 use App\Models\Catalog\ProductStockMovement;
 use App\Models\User;
@@ -96,6 +98,11 @@ class FinalizeInvoiceAction
             $invoice->forceFill([
                 'finalized_at' => now(),
             ])->save();
+
+            SendInvoiceNotificationJob::dispatch(
+                $invoice->id,
+                InvoiceNotificationType::NewInvoice->value,
+            );
 
             return $invoice->fresh(['items', 'party']);
         });

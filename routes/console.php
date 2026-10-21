@@ -1,5 +1,6 @@
 <?php
 
+use App\Jobs\Notifications\SendInvoicePaymentRemindersJob;
 use App\Jobs\System\RunBackupJob;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
@@ -14,3 +15,9 @@ Schedule::job(new RunBackupJob('database', 'local'))
     ->timezone('Asia/Tehran')
     ->withoutOverlapping()
     ->name('system-database-backup');
+
+Schedule::job(new SendInvoicePaymentRemindersJob)
+    ->dailyAt('09:00')
+    ->timezone('Asia/Tehran')
+    ->withoutOverlapping()
+    ->name('invoice-payment-reminders');

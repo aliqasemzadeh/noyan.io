@@ -2,7 +2,9 @@
 
 namespace App\Actions\Transactions\Concerns;
 
+use App\Enums\Accounting\InvoiceNotificationType;
 use App\Enums\Accounting\InvoicePaymentStatus;
+use App\Jobs\Notifications\SendInvoiceNotificationJob;
 use App\Enums\Accounting\LoanStatus;
 use App\Enums\Accounting\TransactionType;
 use App\Models\Accounting\Account;
@@ -97,6 +99,11 @@ trait AppliesTransactionEffects
             'paid_amount' => $paidAmount,
             'payment_status' => $paymentStatus,
         ])->save();
+
+        SendInvoiceNotificationJob::dispatch(
+            $invoice->id,
+            InvoiceNotificationType::PaymentReceipt->value,
+        );
     }
 
     protected function reverseInvoicePayment(Invoice $invoice, string $amount): void

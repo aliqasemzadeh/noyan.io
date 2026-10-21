@@ -8,6 +8,7 @@ use App\Enums\Business\BusinessCategory;
 use App\Enums\Business\BusinessRole;
 use App\Enums\Business\BusinessType;
 use App\Models\Business;
+use App\Models\BusinessInvoiceSetting;
 use App\Models\BusinessUser;
 use App\Models\Currency;
 use App\Models\User;
@@ -90,6 +91,8 @@ class CreateBusinessAction
             }
 
             $this->seedDefaultAccounts($business, $baseCurrency);
+
+            BusinessInvoiceSetting::forBusiness($business);
 
             return $business->fresh();
         });
