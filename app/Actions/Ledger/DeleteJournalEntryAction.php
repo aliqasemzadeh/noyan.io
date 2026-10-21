@@ -34,6 +34,7 @@ class DeleteJournalEntryAction
                 ]);
             }
 
+            $locked->lines()->each(fn ($line) => $line->delete());
             $locked->delete();
         });
     }
