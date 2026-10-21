@@ -20,6 +20,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\DB;
 use Spatie\MediaLibrary\HasMedia;
@@ -36,6 +37,7 @@ use Spatie\MediaLibrary\InteractsWithMedia;
     'invoice_primary_color',
     'invoice_secondary_color',
     'is_active',
+    'sms_wallet_balance',
 ])]
 class Business extends Model implements HasMedia
 {
@@ -55,6 +57,7 @@ class Business extends Model implements HasMedia
             'type' => BusinessType::class,
             'category' => BusinessCategory::class,
             'is_active' => 'boolean',
+            'sms_wallet_balance' => 'decimal:2',
         ];
     }
 
@@ -132,6 +135,24 @@ class Business extends Model implements HasMedia
     public function invoices(): HasMany
     {
         return $this->hasMany(Invoice::class);
+    }
+
+    public function invoiceSettings(): HasOne
+    {
+        return $this->hasOne(BusinessInvoiceSetting::class);
+    }
+
+    /**
+     * @return HasMany<BusinessSmsWalletTransaction, $this>
+     */
+    public function smsWalletTransactions(): HasMany
+    {
+        return $this->hasMany(BusinessSmsWalletTransaction::class);
+    }
+
+    public function resolveInvoiceSettings(): BusinessInvoiceSetting
+    {
+        return BusinessInvoiceSetting::forBusiness($this);
     }
 
     /**
