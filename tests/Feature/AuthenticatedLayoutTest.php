@@ -35,7 +35,8 @@ class AuthenticatedLayoutTest extends TestCase
             ->assertSee(__('general.dashboard'))
             ->assertSee(__('general.system_management'))
             ->assertSee(__('general.accounting'))
-            ->assertSee($user->mobile);
+            ->assertSee($user->mobile)
+            ->assertSee(__('general.toggle_theme'));
     }
 
     public function test_authenticated_user_can_view_users_shell(): void
