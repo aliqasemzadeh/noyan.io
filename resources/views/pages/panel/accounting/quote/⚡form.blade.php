@@ -335,31 +335,41 @@ new class extends Component
                     <flux:error name="form.party_id" />
                 </flux:field>
 
-                <div class="grid gap-4 sm:grid-cols-2">
-                    @if (\App\Support\LocaleDate::usesJalali())
-                        <x-date-picker wire:model="form.issue_date" name="form.issue_date" :label="__('general.issue_date')" required />
-                        <x-date-picker wire:model="form.valid_until" name="form.valid_until" :label="__('general.valid_until')" required />
-                    @else
-                        <flux:field>
-                            <flux:label>{{ __('general.issue_date') }}</flux:label>
-                            <flux:input type="date" wire:model="form.issue_date" />
-                            <flux:error name="form.issue_date" />
-                        </flux:field>
-
-                        <flux:field>
-                            <flux:label>{{ __('general.valid_until') }}</flux:label>
-                            <flux:input type="date" wire:model="form.valid_until" />
-                            <flux:error name="form.valid_until" />
-                        </flux:field>
-                    @endif
-                </div>
+                @if (\App\Support\LocaleDate::usesJalali())
+                    <x-date-picker wire:model="form.issue_date" name="form.issue_date" :label="__('general.issue_date')" required />
+                @else
+                    <flux:field>
+                        <flux:label>{{ __('general.issue_date') }}</flux:label>
+                        <flux:input type="date" wire:model="form.issue_date" />
+                        <flux:error name="form.issue_date" />
+                    </flux:field>
+                @endif
             </div>
 
-            <flux:field>
-                <flux:label>{{ __('general.note') }}</flux:label>
-                <flux:textarea wire:model="form.note" rows="2" clearable />
-                <flux:error name="form.note" />
-            </flux:field>
+            <flux:accordion transition>
+                <flux:accordion.item heading="{{ __('general.date_settings') }}">
+                    <div class="space-y-3 pt-2">
+                        @if (\App\Support\LocaleDate::usesJalali())
+                            <x-date-picker wire:model="form.valid_until" name="form.valid_until" :label="__('general.valid_until')" required />
+                        @else
+                            <flux:field>
+                                <flux:label>{{ __('general.valid_until') }}</flux:label>
+                                <flux:input type="date" wire:model="form.valid_until" />
+                                <flux:error name="form.valid_until" />
+                            </flux:field>
+                        @endif
+                    </div>
+                </flux:accordion.item>
+
+                <flux:accordion.item heading="{{ __('general.note') }}">
+                    <div class="space-y-3 pt-2">
+                        <flux:field>
+                            <flux:textarea wire:model="form.note" rows="2" clearable placeholder="{{ __('general.note_placeholder') }}" />
+                            <flux:error name="form.note" />
+                        </flux:field>
+                    </div>
+                </flux:accordion.item>
+            </flux:accordion>
         </flux:card>
 
         <flux:card class="space-y-4">

@@ -166,6 +166,7 @@ return [
     'invoice_preview_sample_item_2' => 'پشتیبانی ماهانه',
     'invoice_preview_sample_note' => 'این متن فقط برای نمایش ظاهر فاکتور است.',
     'additional_settings' => 'تنظیمات اضافی',
+    'date_settings' => 'تنظیمات تاریخ',
     'invoice_payment_accounts' => 'حساب‌های بانکی فاکتور',
     'invoice_payment_accounts_hint' => 'اختیاری — حساب‌های انتخاب‌شده روی فاکتور نمایش داده می‌شوند.',
     'logo_upload_heading' => 'لوگو را اینجا رها کنید یا انتخاب کنید',

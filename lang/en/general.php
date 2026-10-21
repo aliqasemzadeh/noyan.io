@@ -166,6 +166,7 @@ return [
     'invoice_preview_sample_item_2' => 'Monthly support',
     'invoice_preview_sample_note' => 'This note is only for previewing invoice appearance.',
     'additional_settings' => 'Additional settings',
+    'date_settings' => 'Date settings',
     'invoice_payment_accounts' => 'Invoice bank accounts',
     'invoice_payment_accounts_hint' => 'Optional — selected accounts are shown on the invoice.',
     'logo_upload_heading' => 'Drop logo here or click to browse',

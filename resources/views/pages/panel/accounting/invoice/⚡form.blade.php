@@ -394,31 +394,67 @@ new class extends Component
                     <flux:error name="form.party_id" />
                 </flux:field>
 
-                <div class="grid gap-4 sm:grid-cols-2">
-                    @if (\App\Support\LocaleDate::usesJalali())
-                        <x-date-picker wire:model="form.issue_date" name="form.issue_date" :label="__('general.issue_date')" required />
-                        <x-date-picker wire:model="form.due_date" name="form.due_date" :label="__('general.due_date')" />
-                    @else
-                        <flux:field>
-                            <flux:label>{{ __('general.issue_date') }}</flux:label>
-                            <flux:input type="date" wire:model="form.issue_date" />
-                            <flux:error name="form.issue_date" />
-                        </flux:field>
-
-                        <flux:field>
-                            <flux:label>{{ __('general.due_date') }}</flux:label>
-                            <flux:input type="date" wire:model="form.due_date" />
-                            <flux:error name="form.due_date" />
-                        </flux:field>
-                    @endif
-                </div>
+                @if (\App\Support\LocaleDate::usesJalali())
+                    <x-date-picker wire:model="form.issue_date" name="form.issue_date" :label="__('general.issue_date')" required />
+                @else
+                    <flux:field>
+                        <flux:label>{{ __('general.issue_date') }}</flux:label>
+                        <flux:input type="date" wire:model="form.issue_date" />
+                        <flux:error name="form.issue_date" />
+                    </flux:field>
+                @endif
             </div>
 
-            <flux:field>
-                <flux:label>{{ __('general.note') }}</flux:label>
-                <flux:textarea wire:model="form.note" rows="2" clearable />
-                <flux:error name="form.note" />
-            </flux:field>
+            <flux:accordion transition>
+                <flux:accordion.item heading="{{ __('general.date_settings') }}">
+                    <div class="space-y-3 pt-2">
+                        @if (\App\Support\LocaleDate::usesJalali())
+                            <x-date-picker wire:model="form.due_date" name="form.due_date" :label="__('general.due_date')" />
+                        @else
+                            <flux:field>
+                                <flux:label>{{ __('general.due_date') }}</flux:label>
+                                <flux:input type="date" wire:model="form.due_date" />
+                                <flux:error name="form.due_date" />
+                            </flux:field>
+                        @endif
+                    </div>
+                </flux:accordion.item>
+
+                <flux:accordion.item heading="{{ __('general.note') }}">
+                    <div class="space-y-3 pt-2">
+                        <flux:field>
+                            <flux:textarea wire:model="form.note" rows="2" clearable placeholder="{{ __('general.note_placeholder') }}" />
+                            <flux:error name="form.note" />
+                        </flux:field>
+                    </div>
+                </flux:accordion.item>
+
+                @if ($this->selectableAccounts->isNotEmpty())
+                    <flux:accordion.item heading="{{ __('general.additional_settings') }}">
+                        <div class="space-y-3 pt-2">
+                            <flux:checkbox.group
+                                wire:model="form.account_ids"
+                                label="{{ __('general.invoice_payment_accounts') }}"
+                                description="{{ __('general.invoice_payment_accounts_hint') }}"
+                            >
+                                @foreach ($this->selectableAccounts as $account)
+                                    <flux:checkbox
+                                        wire:key="invoice-account-{{ $account->id }}"
+                                        value="{{ $account->id }}"
+                                        :label="$account->name"
+                                        :description="collect([
+                                            $account->bank_name,
+                                            $account->iban ?: $account->account_number ?: $account->card_number,
+                                        ])->filter()->implode(' — ')"
+                                    />
+                                @endforeach
+                            </flux:checkbox.group>
+                            <flux:error name="form.account_ids" />
+                            <flux:error name="form.account_ids.*" />
+                        </div>
+                    </flux:accordion.item>
+                @endif
+            </flux:accordion>
         </flux:card>
 
         <flux:card class="space-y-4">
@@ -458,36 +494,6 @@ new class extends Component
                 </div>
             </div>
         </flux:card>
-
-        @if ($this->selectableAccounts->isNotEmpty())
-            <flux:card>
-                <flux:accordion transition>
-                    <flux:accordion.item heading="{{ __('general.additional_settings') }}">
-                        <div class="space-y-3 pt-2">
-                            <flux:checkbox.group
-                                wire:model="form.account_ids"
-                                label="{{ __('general.invoice_payment_accounts') }}"
-                                description="{{ __('general.invoice_payment_accounts_hint') }}"
-                            >
-                                @foreach ($this->selectableAccounts as $account)
-                                    <flux:checkbox
-                                        wire:key="invoice-account-{{ $account->id }}"
-                                        value="{{ $account->id }}"
-                                        :label="$account->name"
-                                        :description="collect([
-                                            $account->bank_name,
-                                            $account->iban ?: $account->account_number ?: $account->card_number,
-                                        ])->filter()->implode(' — ')"
-                                    />
-                                @endforeach
-                            </flux:checkbox.group>
-                            <flux:error name="form.account_ids" />
-                            <flux:error name="form.account_ids.*" />
-                        </div>
-                    </flux:accordion.item>
-                </flux:accordion>
-            </flux:card>
-        @endif
 
         <div class="sticky bottom-0 z-10 -mx-1 border-t border-zinc-200 bg-white/95 px-1 py-3 backdrop-blur dark:border-zinc-700 dark:bg-zinc-900/95 sm:static sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none dark:sm:bg-transparent">
             <div class="flex flex-col gap-3 sm:flex-row">
