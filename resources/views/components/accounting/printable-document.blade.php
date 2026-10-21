@@ -19,230 +19,279 @@
     'buyerPostalCode' => null,
     'buyerPhone' => null,
     'buyerAddress' => null,
+    'heading' => null,
 ])
 
 @php
     use App\Enums\Catalog\ProductUnit;
+    use App\Support\Accounting\DocumentLineAmounts;
+    use App\Support\PersianAmountInWords;
 
     $logoUrl = $business->logoUrl();
     $primary = $business->invoicePrimaryColor();
-    $secondary = $business->invoiceSecondaryColor();
     $initial = mb_substr($business->name, 0, 1);
     $sellerName = method_exists($business, 'displayLegalName')
         ? $business->displayLegalName()
         : $business->name;
     $buyerDisplayName = filled($buyerLegalName) ? $buyerLegalName : ($partyName ?: '—');
+    $documentHeading = $heading ?? (
+        $documentLabel === __('general.quote')
+            ? __('general.formal_quote_title')
+            : __('general.formal_invoice_title')
+    );
+    $headerTint = "color-mix(in srgb, {$primary} 18%, white)";
+    $stripeTint = "color-mix(in srgb, {$primary} 8%, white)";
+    $borderColor = "color-mix(in srgb, {$primary} 35%, #71717a)";
+    $issueDateValue = collect($dates)->firstWhere('label', __('general.issue_date'))['value']
+        ?? (collect($dates)->first()['value'] ?? '—');
+    $columnTotals = DocumentLineAmounts::columnTotals($items);
+    $accountsList = collect($accounts);
 @endphp
 
-<div class="invoice-sheet overflow-hidden rounded-lg border border-zinc-300 bg-white dark:border-zinc-700 dark:bg-zinc-900">
-    <div class="h-1.5 w-full" style="background: linear-gradient(90deg, {{ $primary }}, {{ $secondary }});"></div>
-
-    <div class="space-y-6 px-5 py-6 sm:px-8">
+<div
+    {{ $attributes->merge([
+        'class' => 'invoice-sheet overflow-hidden border-2 bg-white text-black dark:bg-white',
+        'style' => "border-color: {$borderColor}; print-color-adjust: exact; -webkit-print-color-adjust: exact;",
+    ]) }}
+>
+    <div class="invoice-doc space-y-1.5 p-2.5 text-[10px] leading-tight sm:p-3 sm:text-[11px]">
         {{ $banner ?? '' }}
 
-        <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-            <div class="flex items-start gap-3">
+        {{-- Header: logo | title | date & number --}}
+        <div class="grid grid-cols-[5.5rem_1fr_8.5rem] items-stretch gap-1.5 border" style="border-color: {{ $borderColor }};">
+            <div class="flex items-center justify-center border-e p-1.5" style="border-color: {{ $borderColor }};">
                 @if ($logoUrl)
                     <img
                         src="{{ $logoUrl }}"
                         alt="{{ $business->name }}"
-                        class="size-14 rounded-lg object-contain ring-1 ring-zinc-200 dark:ring-zinc-700"
+                        class="max-h-14 max-w-full object-contain"
                     />
                 @else
                     <div
-                        class="flex size-14 items-center justify-center rounded-lg text-xl font-bold text-white"
+                        class="flex size-12 items-center justify-center text-lg font-bold text-white"
                         style="background-color: {{ $primary }};"
                     >
                         {{ $initial }}
                     </div>
                 @endif
+            </div>
 
-                <div>
-                    <h1 class="text-xl font-semibold text-zinc-900 dark:text-zinc-100">{{ $sellerName }}</h1>
-                    @if (filled($business->name) && $business->name !== $sellerName)
-                        <p class="mt-0.5 text-sm text-zinc-500">{{ $business->name }}</p>
-                    @endif
+            <div class="flex flex-col items-center justify-center gap-0.5 px-2 py-1.5 text-center">
+                <p class="text-sm font-bold text-black sm:text-base">{{ $documentHeading }}</p>
+                <p class="text-[10px] text-zinc-700">{{ $documentLabel }}</p>
+            </div>
+
+            <div class="space-y-1 border-s p-1.5" style="border-color: {{ $borderColor }};">
+                <div class="flex items-center justify-between gap-1 border px-1.5 py-1" style="border-color: {{ $borderColor }};">
+                    <span class="font-semibold text-black">{{ __('general.number') }}</span>
+                    <span class="font-bold text-black" dir="ltr">{{ $number }}</span>
                 </div>
-            </div>
-
-            <div class="sm:text-end">
-                <p class="text-sm text-zinc-500">{{ $documentLabel }}</p>
-                <p class="mt-1 text-lg font-semibold text-zinc-900 dark:text-zinc-100" dir="ltr">{{ $number }}</p>
-                @if (filled($saleKindName))
-                    <p class="mt-1 text-sm font-medium" style="color: {{ $primary }};">{{ $saleKindName }}</p>
-                @endif
-            </div>
-        </div>
-
-        <div class="grid gap-4 sm:grid-cols-2">
-            <div class="rounded-lg border border-zinc-200 p-4 dark:border-zinc-700">
-                <p class="text-sm font-semibold text-zinc-700 dark:text-zinc-200">{{ __('general.document_seller') }}</p>
-                <div class="mt-3 space-y-1.5 text-sm text-zinc-800 dark:text-zinc-200">
-                    <p class="font-medium">{{ $sellerName }}</p>
-                    @if (filled($business->national_id))
-                        <p>{{ __('general.national_id') }}: <span dir="ltr">{{ $business->national_id }}</span></p>
-                    @endif
-                    @if (filled($business->economic_code))
-                        <p>{{ __('general.economic_code') }}: <span dir="ltr">{{ $business->economic_code }}</span></p>
-                    @endif
-                    @if (filled($business->phone))
-                        <p>{{ __('general.phone') }}: <span dir="ltr">{{ $business->phone }}</span></p>
-                    @endif
-                    @if (filled($business->address))
-                        <p>{{ __('general.address') }}: {{ $business->address }}</p>
-                    @endif
-                    @if (filled($business->postal_code))
-                        <p>{{ __('general.postal_code') }}: <span dir="ltr">{{ $business->postal_code }}</span></p>
-                    @endif
-                </div>
-            </div>
-
-            <div class="rounded-lg border border-zinc-200 p-4 dark:border-zinc-700">
-                <p class="text-sm font-semibold text-zinc-700 dark:text-zinc-200">{{ __('general.document_buyer') }}</p>
-                <div class="mt-3 space-y-1.5 text-sm text-zinc-800 dark:text-zinc-200">
-                    <p class="font-medium">{{ $buyerDisplayName }}</p>
-                    @if (filled($buyerNationalId))
-                        <p>{{ __('general.national_id') }}: <span dir="ltr">{{ $buyerNationalId }}</span></p>
-                    @endif
-                    @if (filled($buyerEconomicCode))
-                        <p>{{ __('general.economic_code') }}: <span dir="ltr">{{ $buyerEconomicCode }}</span></p>
-                    @endif
-                    @if (filled($buyerPhone))
-                        <p>{{ __('general.phone') }}: <span dir="ltr">{{ $buyerPhone }}</span></p>
-                    @endif
-                    @if (filled($buyerAddress))
-                        <p>{{ __('general.address') }}: {{ $buyerAddress }}</p>
-                    @endif
-                    @if (filled($buyerPostalCode))
-                        <p>{{ __('general.postal_code') }}: <span dir="ltr">{{ $buyerPostalCode }}</span></p>
-                    @endif
-                </div>
-            </div>
-        </div>
-
-        @if (count($dates) > 0)
-            <div class="flex flex-wrap gap-x-8 gap-y-2 text-sm">
                 @foreach ($dates as $date)
-                    <div>
-                        <span class="text-zinc-500">{{ $date['label'] }}:</span>
-                        <span class="ms-1 font-medium text-zinc-900 dark:text-zinc-100">{{ $date['value'] }}</span>
+                    <div class="flex items-center justify-between gap-1 border px-1.5 py-1" style="border-color: {{ $borderColor }};">
+                        <span class="font-semibold text-black">{{ $date['label'] }}</span>
+                        <span class="font-medium text-black">{{ $date['value'] }}</span>
                     </div>
                 @endforeach
             </div>
-        @endif
+        </div>
 
-        <div class="overflow-x-auto rounded-lg border border-zinc-200 dark:border-zinc-700">
-            <table class="min-w-full text-sm">
-                <thead style="background-color: color-mix(in srgb, {{ $primary }} 12%, transparent);">
-                    <tr class="text-start">
-                        <th class="border-b border-zinc-200 px-3 py-2.5 font-medium text-zinc-700 dark:border-zinc-700 dark:text-zinc-200">#</th>
-                        <th class="border-b border-zinc-200 px-3 py-2.5 font-medium text-zinc-700 dark:border-zinc-700 dark:text-zinc-200">{{ __('general.sku') }}</th>
-                        <th class="border-b border-zinc-200 px-3 py-2.5 font-medium text-zinc-700 dark:border-zinc-700 dark:text-zinc-200">{{ __('general.title') }}</th>
-                        <th class="border-b border-zinc-200 px-3 py-2.5 font-medium text-zinc-700 dark:border-zinc-700 dark:text-zinc-200">{{ __('general.unit') }}</th>
-                        <th class="border-b border-zinc-200 px-3 py-2.5 font-medium text-zinc-700 dark:border-zinc-700 dark:text-zinc-200">{{ __('general.quantity') }}</th>
-                        <th class="border-b border-zinc-200 px-3 py-2.5 font-medium text-zinc-700 dark:border-zinc-700 dark:text-zinc-200">{{ __('general.unit_price') }}</th>
-                        <th class="border-b border-zinc-200 px-3 py-2.5 font-medium text-zinc-700 dark:border-zinc-700 dark:text-zinc-200">{{ __('general.discount_amount') }}</th>
-                        <th class="border-b border-zinc-200 px-3 py-2.5 font-medium text-zinc-700 dark:border-zinc-700 dark:text-zinc-200">{{ __('general.tax_amount') }}</th>
-                        <th class="border-b border-zinc-200 px-3 py-2.5 font-medium text-zinc-700 dark:border-zinc-700 dark:text-zinc-200">{{ __('general.row_total') }}</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-zinc-100 dark:divide-zinc-800">
-                    @foreach ($items as $index => $item)
-                        @php
-                            $unitValue = $item->unit ?? null;
-                            $unitEnum = is_string($unitValue) ? ProductUnit::tryFrom($unitValue) : null;
-                            $unitLabel = $unitEnum?->label() ?? ($unitValue ?: '—');
-                            $discount = (string) ($item->discount_amount ?? '0');
-                            $tax = (string) ($item->tax_amount ?? '0');
-                        @endphp
-                        <tr>
-                            <td class="px-3 py-2.5 text-zinc-500">{{ $index + 1 }}</td>
-                            <td class="px-3 py-2.5 text-zinc-700 dark:text-zinc-300" dir="ltr">{{ $item->sku ?: '—' }}</td>
-                            <td class="px-3 py-2.5 font-medium text-zinc-900 dark:text-zinc-100">
-                                <div class="prose prose-sm max-w-none dark:prose-invert [&_p]:my-0">
-                                    {!! $item->titleHtml() !!}
-                                </div>
-                            </td>
-                            <td class="px-3 py-2.5 text-zinc-700 dark:text-zinc-300">{{ $unitLabel }}</td>
-                            <td class="px-3 py-2.5" dir="ltr">{{ $formatAmount((string) $item->quantity) }}</td>
-                            <td class="px-3 py-2.5" dir="ltr">{{ $formatAmount((string) $item->unit_price) }}</td>
-                            <td class="px-3 py-2.5" dir="ltr">{{ $formatAmount($discount) }}</td>
-                            <td class="px-3 py-2.5" dir="ltr">{{ $formatAmount($tax) }}</td>
-                            <td class="px-3 py-2.5 font-medium" dir="ltr">{{ $formatAmount((string) $item->total) }}</td>
+        {{-- Seller --}}
+        <div class="border" style="border-color: {{ $borderColor }};">
+            <div class="border-b px-2 py-1 text-center text-[11px] font-bold text-black" style="background-color: {{ $headerTint }}; border-color: {{ $borderColor }};">
+                {{ __('general.document_seller_details') }}
+            </div>
+            <div class="grid grid-cols-1 divide-y sm:grid-cols-2 sm:divide-x sm:divide-y-0" style="border-color: {{ $borderColor }};">
+                <div class="space-y-0.5 p-1.5 text-black" style="border-color: {{ $borderColor }};">
+                    <p><span class="font-semibold">{{ __('general.legal_or_natural_name') }}:</span> {{ $sellerName }}</p>
+                    @if (filled($business->name) && $business->name !== $sellerName)
+                        <p><span class="font-semibold">{{ __('general.business_name') }}:</span> {{ $business->name }}</p>
+                    @endif
+                    @if (filled($business->phone))
+                        <p><span class="font-semibold">{{ __('general.phone') }}:</span> <span dir="ltr">{{ $business->phone }}</span></p>
+                    @endif
+                    @if (filled($business->address))
+                        <p><span class="font-semibold">{{ __('general.address') }}:</span> {{ $business->address }}</p>
+                    @endif
+                </div>
+                <div class="space-y-0.5 p-1.5 text-black">
+                    @if (filled($business->national_id))
+                        <p><span class="font-semibold">{{ __('general.national_id') }}:</span> <span dir="ltr">{{ $business->national_id }}</span></p>
+                    @endif
+                    @if (filled($business->economic_code))
+                        <p><span class="font-semibold">{{ __('general.economic_code') }}:</span> <span dir="ltr">{{ $business->economic_code }}</span></p>
+                    @endif
+                    @if (filled($business->postal_code))
+                        <p><span class="font-semibold">{{ __('general.postal_code') }}:</span> <span dir="ltr">{{ $business->postal_code }}</span></p>
+                    @endif
+                </div>
+            </div>
+        </div>
+
+        {{-- Buyer --}}
+        <div class="border" style="border-color: {{ $borderColor }};">
+            <div class="border-b px-2 py-1 text-center text-[11px] font-bold text-black" style="background-color: {{ $headerTint }}; border-color: {{ $borderColor }};">
+                {{ __('general.document_buyer_details') }}
+            </div>
+            <div class="grid grid-cols-1 divide-y sm:grid-cols-2 sm:divide-x sm:divide-y-0" style="border-color: {{ $borderColor }};">
+                <div class="space-y-0.5 p-1.5 text-black" style="border-color: {{ $borderColor }};">
+                    <p><span class="font-semibold">{{ __('general.legal_or_natural_name') }}:</span> {{ $buyerDisplayName }}</p>
+                    @if (filled($buyerPhone))
+                        <p><span class="font-semibold">{{ __('general.phone') }}:</span> <span dir="ltr">{{ $buyerPhone }}</span></p>
+                    @endif
+                    @if (filled($buyerAddress))
+                        <p><span class="font-semibold">{{ __('general.address') }}:</span> {{ $buyerAddress }}</p>
+                    @endif
+                </div>
+                <div class="space-y-0.5 p-1.5 text-black">
+                    @if (filled($buyerNationalId))
+                        <p><span class="font-semibold">{{ __('general.national_id') }}:</span> <span dir="ltr">{{ $buyerNationalId }}</span></p>
+                    @endif
+                    @if (filled($buyerEconomicCode))
+                        <p><span class="font-semibold">{{ __('general.economic_code') }}:</span> <span dir="ltr">{{ $buyerEconomicCode }}</span></p>
+                    @endif
+                    @if (filled($buyerPostalCode))
+                        <p><span class="font-semibold">{{ __('general.postal_code') }}:</span> <span dir="ltr">{{ $buyerPostalCode }}</span></p>
+                    @endif
+                </div>
+            </div>
+        </div>
+
+        {{-- Items table --}}
+        <div class="border" style="border-color: {{ $borderColor }};">
+            <div class="border-b px-2 py-1 text-center text-[11px] font-bold text-black" style="background-color: {{ $headerTint }}; border-color: {{ $borderColor }};">
+                {{ __('general.document_items_details') }}
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full border-collapse text-center text-[9px] text-black sm:text-[10px]">
+                    <thead>
+                        <tr style="background-color: {{ $headerTint }};">
+                            <th class="border px-0.5 py-1 font-bold" style="border-color: {{ $borderColor }};">{{ __('general.row') }}</th>
+                            <th class="border px-0.5 py-1 font-bold" style="border-color: {{ $borderColor }};">{{ __('general.sku') }}</th>
+                            <th class="border px-0.5 py-1 font-bold" style="border-color: {{ $borderColor }};">{{ __('general.item_description') }}</th>
+                            <th class="border px-0.5 py-1 font-bold" style="border-color: {{ $borderColor }};">{{ __('general.quantity') }}</th>
+                            <th class="border px-0.5 py-1 font-bold" style="border-color: {{ $borderColor }};">{{ __('general.unit') }}</th>
+                            <th class="border px-0.5 py-1 font-bold" style="border-color: {{ $borderColor }};">{{ __('general.unit_price_rial') }}</th>
+                            <th class="border px-0.5 py-1 font-bold" style="border-color: {{ $borderColor }};">{{ __('general.line_total_rial') }}</th>
+                            <th class="border px-0.5 py-1 font-bold" style="border-color: {{ $borderColor }};">{{ __('general.discount_amount') }}</th>
+                            <th class="border px-0.5 py-1 font-bold" style="border-color: {{ $borderColor }};">{{ __('general.after_discount_rial') }}</th>
+                            <th class="border px-0.5 py-1 font-bold" style="border-color: {{ $borderColor }};">{{ __('general.tax_duties_rial') }}</th>
+                            <th class="border px-0.5 py-1 font-bold" style="border-color: {{ $borderColor }};">{{ __('general.final_line_total_rial') }}</th>
                         </tr>
-                    @endforeach
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        @foreach ($items as $index => $item)
+                            @php
+                                $unitValue = $item->unit ?? null;
+                                $unitEnum = is_string($unitValue) ? ProductUnit::tryFrom($unitValue) : null;
+                                $unitLabel = $unitEnum?->label() ?? ($unitValue ?: '—');
+                                $amounts = DocumentLineAmounts::forItem($item);
+                                $rowStyle = $index % 2 === 1 ? "background-color: {$stripeTint};" : '';
+                            @endphp
+                            <tr style="{{ $rowStyle }}">
+                                <td class="border px-0.5 py-1 text-black" style="border-color: {{ $borderColor }};">{{ $index + 1 }}</td>
+                                <td class="border px-0.5 py-1 text-black" style="border-color: {{ $borderColor }};" dir="ltr">{{ $item->sku ?: '—' }}</td>
+                                <td class="border px-0.5 py-1 text-start text-black" style="border-color: {{ $borderColor }};">
+                                    <div class="prose prose-sm max-w-none text-[9px] text-black sm:text-[10px] [&_p]:my-0">
+                                        {!! $item->titleHtml() !!}
+                                    </div>
+                                </td>
+                                <td class="border px-0.5 py-1 text-black" style="border-color: {{ $borderColor }};" dir="ltr">{{ $formatAmount($amounts['quantity']) }}</td>
+                                <td class="border px-0.5 py-1 text-black" style="border-color: {{ $borderColor }};">{{ $unitLabel }}</td>
+                                <td class="border px-0.5 py-1 text-black" style="border-color: {{ $borderColor }};" dir="ltr">{{ $formatAmount($amounts['unit_price']) }}</td>
+                                <td class="border px-0.5 py-1 text-black" style="border-color: {{ $borderColor }};" dir="ltr">{{ $formatAmount($amounts['line_total']) }}</td>
+                                <td class="border px-0.5 py-1 text-black" style="border-color: {{ $borderColor }};" dir="ltr">{{ $formatAmount($amounts['discount_amount']) }}</td>
+                                <td class="border px-0.5 py-1 text-black" style="border-color: {{ $borderColor }};" dir="ltr">{{ $formatAmount($amounts['after_discount']) }}</td>
+                                <td class="border px-0.5 py-1 text-black" style="border-color: {{ $borderColor }};" dir="ltr">{{ $formatAmount($amounts['tax_amount']) }}</td>
+                                <td class="border px-0.5 py-1 font-semibold text-black" style="border-color: {{ $borderColor }};" dir="ltr">{{ $formatAmount($amounts['final_total']) }}</td>
+                            </tr>
+                        @endforeach
+
+                        <tr style="background-color: {{ $headerTint }};">
+                            <td colspan="6" class="border px-1 py-1 text-start font-bold text-black" style="border-color: {{ $borderColor }};">
+                                {{ __('general.column_totals') }}
+                            </td>
+                            <td class="border px-0.5 py-1 font-bold text-black" style="border-color: {{ $borderColor }};" dir="ltr">{{ $formatAmount($columnTotals['line_total']) }}</td>
+                            <td class="border px-0.5 py-1 font-bold text-black" style="border-color: {{ $borderColor }};" dir="ltr">{{ $formatAmount($columnTotals['discount_amount']) }}</td>
+                            <td class="border px-0.5 py-1 font-bold text-black" style="border-color: {{ $borderColor }};" dir="ltr">{{ $formatAmount($columnTotals['after_discount']) }}</td>
+                            <td class="border px-0.5 py-1 font-bold text-black" style="border-color: {{ $borderColor }};" dir="ltr">{{ $formatAmount($columnTotals['tax_amount']) }}</td>
+                            <td class="border px-0.5 py-1 font-bold text-black" style="border-color: {{ $borderColor }};" dir="ltr">{{ $formatAmount($columnTotals['final_total']) }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
 
-        <div class="ms-auto max-w-xs space-y-2 text-sm">
-            <div class="flex justify-between gap-6">
-                <span class="text-zinc-500">{{ __('general.items_total') }}</span>
-                <span dir="ltr">{{ $formatAmount((string) $itemsTotal) }}</span>
+        {{-- Total in words + grand adjustments --}}
+        <div class="border px-2 py-1.5 text-black" style="border-color: {{ $borderColor }}; background-color: {{ $stripeTint }};">
+            <p>
+                <span class="font-bold">{{ __('general.total_in_words') }}:</span>
+                {{ PersianAmountInWords::convert((string) $totalAmount) }}
+            </p>
+            @if ((float) $globalDiscount > 0 || (float) $globalTax > 0)
+                <div class="mt-1 flex flex-wrap gap-x-4 gap-y-0.5">
+                    <span>{{ __('general.items_total') }}: <span dir="ltr">{{ $formatAmount((string) $itemsTotal) }}</span></span>
+                    @if ((float) $globalDiscount > 0)
+                        <span>{{ __('general.global_discount') }}: <span dir="ltr">{{ $formatAmount((string) $globalDiscount) }}</span></span>
+                    @endif
+                    @if ((float) $globalTax > 0)
+                        <span>{{ __('general.global_tax') }}: <span dir="ltr">{{ $formatAmount((string) $globalTax) }}</span></span>
+                    @endif
+                    <span class="font-bold">{{ __('general.total_amount') }}: <span dir="ltr">{{ $formatAmount((string) $totalAmount) }}</span></span>
+                </div>
+            @else
+                <p class="mt-0.5 font-bold">
+                    {{ __('general.total_amount') }}:
+                    <span dir="ltr">{{ $formatAmount((string) $totalAmount) }}</span>
+                </p>
+            @endif
+        </div>
+
+        {{-- Sale kind + note | accounts --}}
+        <div class="grid grid-cols-1 border sm:grid-cols-2" style="border-color: {{ $borderColor }};">
+            <div class="border-b p-1.5 sm:border-b-0 sm:border-e" style="border-color: {{ $borderColor }};">
+                <p class="mb-1 font-bold text-black">{{ __('general.sale_terms_and_notes') }}</p>
+                <p class="text-black">
+                    <span class="font-semibold">{{ __('general.sale_kind') }}:</span>
+                    {{ filled($saleKindName) ? $saleKindName : '—' }}
+                </p>
+                <p class="mt-1 text-black">
+                    <span class="font-semibold">{{ __('general.descriptions') }}:</span>
+                    {{ filled($note) ? $note : '—' }}
+                </p>
             </div>
-            @if ((float) $globalDiscount > 0)
-                <div class="flex justify-between gap-6">
-                    <span class="text-zinc-500">{{ __('general.global_discount') }}</span>
-                    <span dir="ltr">{{ $formatAmount((string) $globalDiscount) }}</span>
-                </div>
-            @endif
-            @if ((float) $globalTax > 0)
-                <div class="flex justify-between gap-6">
-                    <span class="text-zinc-500">{{ __('general.global_tax') }}</span>
-                    <span dir="ltr">{{ $formatAmount((string) $globalTax) }}</span>
-                </div>
-            @endif
-            <div
-                class="flex justify-between gap-6 border-t border-zinc-200 pt-2 text-base font-semibold dark:border-zinc-700"
-                style="color: {{ $primary }};"
-            >
-                <span>{{ __('general.total_amount') }}</span>
-                <span dir="ltr">{{ $formatAmount((string) $totalAmount) }}</span>
+            <div class="p-1.5">
+                <p class="mb-1 font-bold text-black">{{ __('general.invoice_payment_accounts') }}</p>
+                @forelse ($accountsList as $account)
+                    <div class="mb-1.5 last:mb-0 text-black">
+                        <p class="font-semibold">{{ $account->name }}</p>
+                        @if (filled($account->bank_name ?? null))
+                            <p>{{ __('general.bank_name') }}: {{ $account->bank_name }}</p>
+                        @endif
+                        @if (filled($account->account_number ?? null))
+                            <p dir="ltr">{{ __('general.account_number') }}: {{ $account->account_number }}</p>
+                        @endif
+                        @if (filled($account->iban ?? null))
+                            <p dir="ltr">{{ __('general.iban') }}: {{ $account->iban }}</p>
+                        @endif
+                        @if (filled($account->card_number ?? null))
+                            <p dir="ltr">{{ __('general.card_number') }}: {{ $account->card_number }}</p>
+                        @endif
+                    </div>
+                @empty
+                    <p class="text-black">—</p>
+                @endforelse
             </div>
         </div>
 
-        @if (filled($note))
-            <div class="rounded-lg border border-zinc-200 p-4 dark:border-zinc-700">
-                <p class="text-sm text-zinc-500">{{ __('general.note') }}</p>
-                <p class="mt-1 text-zinc-800 dark:text-zinc-200">{{ $note }}</p>
+        {{-- Signatures --}}
+        <div class="grid grid-cols-2 gap-1.5">
+            <div class="flex min-h-20 flex-col justify-between border p-2 text-black" style="border-color: {{ $borderColor }};">
+                <p class="text-center font-bold">{{ __('general.seller_stamp_signature') }}</p>
+                <p class="text-center text-[10px]">{{ __('general.issue_date') }}: {{ $issueDateValue }}</p>
             </div>
-        @endif
-
-        @if (count($accounts) > 0)
-            <div class="rounded-lg border border-zinc-200 p-4 dark:border-zinc-700">
-                <p class="text-sm font-medium text-zinc-700 dark:text-zinc-200">{{ __('general.invoice_payment_accounts') }}</p>
-                <div class="mt-3 space-y-3">
-                    @foreach ($accounts as $account)
-                        <div class="text-sm text-zinc-800 dark:text-zinc-200">
-                            <p class="font-medium">{{ $account->name }}</p>
-                            <div class="mt-1 space-y-0.5 text-zinc-600 dark:text-zinc-300">
-                                @if (filled($account->bank_name))
-                                    <p>{{ __('general.bank_name') }}: {{ $account->bank_name }}</p>
-                                @endif
-                                @if (filled($account->iban))
-                                    <p dir="ltr">{{ __('general.iban') }}: {{ $account->iban }}</p>
-                                @endif
-                                @if (filled($account->account_number))
-                                    <p dir="ltr">{{ __('general.account_number') }}: {{ $account->account_number }}</p>
-                                @endif
-                                @if (filled($account->card_number))
-                                    <p dir="ltr">{{ __('general.card_number') }}: {{ $account->card_number }}</p>
-                                @endif
-                            </div>
-                        </div>
-                    @endforeach
-                </div>
-            </div>
-        @endif
-
-        <div class="grid gap-4 sm:grid-cols-2">
-            <div class="flex h-28 flex-col justify-between rounded-lg border border-zinc-200 p-4 dark:border-zinc-700">
-                <p class="text-sm text-zinc-500">{{ __('general.seller_stamp_signature') }}</p>
-                <div class="border-t border-dashed border-zinc-300 dark:border-zinc-600"></div>
-            </div>
-            <div class="flex h-28 flex-col justify-between rounded-lg border border-zinc-200 p-4 dark:border-zinc-700">
-                <p class="text-sm text-zinc-500">{{ __('general.buyer_stamp_signature') }}</p>
-                <div class="border-t border-dashed border-zinc-300 dark:border-zinc-600"></div>
+            <div class="flex min-h-20 flex-col justify-between border p-2 text-black" style="border-color: {{ $borderColor }};">
+                <p class="text-center font-bold">{{ __('general.buyer_stamp_signature') }}</p>
+                <div class="border-t border-dashed border-zinc-400 pt-1"></div>
             </div>
         </div>
 
