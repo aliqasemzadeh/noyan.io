@@ -2,7 +2,7 @@
 
 namespace App\Actions\Transactions;
 
-use App\Enums\Accounting\InvoicePaymentStatus;
+use App\Actions\Transactions\Concerns\AppliesTransactionEffects;
 use App\Enums\Accounting\TransactionType;
 use App\Enums\CategoryType;
 use App\Models\Accounting\Account;
@@ -19,6 +19,8 @@ use RuntimeException;
 
 class ProcessTransactionAction
 {
+    use AppliesTransactionEffects;
+
     /**
      * @param  array{
      *     type: string|TransactionType,
@@ -30,6 +32,7 @@ class ProcessTransactionAction
      *     loan_id?: int|null,
      *     cheque_id?: int|null,
      *     skip_party_balance?: bool,
+     *     apply_loan_payment?: bool,
      *     transaction_date: string,
      *     currency?: string|null,
      *     exchange_rate?: string|null,
@@ -175,12 +178,14 @@ class ProcessTransactionAction
                 $categoryId = null;
             }
 
+            $loan = null;
             $loanId = $data['loan_id'] ?? null;
 
             if ($loanId !== null && $type !== TransactionType::Transfer) {
                 $loan = Loan::query()
                     ->where('business_id', $businessId)
                     ->whereKey($loanId)
+                    ->lockForUpdate()
                     ->first();
 
                 if ($loan === null) {
@@ -229,6 +234,30 @@ class ProcessTransactionAction
                 ? $this->normalizeDecimal((string) $data['base_amount'])
                 : $this->normalizeDecimal(bcmul($amount, $exchangeRate, 18));
 
+            $skipPartyBalance = (bool) ($data['skip_party_balance'] ?? false) || $chequeId !== null;
+            $applyLoanPayment = (bool) ($data['apply_loan_payment'] ?? false);
+
+            $meta = $data['meta'] ?? [];
+            $meta = is_array($meta) ? $meta : [];
+
+            if ($skipPartyBalance) {
+                $meta['skip_party_balance'] = true;
+            }
+
+            if ($applyLoanPayment) {
+                $meta['loan_payment'] = true;
+            }
+
+            if ($applyLoanPayment && $loan !== null) {
+                $remaining = $loan->remainingAmount();
+
+                if (bccomp($amount, $remaining, 18) === 1) {
+                    throw ValidationException::withMessages([
+                        'amount' => [__('general.loan_payment_exceeds_remaining')],
+                    ]);
+                }
+            }
+
             $transaction = Transaction::query()->create([
                 'business_id' => $businessId,
                 'created_by' => $user->id,
@@ -247,89 +276,22 @@ class ProcessTransactionAction
                 'base_amount' => $baseAmount,
                 'reference_number' => $data['reference_number'] ?? null,
                 'note' => $data['note'] ?? null,
-                'meta' => $data['meta'] ?? null,
+                'meta' => $meta === [] ? null : $meta,
             ]);
 
-            $balanceParty = ($data['skip_party_balance'] ?? false) ? null : $party;
+            $balanceParty = $skipPartyBalance ? null : $party;
 
-            match ($type) {
-                TransactionType::Income => $this->applyIncome($account, $balanceParty, $amount),
-                TransactionType::Expense => $this->applyExpense($account, $balanceParty, $amount),
-                TransactionType::Transfer => $this->applyTransfer($account, $destinationAccount, $amount),
-            };
+            $this->applyBalanceEffects($type, $account, $destinationAccount, $balanceParty, $amount);
 
             if ($invoice !== null) {
                 $this->applyInvoicePayment($invoice, $amount);
             }
 
+            if ($applyLoanPayment && $loan !== null) {
+                $this->applyLoanPayment($loan, $amount);
+            }
+
             return $transaction->fresh(['account', 'destinationAccount', 'party', 'invoice', 'category', 'loan', 'cheque']);
         });
-    }
-
-    protected function applyIncome(Account $account, ?Party $party, string $amount): void
-    {
-        $account->forceFill([
-            'current_balance' => bcadd((string) $account->current_balance, $amount, 18),
-        ])->save();
-
-        if ($party !== null) {
-            $party->forceFill([
-                'balance' => bcsub((string) $party->balance, $amount, 18),
-            ])->save();
-        }
-    }
-
-    protected function applyExpense(Account $account, ?Party $party, string $amount): void
-    {
-        $account->forceFill([
-            'current_balance' => bcsub((string) $account->current_balance, $amount, 18),
-        ])->save();
-
-        if ($party !== null) {
-            $party->forceFill([
-                'balance' => bcadd((string) $party->balance, $amount, 18),
-            ])->save();
-        }
-    }
-
-    protected function applyTransfer(Account $source, Account $destination, string $amount): void
-    {
-        $source->forceFill([
-            'current_balance' => bcsub((string) $source->current_balance, $amount, 18),
-        ])->save();
-
-        $destination->forceFill([
-            'current_balance' => bcadd((string) $destination->current_balance, $amount, 18),
-        ])->save();
-    }
-
-    protected function applyInvoicePayment(Invoice $invoice, string $amount): void
-    {
-        $paidAmount = bcadd((string) $invoice->paid_amount, $amount, 18);
-        $totalAmount = (string) $invoice->total_amount;
-
-        $paymentStatus = bccomp($paidAmount, $totalAmount, 18) >= 0
-            ? InvoicePaymentStatus::Paid
-            : InvoicePaymentStatus::PartiallyPaid;
-
-        $invoice->forceFill([
-            'paid_amount' => $paidAmount,
-            'payment_status' => $paymentStatus,
-        ])->save();
-    }
-
-    protected function normalizeDecimal(string $amount): string
-    {
-        $amount = trim($amount);
-
-        if ($amount === '' || ! is_numeric($amount)) {
-            return '0';
-        }
-
-        if (! str_contains($amount, '.')) {
-            return $amount;
-        }
-
-        return rtrim(rtrim($amount, '0'), '.') ?: '0';
     }
 }
