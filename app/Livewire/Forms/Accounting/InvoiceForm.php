@@ -5,6 +5,7 @@ namespace App\Livewire\Forms\Accounting;
 use App\Actions\Invoices\FinalizeInvoiceAction;
 use App\Actions\Invoices\SaveInvoiceAction;
 use App\Enums\Accounting\InvoiceType;
+use App\Enums\Catalog\ProductUnit;
 use App\Livewire\Forms\Concerns\ManagesLineItems;
 use App\Models\Accounting\Invoice;
 use App\Models\Catalog\Product;
@@ -24,6 +25,8 @@ class InvoiceForm extends Form
     public ?Invoice $invoice = null;
 
     public string $type = InvoiceType::Sale->value;
+
+    public ?int $sale_kind_id = null;
 
     public ?int $party_id = null;
 
@@ -56,6 +59,7 @@ class InvoiceForm extends Form
     {
         $this->invoice = $invoice;
         $this->type = $invoice->type->value;
+        $this->sale_kind_id = $invoice->sale_kind_id;
         $this->party_id = $invoice->party_id;
         $this->party_name = (string) ($invoice->party_name ?? '');
         $this->issue_date = LocaleDate::formatInput($invoice->issue_date);
@@ -70,6 +74,8 @@ class InvoiceForm extends Form
                 'id' => (string) $item->id,
                 'product_id' => $item->product_id,
                 'title' => $item->title,
+                'sku' => (string) ($item->sku ?? ''),
+                'unit' => (string) ($item->unit ?? ''),
                 'quantity' => $this->formatAmount((string) $item->quantity),
                 'unit_price' => $this->formatAmount((string) $item->unit_price),
                 'discount_amount' => $this->formatAmount((string) $item->discount_amount),
@@ -92,6 +98,7 @@ class InvoiceForm extends Form
         $this->global_discount = '0';
         $this->global_tax = '0';
         $this->note = '';
+        $this->sale_kind_id = Auth::user()?->currentBusiness()?->defaultSaleKind()?->id;
         $this->party_id = null;
         $this->party_name = '';
         $this->account_ids = [];
@@ -122,6 +129,10 @@ class InvoiceForm extends Form
 
         $this->items[$index]['product_id'] = $product->id;
         $this->items[$index]['title'] = RichText::fromPlain($product->name);
+        $this->items[$index]['sku'] = (string) ($product->sku ?? '');
+        $this->items[$index]['unit'] = $product->unit instanceof ProductUnit
+            ? $product->unit->value
+            : (string) ($product->unit ?? '');
         $this->items[$index]['unit_price'] = $this->formatAmount($unitPrice);
         $this->recalculate();
     }
@@ -173,6 +184,12 @@ class InvoiceForm extends Form
 
         return [
             'type' => ['required', Rule::enum(InvoiceType::class)],
+            'sale_kind_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('business_sale_kinds', 'sale_kind_id')
+                    ->where(fn ($query) => $query->where('business_id', $businessId)),
+            ],
             'party_id' => [
                 'required',
                 'integer',
@@ -211,6 +228,8 @@ class InvoiceForm extends Form
                 Rule::exists('products', 'id')
                     ->where(fn ($query) => $query->where('business_id', $businessId)->whereNull('deleted_at')),
             ],
+            'items.*.sku' => ['nullable', 'string', 'max:100'],
+            'items.*.unit' => ['nullable', 'string', Rule::enum(ProductUnit::class)],
             'items.*.quantity' => $amount,
             'items.*.unit_price' => $amount,
             'items.*.discount_amount' => $amount,
@@ -226,6 +245,7 @@ class InvoiceForm extends Form
         return [
             'party_id' => __('general.party'),
             'party_name' => __('general.party_name'),
+            'sale_kind_id' => __('general.sale_kind'),
             'issue_date' => __('general.issue_date'),
             'due_date' => __('general.due_date'),
             'global_discount' => __('general.global_discount'),
@@ -234,6 +254,8 @@ class InvoiceForm extends Form
             'account_ids.*' => __('general.account'),
             'items' => __('general.invoice_items'),
             'items.*.title' => __('general.item_title'),
+            'items.*.sku' => __('general.product_sku'),
+            'items.*.unit' => __('general.unit'),
             'items.*.quantity' => __('general.quantity'),
             'items.*.unit_price' => __('general.unit_price'),
             'items.*.discount_amount' => __('general.discount_amount'),
@@ -248,6 +270,7 @@ class InvoiceForm extends Form
     {
         return [
             'type' => $this->type,
+            'sale_kind_id' => $this->sale_kind_id,
             'party_id' => $this->party_id,
             'party_name' => $this->party_name !== '' ? $this->party_name : null,
             'issue_date' => LocaleDate::toStorageDate($this->issue_date) ?? $this->issue_date,
@@ -268,6 +291,8 @@ class InvoiceForm extends Form
                 ->map(fn (array $item, int $index): array => [
                     'product_id' => $item['product_id'] ?? null,
                     'title' => (string) $item['title'],
+                    'sku' => filled($item['sku'] ?? null) ? (string) $item['sku'] : null,
+                    'unit' => filled($item['unit'] ?? null) ? (string) $item['unit'] : null,
                     'quantity' => $this->normalizeAmount((string) ($item['quantity'] ?? '1')),
                     'unit_price' => $this->normalizeAmount((string) ($item['unit_price'] ?? '0')),
                     'discount_amount' => $this->normalizeAmount((string) ($item['discount_amount'] ?? '0')),

@@ -2,6 +2,7 @@
 
 namespace App\Actions\Concerns;
 
+use App\Enums\Catalog\ProductUnit;
 use App\Models\Accounting\Party;
 use App\Models\Catalog\Product;
 use App\Support\RichText;
@@ -47,6 +48,8 @@ trait NormalizesLineItems
      * @return list<array{
      *     product_id: int|null,
      *     title: string,
+     *     sku: string|null,
+     *     unit: string|null,
      *     quantity: string,
      *     unit_price: string,
      *     discount_amount: string,
@@ -71,17 +74,34 @@ trait NormalizesLineItems
                 ? (int) $item['product_id']
                 : null;
 
+            $sku = filled($item['sku'] ?? null) ? trim((string) $item['sku']) : null;
+            $unit = filled($item['unit'] ?? null) ? trim((string) $item['unit']) : null;
+
             if ($productId !== null) {
-                $exists = Product::query()
+                $product = Product::query()
                     ->where('business_id', $businessId)
                     ->whereKey($productId)
-                    ->exists();
+                    ->first();
 
-                if (! $exists) {
+                if ($product === null) {
                     throw ValidationException::withMessages([
                         "items.{$index}.product_id" => [__('general.invoice_product_invalid')],
                     ]);
                 }
+
+                if ($sku === null && filled($product->sku)) {
+                    $sku = (string) $product->sku;
+                }
+
+                if ($unit === null && $product->unit instanceof ProductUnit) {
+                    $unit = $product->unit->value;
+                }
+            }
+
+            if ($unit !== null && ProductUnit::tryFrom($unit) === null) {
+                throw ValidationException::withMessages([
+                    "items.{$index}.unit" => [__('validation.in', ['attribute' => __('general.unit')])],
+                ]);
             }
 
             $quantity = $this->normalizeAmount((string) ($item['quantity'] ?? '1'));
@@ -94,6 +114,8 @@ trait NormalizesLineItems
             $normalized[] = [
                 'product_id' => $productId,
                 'title' => $title,
+                'sku' => $sku,
+                'unit' => $unit,
                 'quantity' => $quantity,
                 'unit_price' => $unitPrice,
                 'discount_amount' => $discount,

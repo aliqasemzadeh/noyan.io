@@ -15,6 +15,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'invoice_id',
     'product_id',
     'title',
+    'sku',
+    'unit',
     'sort_order',
     'quantity',
     'unit_price',

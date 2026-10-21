@@ -121,14 +121,14 @@ class Invoice extends Model
         return $this->belongsTo(Party::class);
     }
 
-    public function saleKind(): BelongsTo
-    {
-        return $this->belongsTo(SaleKind::class);
-    }
-
     public function quote(): BelongsTo
     {
         return $this->belongsTo(Quote::class);
+    }
+
+    public function saleKind(): BelongsTo
+    {
+        return $this->belongsTo(SaleKind::class);
     }
 
     /**

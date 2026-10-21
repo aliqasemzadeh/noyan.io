@@ -95,7 +95,22 @@ class FinalizeInvoiceAction
                 ])->save();
             }
 
+            $buyerSnapshots = [];
+
+            if ($invoice->party !== null) {
+                $party = $invoice->party;
+                $buyerSnapshots = [
+                    'buyer_legal_name' => $party->legal_name ?: $party->displayName(),
+                    'buyer_national_id' => $party->national_id,
+                    'buyer_economic_code' => $party->economic_code,
+                    'buyer_postal_code' => $party->postal_code,
+                    'buyer_phone' => $party->mobile ?: $party->phone,
+                    'buyer_address' => $party->address,
+                ];
+            }
+
             $invoice->forceFill([
+                ...$buyerSnapshots,
                 'finalized_at' => now(),
             ])->save();
 

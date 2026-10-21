@@ -14,6 +14,8 @@ trait ManagesLineItems
             'id' => (string) Str::uuid(),
             'product_id' => null,
             'title' => '',
+            'sku' => '',
+            'unit' => '',
             'quantity' => '1',
             'unit_price' => '0',
             'discount_amount' => '0',

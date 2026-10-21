@@ -94,6 +94,11 @@ class Quote extends Model
         return $this->belongsTo(Party::class);
     }
 
+    public function saleKind(): BelongsTo
+    {
+        return $this->belongsTo(SaleKind::class);
+    }
+
     public function invoice(): BelongsTo
     {
         return $this->belongsTo(Invoice::class);
