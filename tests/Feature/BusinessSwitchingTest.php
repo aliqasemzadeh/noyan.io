@@ -22,10 +22,9 @@ class BusinessSwitchingTest extends TestCase
         $first = Business::factory()->for($user, 'owner')->create(['name' => 'First Co']);
         $second = Business::factory()->create(['name' => 'Second Co']);
 
-        BusinessUser::factory()->create([
+        BusinessUser::factory()->admin()->create([
             'business_id' => $second->id,
             'user_id' => $user->id,
-            'role' => BusinessRole::Admin,
         ]);
 
         $this->assertTrue($user->belongsToBusiness($first));
@@ -42,7 +41,6 @@ class BusinessSwitchingTest extends TestCase
         BusinessUser::factory()->create([
             'business_id' => $second->id,
             'user_id' => $user->id,
-            'role' => BusinessRole::Viewer,
         ]);
 
         $user->switchBusiness($second);
@@ -67,10 +65,9 @@ class BusinessSwitchingTest extends TestCase
         $first = Business::factory()->for($user, 'owner')->create();
         $second = Business::factory()->create();
 
-        BusinessUser::factory()->create([
+        BusinessUser::factory()->admin()->create([
             'business_id' => $second->id,
             'user_id' => $user->id,
-            'role' => BusinessRole::Admin,
         ]);
 
         $user->forceFill(['current_business_id' => $first->id])->save();
@@ -92,10 +89,9 @@ class BusinessSwitchingTest extends TestCase
         $first = Business::factory()->for($user, 'owner')->create();
         $second = Business::factory()->create();
 
-        BusinessUser::factory()->create([
+        BusinessUser::factory()->admin()->create([
             'business_id' => $second->id,
             'user_id' => $user->id,
-            'role' => BusinessRole::Admin,
         ]);
 
         $user->forceFill(['current_business_id' => $first->id])->save();
@@ -148,10 +144,9 @@ class BusinessSwitchingTest extends TestCase
         $first = Business::factory()->for($user, 'owner')->create(['name' => 'Alpha']);
         $second = Business::factory()->create(['name' => 'Beta']);
 
-        BusinessUser::factory()->create([
+        BusinessUser::factory()->admin()->create([
             'business_id' => $second->id,
             'user_id' => $user->id,
-            'role' => BusinessRole::Admin,
         ]);
 
         $user->forgetBusinessesCache();

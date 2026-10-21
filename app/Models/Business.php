@@ -105,7 +105,7 @@ class Business extends Model implements HasMedia
     public function users(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'business_user')
-            ->withPivot(['role'])
+            ->withPivot(['roles', 'permissions'])
             ->withTimestamps()
             ->wherePivotNull('deleted_at');
     }
