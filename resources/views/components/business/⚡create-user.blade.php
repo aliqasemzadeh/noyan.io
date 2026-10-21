@@ -7,6 +7,7 @@ use App\Models\Business;
 use App\Models\User;
 use Flux\Flux;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
 use Livewire\Component;
@@ -22,8 +23,11 @@ new class extends Component
     public ?string $editingRole = null;
 
     #[On('panels.administrator.business.create-user.assign-data')]
+    #[On('panels.user.business.create-user.assign-data')]
     public function assignData(Business $business): void
     {
+        $this->authorizeManage($business);
+
         $this->business = $business;
         $this->form->setBusiness($business);
         $this->userSearch = '';
@@ -32,6 +36,17 @@ new class extends Component
         unset($this->users);
 
         Flux::modal('business.create-user')->show();
+    }
+
+    protected function authorizeManage(Business $business): void
+    {
+        abort_unless(Auth::user()?->canManageBusinessUsers($business), 403);
+    }
+
+    protected function dispatchUsersTableRefresh(): void
+    {
+        $this->dispatch('panels.administrator.business.users.table');
+        $this->dispatch('panels.user.business.users.table');
     }
 
     public function updatedFormRoles(): void
@@ -163,13 +178,16 @@ new class extends Component
 
     public function save(): void
     {
+        abort_unless($this->business !== null, 403);
+        $this->authorizeManage($this->business);
+
         $this->form->syncPermissionsFromRoles();
         $this->form->store();
 
         $this->reset('userSearch', 'business', 'editingRole');
         unset($this->users);
 
-        $this->dispatch('panels.administrator.business.users.table');
+        $this->dispatchUsersTableRefresh();
 
         Flux::modals()->close();
 

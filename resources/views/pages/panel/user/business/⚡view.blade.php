@@ -44,15 +44,29 @@ new class extends Component
                 {{ $business->name }}
             </flux:heading>
 
-            <flux:button
-                variant="primary"
-                color="blue"
-                icon="pencil"
-                :href="route('user.businesses.edit', $business)"
-                wire:navigate
-            >
-                {{ __('general.edit_business') }}
-            </flux:button>
+            <div class="flex items-center gap-2">
+                @if (auth()->user()->owns($business))
+                    <flux:button
+                        variant="primary"
+                        color="teal"
+                        icon="users"
+                        :href="route('user.businesses.users', $business)"
+                        wire:navigate
+                    >
+                        {{ __('general.business_users') }}
+                    </flux:button>
+                @endif
+
+                <flux:button
+                    variant="primary"
+                    color="blue"
+                    icon="pencil"
+                    :href="route('user.businesses.edit', $business)"
+                    wire:navigate
+                >
+                    {{ __('general.edit_business') }}
+                </flux:button>
+            </div>
         </div>
     </div>
 

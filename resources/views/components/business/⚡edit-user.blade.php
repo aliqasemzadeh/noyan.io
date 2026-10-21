@@ -3,8 +3,10 @@
 use App\Enums\Business\BusinessPermission;
 use App\Enums\Business\BusinessRole;
 use App\Livewire\Forms\BusinessUserForm;
+use App\Models\Business;
 use App\Models\BusinessUser;
 use Flux\Flux;
+use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\On;
 use Livewire\Component;
 
@@ -17,9 +19,13 @@ new class extends Component
     public ?string $editingRole = null;
 
     #[On('panels.administrator.business.edit-user.assign-data')]
+    #[On('panels.user.business.edit-user.assign-data')]
     public function assignData(BusinessUser $membership): void
     {
         abort_if($membership->isOwner(), 403);
+
+        $membership->loadMissing('business');
+        $this->authorizeManage($membership->business);
 
         $this->membership = $membership;
         $this->form->setMembership($membership);
@@ -27,6 +33,20 @@ new class extends Component
         $this->resetValidation();
 
         Flux::modal('business.edit-user')->show();
+    }
+
+    protected function authorizeManage(?Business $business): void
+    {
+        abort_unless(
+            $business !== null && Auth::user()?->canManageBusinessUsers($business),
+            403,
+        );
+    }
+
+    protected function dispatchUsersTableRefresh(): void
+    {
+        $this->dispatch('panels.administrator.business.users.table');
+        $this->dispatch('panels.user.business.users.table');
     }
 
     public function updatedFormRoles(): void
@@ -123,12 +143,16 @@ new class extends Component
 
     public function save(): void
     {
+        abort_unless($this->membership !== null, 403);
+        $this->membership->loadMissing('business');
+        $this->authorizeManage($this->membership->business);
+
         $this->form->syncPermissionsFromRoles();
         $this->form->update();
 
         $this->reset('membership', 'editingRole');
 
-        $this->dispatch('panels.administrator.business.users.table');
+        $this->dispatchUsersTableRefresh();
 
         Flux::modals()->close();
 

@@ -10,10 +10,12 @@ use App\Models\BusinessUser;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
+use Tests\Concerns\GrantsAdministratorAccess;
 use Tests\TestCase;
 
 class SalePanelAccessTest extends TestCase
 {
+    use GrantsAdministratorAccess;
     use RefreshDatabase;
 
     public function test_seller_can_access_sale_panel_but_not_accounting(): void
@@ -69,7 +71,7 @@ class SalePanelAccessTest extends TestCase
 
     public function test_admin_can_add_seller_with_custom_permissions(): void
     {
-        $admin = User::factory()->create();
+        $admin = $this->grantAdministratorAccess(User::factory()->create());
         $owner = User::factory()->create();
         $member = User::factory()->create();
         $business = Business::factory()->for($owner, 'owner')->create();

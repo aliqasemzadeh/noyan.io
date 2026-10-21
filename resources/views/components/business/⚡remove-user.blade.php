@@ -1,8 +1,9 @@
 <?php
 
-use App\Enums\Business\BusinessRole;
+use App\Models\Business;
 use App\Models\BusinessUser;
 use Flux\Flux;
+use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\On;
 use Livewire\Component;
 
@@ -11,11 +12,29 @@ new class extends Component
     public ?BusinessUser $membership = null;
 
     #[On('panels.administrator.business.remove-user.assign-data')]
+    #[On('panels.user.business.remove-user.assign-data')]
     public function assignData(BusinessUser $membership): void
     {
-        $this->membership = $membership->loadMissing('user');
+        $membership->loadMissing(['user', 'business']);
+        $this->authorizeManage($membership->business);
+
+        $this->membership = $membership;
 
         Flux::modal('business.remove-user')->show();
+    }
+
+    protected function authorizeManage(?Business $business): void
+    {
+        abort_unless(
+            $business !== null && Auth::user()?->canManageBusinessUsers($business),
+            403,
+        );
+    }
+
+    protected function dispatchUsersTableRefresh(): void
+    {
+        $this->dispatch('panels.administrator.business.users.table');
+        $this->dispatch('panels.user.business.users.table');
     }
 
     public function remove(): void
@@ -23,6 +42,9 @@ new class extends Component
         if ($this->membership === null) {
             return;
         }
+
+        $this->membership->loadMissing('business');
+        $this->authorizeManage($this->membership->business);
 
         if ($this->membership->isOwner()) {
             Flux::modals()->close();
@@ -37,7 +59,7 @@ new class extends Component
         $user?->forgetBusinessesCache();
         $this->reset('membership');
 
-        $this->dispatch('panels.administrator.business.users.table');
+        $this->dispatchUsersTableRefresh();
 
         Flux::modals()->close();
 

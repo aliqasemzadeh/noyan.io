@@ -8,15 +8,17 @@ use App\Models\BusinessUser;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
+use Tests\Concerns\GrantsAdministratorAccess;
 use Tests\TestCase;
 
 class BusinessManagementTest extends TestCase
 {
+    use GrantsAdministratorAccess;
     use RefreshDatabase;
 
     public function test_admin_can_create_business_with_owner_membership(): void
     {
-        $admin = User::factory()->create();
+        $admin = $this->grantAdministratorAccess(User::factory()->create());
         $owner = User::factory()->create(['mobile' => '09121234567']);
 
         Livewire::actingAs($admin)
@@ -47,7 +49,7 @@ class BusinessManagementTest extends TestCase
 
     public function test_admin_can_update_business_owner(): void
     {
-        $admin = User::factory()->create();
+        $admin = $this->grantAdministratorAccess(User::factory()->create());
         $oldOwner = User::factory()->create();
         $newOwner = User::factory()->create();
         $business = Business::factory()->for($oldOwner, 'owner')->create([
@@ -84,7 +86,7 @@ class BusinessManagementTest extends TestCase
 
     public function test_admin_can_add_and_remove_business_user(): void
     {
-        $admin = User::factory()->create();
+        $admin = $this->grantAdministratorAccess(User::factory()->create());
         $owner = User::factory()->create();
         $member = User::factory()->create();
         $business = Business::factory()->for($owner, 'owner')->create();
@@ -116,7 +118,7 @@ class BusinessManagementTest extends TestCase
 
     public function test_cannot_remove_business_owner_membership(): void
     {
-        $admin = User::factory()->create();
+        $admin = $this->grantAdministratorAccess(User::factory()->create());
         $owner = User::factory()->create();
         $business = Business::factory()->for($owner, 'owner')->create();
 
@@ -139,7 +141,7 @@ class BusinessManagementTest extends TestCase
 
     public function test_business_users_page_renders(): void
     {
-        $admin = User::factory()->create();
+        $admin = $this->grantAdministratorAccess(User::factory()->create());
         $owner = User::factory()->create();
         $business = Business::factory()->for($owner, 'owner')->create();
 
@@ -151,7 +153,7 @@ class BusinessManagementTest extends TestCase
 
     public function test_admin_can_create_owner_from_modal(): void
     {
-        $admin = User::factory()->create();
+        $admin = $this->grantAdministratorAccess(User::factory()->create());
 
         Livewire::actingAs($admin)
             ->test('business.create')
@@ -167,7 +169,7 @@ class BusinessManagementTest extends TestCase
 
     public function test_admin_can_create_owner_from_edit_modal(): void
     {
-        $admin = User::factory()->create();
+        $admin = $this->grantAdministratorAccess(User::factory()->create());
         $owner = User::factory()->create();
         $business = Business::factory()->for($owner, 'owner')->create();
 
@@ -186,7 +188,7 @@ class BusinessManagementTest extends TestCase
 
     public function test_delete_business_requires_matching_name_confirmation(): void
     {
-        $admin = User::factory()->create();
+        $admin = $this->grantAdministratorAccess(User::factory()->create());
         $owner = User::factory()->create();
         $business = Business::factory()->for($owner, 'owner')->create([
             'name' => 'Target Business',

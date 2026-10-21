@@ -119,6 +119,19 @@ new class extends Component
                                         wire:navigate
                                     />
                                 </flux:tooltip>
+                                @if (auth()->user()->owns($business))
+                                    <flux:tooltip content="{{ __('general.business_users') }}">
+                                        <flux:button
+                                            size="xs"
+                                            variant="primary"
+                                            color="teal"
+                                            icon="users"
+                                            icon:variant="outline"
+                                            :href="route('user.businesses.users', $business)"
+                                            wire:navigate
+                                        />
+                                    </flux:tooltip>
+                                @endif
                                 <flux:tooltip content="{{ __('general.edit') }}">
                                     <flux:button
                                         size="xs"

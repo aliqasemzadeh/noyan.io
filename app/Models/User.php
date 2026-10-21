@@ -48,6 +48,11 @@ class User extends Authenticatable
         return (int) $business->owner_id === (int) $this->id;
     }
 
+    public function canManageBusinessUsers(Business $business): bool
+    {
+        return $this->can('business_user_manage') || $this->owns($business);
+    }
+
     public function belongsToBusiness(Business $business): bool
     {
         return $this->memberships()
