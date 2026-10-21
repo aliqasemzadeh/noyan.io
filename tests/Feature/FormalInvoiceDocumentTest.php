@@ -88,7 +88,7 @@ class FormalInvoiceDocumentTest extends TestCase
             ->assertSee('شرکت نویان')
             ->assertSee('خریدار رسمی')
             ->assertSee('W-100')
-            ->assertSee(__('general.document_business_details'))
+            ->assertDontSee(__('general.document_business_details'))
             ->assertSee(__('general.seller_stamp_signature'))
             ->assertSee($saleKind->name)
             ->assertSee('02112345678');

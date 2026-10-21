@@ -89,11 +89,7 @@ new #[Layout('layouts::invoice')] class extends Component
 <x-slot name="invoiceOrientation">{{ $orientation->value }}</x-slot>
 
 <div class="{{ $containerClass }}">
-    <div class="no-print mb-4 flex flex-wrap items-center justify-between gap-3">
-        <flux:callout icon="eye" variant="secondary" inline>
-            {{ __('general.invoice_preview_sample_notice') }}
-        </flux:callout>
-
+    <div class="no-print mb-4 flex justify-end">
         <flux:button
             type="button"
             variant="primary"
@@ -122,6 +118,12 @@ new #[Layout('layouts::invoice')] class extends Component
         :note="__('general.invoice_preview_sample_note')"
         :format-amount="fn (string $amount): string => $this->formatAmount($amount)"
     >
+        <x-slot:banner>
+            <div class="no-print rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100">
+                {{ __('general.invoice_preview_sample_notice') }}
+            </div>
+        </x-slot:banner>
+
         @if ($footer = $this->documentFooter())
             <x-slot:footer>
                 {{ $footer }}
