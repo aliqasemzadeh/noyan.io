@@ -1,6 +1,9 @@
 <?php
 
 use App\Actions\Invoices\CreateInvoiceShareLinkAction;
+use App\Actions\Notifications\SendInvoiceNotificationAction;
+use App\Enums\Accounting\InvoiceNotificationChannel;
+use App\Enums\Accounting\InvoiceNotificationType;
 use App\Enums\Accounting\InvoiceType;
 use App\Enums\Business\BusinessPermission;
 use App\Models\Accounting\Invoice;
@@ -103,6 +106,52 @@ new class extends Component
         $this->js('navigator.clipboard.writeText('.json_encode($url).')');
 
         Flux::toast(__('general.invoice_link_copied'));
+    }
+
+    public function sendEmail(Invoice $invoice, SendInvoiceNotificationAction $action): void
+    {
+        $this->sendNotification($invoice, $action, InvoiceNotificationChannel::Email);
+    }
+
+    public function sendSms(Invoice $invoice, SendInvoiceNotificationAction $action): void
+    {
+        $this->sendNotification($invoice, $action, InvoiceNotificationChannel::Sms);
+    }
+
+    protected function sendNotification(
+        Invoice $invoice,
+        SendInvoiceNotificationAction $action,
+        InvoiceNotificationChannel $channel,
+    ): void {
+        $businessId = Auth::user()?->current_business_id;
+
+        if ($businessId === null || (int) $invoice->business_id !== (int) $businessId) {
+            return;
+        }
+
+        if (! $invoice->isFinalized()) {
+            Flux::toast(text: __('general.invoice_share_requires_finalized'), variant: 'danger');
+
+            return;
+        }
+
+        $result = $action->handle(
+            $invoice->loadMissing(['party', 'business']),
+            InvoiceNotificationType::NewInvoice,
+            [$channel],
+            force: true,
+        );
+
+        $sent = $channel === InvoiceNotificationChannel::Email ? $result['email'] : $result['sms'];
+
+        if ($sent) {
+            Flux::toast(__('general.invoice_notification_sent'));
+
+            return;
+        }
+
+        $message = $result['errors'][0] ?? __('general.invoice_notification_failed');
+        Flux::toast(text: $message, variant: 'danger');
     }
 
     /**

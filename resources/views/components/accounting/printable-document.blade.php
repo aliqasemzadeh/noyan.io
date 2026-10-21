@@ -11,6 +11,7 @@
     'totalAmount',
     'note' => null,
     'formatAmount',
+    'accounts' => [],
 ])
 
 @php
@@ -136,6 +137,33 @@
             <div class="rounded-xl bg-zinc-50 p-4 dark:bg-zinc-800/60">
                 <p class="text-sm text-zinc-500">{{ __('general.note') }}</p>
                 <p class="mt-1 text-zinc-800 dark:text-zinc-200">{{ $note }}</p>
+            </div>
+        @endif
+
+        @if (count($accounts) > 0)
+            <div class="rounded-xl ring-1 ring-zinc-200 p-4 dark:ring-zinc-700">
+                <p class="text-sm font-medium text-zinc-700 dark:text-zinc-200">{{ __('general.invoice_payment_accounts') }}</p>
+                <div class="mt-3 space-y-3">
+                    @foreach ($accounts as $account)
+                        <div class="text-sm text-zinc-800 dark:text-zinc-200">
+                            <p class="font-medium">{{ $account->name }}</p>
+                            <div class="mt-1 space-y-0.5 text-zinc-600 dark:text-zinc-300">
+                                @if (filled($account->bank_name))
+                                    <p>{{ __('general.bank_name') }}: {{ $account->bank_name }}</p>
+                                @endif
+                                @if (filled($account->iban))
+                                    <p dir="ltr">{{ __('general.iban') }}: {{ $account->iban }}</p>
+                                @endif
+                                @if (filled($account->account_number))
+                                    <p dir="ltr">{{ __('general.account_number') }}: {{ $account->account_number }}</p>
+                                @endif
+                                @if (filled($account->card_number))
+                                    <p dir="ltr">{{ __('general.card_number') }}: {{ $account->card_number }}</p>
+                                @endif
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
             </div>
         @endif
 
