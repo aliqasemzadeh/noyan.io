@@ -166,12 +166,12 @@ class InvoiceForm extends Form
         return [
             'type' => ['required', Rule::enum(InvoiceType::class)],
             'party_id' => [
-                'nullable',
+                'required',
                 'integer',
                 Rule::exists('parties', 'id')
                     ->where(fn ($query) => $query->where('business_id', $businessId)->whereNull('deleted_at')),
             ],
-            'party_name' => ['nullable', 'string', 'max:150', 'required_without:party_id'],
+            'party_name' => ['nullable', 'string', 'max:150'],
             'issue_date' => $this->localeDateRules(),
             'due_date' => [...$this->localeDateRules(required: false), 'after_or_equal:issue_date'],
             'global_discount' => $amount,

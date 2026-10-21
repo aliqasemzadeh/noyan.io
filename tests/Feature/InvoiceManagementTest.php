@@ -76,6 +76,56 @@ class InvoiceManagementTest extends TestCase
         ]);
     }
 
+    public function test_invoice_form_requires_party_id(): void
+    {
+        [$user] = $this->actingBusinessUser();
+
+        Livewire::actingAs($user)
+            ->test('pages::panel.accounting.invoice.form', ['type' => 'sale'])
+            ->set('form.issue_date', now()->toDateString())
+            ->call('saveAsDraft')
+            ->assertHasErrors(['form.party_id']);
+    }
+
+    public function test_recalculate_totals_updates_row_without_saving(): void
+    {
+        [$user, $business] = $this->actingBusinessUser();
+        $party = Party::factory()->create([
+            'business_id' => $business->id,
+            'is_customer' => true,
+        ]);
+
+        Livewire::actingAs($user)
+            ->test('pages::panel.accounting.invoice.form', ['type' => 'sale'])
+            ->set('form.party_id', $party->id)
+            ->set('form.party_name', $party->name)
+            ->set('form.items.0.quantity', '3')
+            ->set('form.items.0.unit_price', '1500')
+            ->set('form.items.0.discount_amount', '500')
+            ->set('form.items.0.tax_amount', '200')
+            ->call('recalculateTotals')
+            ->assertSet('form.items.0.total', '4200')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseCount('invoices', 0);
+    }
+
+    public function test_created_party_is_selected_on_invoice_form(): void
+    {
+        [$user, $business] = $this->actingBusinessUser();
+        $party = Party::factory()->create([
+            'business_id' => $business->id,
+            'is_customer' => true,
+            'name' => 'New Customer',
+        ]);
+
+        Livewire::actingAs($user)
+            ->test('pages::panel.accounting.invoice.form', ['type' => 'sale'])
+            ->dispatch('panels.accounting.party.created', partyId: $party->id)
+            ->assertSet('form.party_id', $party->id)
+            ->assertSet('form.party_name', $party->displayName());
+    }
+
     public function test_invoices_index_lists_current_business_only(): void
     {
         $user = User::factory()->create();

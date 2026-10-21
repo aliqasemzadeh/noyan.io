@@ -144,15 +144,66 @@ class QuoteManagementTest extends TestCase
     #[Test]
     public function form_validates_valid_until_after_issue_date(): void
     {
-        [$user] = $this->actingBusinessUser();
+        [$user, $business, $party] = $this->seedContext();
 
         Livewire::actingAs($user)
             ->test('pages::panel.accounting.quote.form')
-            ->set('form.party_name', 'Guest')
+            ->set('form.party_id', $party->id)
+            ->set('form.party_name', $party->name)
             ->set('form.issue_date', now()->toDateString())
             ->set('form.valid_until', now()->subDay()->toDateString())
             ->call('saveAsDraft')
             ->assertHasErrors(['form.valid_until']);
+    }
+
+    #[Test]
+    public function form_requires_party_id(): void
+    {
+        [$user] = $this->actingBusinessUser();
+
+        Livewire::actingAs($user)
+            ->test('pages::panel.accounting.quote.form')
+            ->set('form.issue_date', now()->toDateString())
+            ->set('form.valid_until', now()->addDays(7)->toDateString())
+            ->call('saveAsDraft')
+            ->assertHasErrors(['form.party_id']);
+    }
+
+    #[Test]
+    public function recalculate_totals_updates_row_without_saving(): void
+    {
+        [$user, $business, $party] = $this->seedContext();
+
+        Livewire::actingAs($user)
+            ->test('pages::panel.accounting.quote.form')
+            ->set('form.party_id', $party->id)
+            ->set('form.party_name', $party->name)
+            ->set('form.items.0.quantity', '2')
+            ->set('form.items.0.unit_price', '1000')
+            ->set('form.items.0.discount_amount', '0')
+            ->set('form.items.0.tax_amount', '0')
+            ->call('recalculateTotals')
+            ->assertSet('form.items.0.total', '2000')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseCount('quotes', 0);
+    }
+
+    #[Test]
+    public function created_party_is_selected_on_form(): void
+    {
+        [$user, $business] = $this->actingBusinessUser();
+        $party = Party::factory()->create([
+            'business_id' => $business->id,
+            'is_customer' => true,
+            'name' => 'New Party',
+        ]);
+
+        Livewire::actingAs($user)
+            ->test('pages::panel.accounting.quote.form')
+            ->dispatch('panels.accounting.party.created', partyId: $party->id)
+            ->assertSet('form.party_id', $party->id)
+            ->assertSet('form.party_name', $party->displayName());
     }
 
     #[Test]

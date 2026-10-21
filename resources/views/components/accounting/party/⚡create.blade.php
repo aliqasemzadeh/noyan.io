@@ -14,6 +14,7 @@ new class extends Component
         $party = $this->form->store();
 
         $this->dispatch('panels.accounting.party.index.table');
+        $this->dispatch('panels.accounting.party.created', partyId: $party->id);
 
         Flux::modals()->close();
 

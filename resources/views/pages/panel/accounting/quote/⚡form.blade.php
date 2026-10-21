@@ -10,6 +10,7 @@ use Flux\Flux;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
+use Livewire\Attributes\On;
 use Livewire\Component;
 
 new class extends Component
@@ -92,15 +93,25 @@ new class extends Component
         $this->form->updateSortOrder($id, $position);
     }
 
-    public function useGuestParty(): void
+    #[On('panels.accounting.party.created')]
+    public function onPartyCreated(int $partyId): void
     {
-        $name = trim($this->partySearch);
+        unset($this->parties);
 
-        if ($name === '') {
+        $party = $this->parties->firstWhere('id', $partyId);
+
+        if ($party === null) {
+            $party = Party::query()
+                ->where('business_id', Auth::user()?->current_business_id)
+                ->whereKey($partyId)
+                ->first();
+        }
+
+        if ($party === null) {
             return;
         }
 
-        $this->form->useGuestParty($name);
+        $this->form->selectParty($party->id, $party->displayName());
         $this->partySearch = '';
     }
 
@@ -114,6 +125,11 @@ new class extends Component
 
         $this->form->useFreeTextItem($index, $title);
         $this->itemSearches[$index] = '';
+    }
+
+    public function recalculateTotals(): void
+    {
+        $this->form->recalculate();
     }
 
     public function saveAsDraft(SaveQuoteAction $action): void
@@ -243,9 +259,9 @@ new class extends Component
                         wire:model.live="form.party_id"
                         variant="combobox"
                         clearable
-                        placeholder="{{ __('general.select_party_or_guest') }}"
+                        placeholder="{{ __('general.select_party') }}"
                     >
-                        <flux:select.input wire:model.live.debounce.300ms="partySearch" placeholder="{{ __('general.select_party_or_guest') }}" />
+                        <flux:select.input wire:model.live.debounce.300ms="partySearch" placeholder="{{ __('general.select_party') }}" />
 
                         @foreach ($this->parties as $party)
                             <flux:select.option value="{{ $party->id }}" wire:key="quote-party-{{ $party->id }}">
@@ -253,17 +269,11 @@ new class extends Component
                             </flux:select.option>
                         @endforeach
 
-                        <flux:select.option.create wire:click="useGuestParty" min-length="2">
-                            {{ __('general.use_as_guest_party') }}
+                        <flux:select.option.create modal="party.create">
+                            {{ __('general.create_party') }}
                         </flux:select.option.create>
                     </flux:select>
                     <flux:error name="form.party_id" />
-                    <flux:error name="form.party_name" />
-                    @if ($form->party_id === null && $form->party_name !== '')
-                        <flux:text class="mt-1 text-sm">
-                            {{ __('general.guest_party') }}: <span class="font-medium">{{ $form->party_name }}</span>
-                        </flux:text>
-                    @endif
                 </flux:field>
 
                 <div class="grid gap-4 sm:grid-cols-2">
@@ -362,16 +372,16 @@ new class extends Component
                                     <flux:error name="form.items.{{ $index }}.title" />
                                 </td>
                                 <td class="px-2 py-2 align-top" wire:sort:ignore>
-                                    <flux:input type="number" step="any" wire:model.live="form.items.{{ $index }}.quantity" />
+                                    <flux:input type="number" step="any" wire:model.live.blur="form.items.{{ $index }}.quantity" />
                                 </td>
                                 <td class="px-2 py-2 align-top" wire:sort:ignore>
-                                    <flux:input wire:model.live="form.items.{{ $index }}.unit_price" mask:dynamic="$money($input)" dir="ltr" />
+                                    <flux:input wire:model.live.blur="form.items.{{ $index }}.unit_price" mask:dynamic="$money($input)" dir="ltr" />
                                 </td>
                                 <td class="px-2 py-2 align-top" wire:sort:ignore>
-                                    <flux:input wire:model.live="form.items.{{ $index }}.discount_amount" mask:dynamic="$money($input)" dir="ltr" />
+                                    <flux:input wire:model.live.blur="form.items.{{ $index }}.discount_amount" mask:dynamic="$money($input)" dir="ltr" />
                                 </td>
                                 <td class="px-2 py-2 align-top" wire:sort:ignore>
-                                    <flux:input wire:model.live="form.items.{{ $index }}.tax_amount" mask:dynamic="$money($input)" dir="ltr" />
+                                    <flux:input wire:model.live.blur="form.items.{{ $index }}.tax_amount" mask:dynamic="$money($input)" dir="ltr" />
                                 </td>
                                 <td class="px-2 py-2 align-top">
                                     <flux:input readonly :value="$item['total']" dir="ltr" />
@@ -400,13 +410,13 @@ new class extends Component
             <div class="grid gap-4 md:grid-cols-3">
                 <flux:field>
                     <flux:label>{{ __('general.global_discount') }}</flux:label>
-                    <flux:input wire:model.live="form.global_discount" mask:dynamic="$money($input)" dir="ltr" />
+                    <flux:input wire:model.live.blur="form.global_discount" mask:dynamic="$money($input)" dir="ltr" />
                     <flux:error name="form.global_discount" />
                 </flux:field>
 
                 <flux:field>
                     <flux:label>{{ __('general.global_tax') }}</flux:label>
-                    <flux:input wire:model.live="form.global_tax" mask:dynamic="$money($input)" dir="ltr" />
+                    <flux:input wire:model.live.blur="form.global_tax" mask:dynamic="$money($input)" dir="ltr" />
                     <flux:error name="form.global_tax" />
                 </flux:field>
 
@@ -421,11 +431,16 @@ new class extends Component
 
         <div class="flex flex-col gap-3 sm:flex-row">
             <flux:button type="submit" variant="primary" color="zinc" class="w-full sm:w-auto">
-                {{ __('general.save_as_draft') }}
+                {{ $form->quote !== null ? __('general.update') : __('general.save_as_draft') }}
+            </flux:button>
+            <flux:button type="button" variant="primary" color="sky" class="w-full sm:w-auto" wire:click="recalculateTotals">
+                {{ __('general.recalculate_totals') }}
             </flux:button>
             <flux:button type="button" variant="primary" color="teal" class="w-full sm:w-auto" wire:click="saveAndFinalize">
                 {{ __('general.save_and_finalize') }}
             </flux:button>
         </div>
     </form>
+
+    <livewire:accounting.party.create :key="'quote-party-create'" />
 </div>
