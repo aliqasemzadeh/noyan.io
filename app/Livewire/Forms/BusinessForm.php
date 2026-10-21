@@ -4,6 +4,7 @@ namespace App\Livewire\Forms;
 
 use App\Enums\Business\BusinessRole;
 use App\Models\Business;
+use App\Models\BusinessInvoiceSetting;
 use App\Models\BusinessUser;
 use App\Models\User;
 use Illuminate\Support\Str;
@@ -73,6 +74,7 @@ class BusinessForm extends Form
 
         $this->syncOwnerMembership($business, $previousOwnerId);
         $this->ensureOwnerCurrentBusiness($business);
+        BusinessInvoiceSetting::forBusiness($business);
 
         $owner = User::query()->find($business->owner_id);
         $owner?->forgetBusinessesCache();
