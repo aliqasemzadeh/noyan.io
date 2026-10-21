@@ -239,6 +239,7 @@ class UserBusinessOnboardingTest extends TestCase
             ->set('form.address', 'Tehran')
             ->set('form.invoice_primary_color', '#0ea5e9')
             ->set('form.invoice_secondary_color', '#0369a1')
+            ->set('form.invoice_orientation', InvoiceOrientation::Landscape->value)
             ->call('save')
             ->assertHasNoErrors()
             ->assertRedirect(route('user.businesses.view', $business));
@@ -249,6 +250,7 @@ class UserBusinessOnboardingTest extends TestCase
         $this->assertSame('Tehran', $business->address);
         $this->assertSame('#0ea5e9', $business->invoice_primary_color);
         $this->assertSame('#0369a1', $business->invoice_secondary_color);
+        $this->assertSame(InvoiceOrientation::Landscape, $business->invoiceOrientation());
     }
 
     public function test_foreign_user_cannot_edit_business(): void
