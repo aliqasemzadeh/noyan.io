@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 
@@ -33,7 +34,7 @@ use Illuminate\Support\Facades\Cache;
 class Account extends Model
 {
     /** @use HasFactory<AccountFactory> */
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     protected $table = 'accounting_accounts';
 
@@ -54,6 +55,18 @@ class Account extends Model
     protected static function newFactory(): AccountFactory
     {
         return AccountFactory::new();
+    }
+
+    protected static function booted(): void
+    {
+        $forgetCaches = function (Account $account): void {
+            self::forgetOptionsCache((int) $account->business_id);
+            self::forgetBalanceCache((int) $account->business_id, (int) $account->id);
+        };
+
+        static::saved($forgetCaches);
+        static::deleted($forgetCaches);
+        static::restored($forgetCaches);
     }
 
     public function business(): BelongsTo
