@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\CategoryType;
+use App\Livewire\Concerns\WithCategoryTreeListing;
 use App\Models\Category;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Livewire\Attributes\Computed;
@@ -12,6 +13,7 @@ use Morilog\Jalali\Jalalian;
 
 new class extends Component
 {
+    use WithCategoryTreeListing;
     use WithPagination;
 
     public string $search = '';
@@ -22,17 +24,65 @@ new class extends Component
     public function updatedSearch(): void
     {
         $this->resetPage();
+        $this->forgetCategoryTreeComputed();
     }
 
     public function updatedTypeFilter(): void
     {
         $this->resetPage();
+        $this->forgetCategoryTreeComputed();
     }
 
     #[On('panels.administrator.category.index.table')]
     public function refreshTable(): void
     {
-        unset($this->categories);
+        $this->forgetCategoryTreeComputed();
+    }
+
+    protected function forgetCategoryTreeComputed(): void
+    {
+        unset($this->categoryTree, $this->categories, $this->rows);
+    }
+
+    /**
+     * @return array{
+     *     paginator: LengthAwarePaginator<int, Category>,
+     *     rows: list<array{category: Category, depth: int, children_count: int, is_context: bool}>,
+     *     expandableIds: list<int>
+     * }
+     */
+    #[Computed]
+    public function categoryTree(): array
+    {
+        $categories = Category::query()
+            ->system()
+            ->when($this->typeFilter !== '', fn ($query) => $query->ofType($this->typeFilter))
+            ->orderBy('type')
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->get();
+
+        $matchIds = null;
+
+        if ($this->search !== '') {
+            $search = mb_strtolower(trim($this->search));
+
+            $matchIds = $categories
+                ->filter(function (Category $category) use ($search): bool {
+                    $haystack = mb_strtolower(implode(' ', array_filter([
+                        $category->name,
+                        $category->slug,
+                        $category->code,
+                    ])));
+
+                    return str_contains($haystack, $search);
+                })
+                ->pluck('id')
+                ->map(fn ($id): int => (int) $id)
+                ->all();
+        }
+
+        return $this->buildCategoryTreePage($categories, $matchIds);
     }
 
     /**
@@ -41,24 +91,21 @@ new class extends Component
     #[Computed]
     public function categories(): LengthAwarePaginator
     {
-        return Category::query()
-            ->system()
-            ->with('parent:id,name')
-            ->withCount(['children', 'products', 'transactions'])
-            ->when($this->typeFilter !== '', fn ($query) => $query->ofType($this->typeFilter))
-            ->when($this->search !== '', function ($query): void {
-                $search = '%'.$this->search.'%';
+        return $this->categoryTree['paginator'];
+    }
 
-                $query->where(function ($query) use ($search): void {
-                    $query->where('name', 'like', $search)
-                        ->orWhere('code', 'like', $search)
-                        ->orWhere('slug', 'like', $search);
-                });
-            })
-            ->orderBy('type')
-            ->orderBy('sort_order')
-            ->orderBy('name')
-            ->paginate(15);
+    /**
+     * @return list<array{category: Category, depth: int, children_count: int, is_context: bool}>
+     */
+    #[Computed]
+    public function rows(): array
+    {
+        return $this->categoryTree['rows'];
+    }
+
+    public function isFiltering(): bool
+    {
+        return $this->search !== '';
     }
 
     public function formatCreatedAt(Category $category): string
@@ -116,23 +163,82 @@ new class extends Component
             </flux:select>
         </div>
 
+        @if (! $this->isFiltering() && $this->categoryTree['expandableIds'] !== [])
+            <div class="mb-4 flex justify-end gap-2">
+                <flux:tooltip content="{{ __('general.expand_all') }}">
+                    <flux:button
+                        size="xs"
+                        variant="ghost"
+                        color="zinc"
+                        icon="chevrons-up-down"
+                        icon:variant="outline"
+                        wire:click="expandAllCategories"
+                    />
+                </flux:tooltip>
+                <flux:tooltip content="{{ __('general.collapse_all') }}">
+                    <flux:button
+                        size="xs"
+                        variant="ghost"
+                        color="zinc"
+                        icon="chevrons-down-up"
+                        icon:variant="outline"
+                        wire:click="collapseAllCategories"
+                    />
+                </flux:tooltip>
+            </div>
+        @endif
+
         <flux:table :paginate="$this->categories">
             <flux:table.columns>
                 <flux:table.column>{{ __('general.name') }}</flux:table.column>
                 <flux:table.column>{{ __('general.category_type') }}</flux:table.column>
                 <flux:table.column>{{ __('general.category_code') }}</flux:table.column>
-                <flux:table.column>{{ __('general.parent_category') }}</flux:table.column>
                 <flux:table.column>{{ __('general.is_active') }}</flux:table.column>
                 <flux:table.column>{{ __('general.created_at') }}</flux:table.column>
                 <flux:table.column align="end">{{ __('general.actions') }}</flux:table.column>
             </flux:table.columns>
 
             <flux:table.rows>
-                @forelse ($this->categories as $category)
-                    <flux:table.row :key="$category->id">
+                @forelse ($this->rows as $row)
+                    @php($category = $row['category'])
+                    <flux:table.row
+                        :key="$category->id"
+                        data-category-id="{{ $category->id }}"
+                        data-depth="{{ $row['depth'] }}"
+                        class="{{ $row['is_context'] ? 'opacity-60' : '' }}"
+                    >
                         <flux:table.cell>
-                            <div class="font-medium">{{ $category->name }}</div>
-                            <flux:text size="sm" class="mt-0.5 block text-zinc-500" dir="ltr">{{ $category->slug }}</flux:text>
+                            <div
+                                class="flex items-center gap-2 {{ $row['depth'] === 0 ? 'font-medium' : '' }}"
+                                style="padding-inline-start: {{ $row['depth'] * 1.5 }}rem"
+                            >
+                                @if ($row['children_count'] > 0 && ! $this->isFiltering())
+                                    <flux:tooltip content="{{ __('general.toggle_subcategories') }}">
+                                        <flux:button
+                                            size="xs"
+                                            variant="ghost"
+                                            color="zinc"
+                                            icon="chevron-down"
+                                            icon:variant="outline"
+                                            class="{{ in_array($category->id, $expandedIds, true) ? '' : 'ltr:-rotate-90 rtl:rotate-90' }}"
+                                            wire:click="toggleExpand({{ $category->id }})"
+                                        />
+                                    </flux:tooltip>
+                                @else
+                                    <span class="inline-block size-7 shrink-0"></span>
+                                @endif
+
+                                <div class="min-w-0">
+                                    <div>{{ $category->name }}</div>
+                                    <flux:text size="sm" class="mt-0.5 block text-zinc-500" dir="ltr">{{ $category->slug }}</flux:text>
+                                </div>
+
+                                @if ($row['children_count'] > 0)
+                                    <flux:badge size="sm" color="zinc">
+                                        {{ __('general.subcategories_count', ['count' => $row['children_count']]) }}
+                                    </flux:badge>
+                                @endif
+                            </div>
                         </flux:table.cell>
                         <flux:table.cell>
                             <flux:badge size="sm" :color="$category->type->badgeColor()">
@@ -142,7 +248,6 @@ new class extends Component
                         <flux:table.cell>
                             <span dir="ltr">{{ $category->code }}</span>
                         </flux:table.cell>
-                        <flux:table.cell>{{ $category->parent?->name ?: '—' }}</flux:table.cell>
                         <flux:table.cell>
                             <flux:badge size="sm" :color="$category->is_active ? 'green' : 'zinc'">
                                 {{ $category->is_active ? __('general.active') : __('general.inactive') }}
@@ -176,7 +281,7 @@ new class extends Component
                     </flux:table.row>
                 @empty
                     <flux:table.row>
-                        <flux:table.cell colspan="7">
+                        <flux:table.cell colspan="6">
                             {{ __('general.no_categories') }}
                         </flux:table.cell>
                     </flux:table.row>

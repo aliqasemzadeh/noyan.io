@@ -66,7 +66,7 @@ new class extends Component
 
     protected function forgetCategoryTreeComputed(): void
     {
-        unset($this->categoryTree);
+        unset($this->categoryTree, $this->categories, $this->rows);
     }
 
     /**
