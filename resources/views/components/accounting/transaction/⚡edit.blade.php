@@ -21,6 +21,8 @@ new class extends Component
 
     public ?Transaction $transaction = null;
 
+    public string $tagSearch = '';
+
     #[On('panels.accounting.transaction.edit.assign-data')]
     public function assignData(Transaction $transaction): void
     {
@@ -31,8 +33,9 @@ new class extends Component
 
         $this->transaction = $transaction;
         $this->form->setTransaction($transaction);
+        $this->tagSearch = '';
         $this->resetValidation();
-        unset($this->transactionCategories);
+        unset($this->transactionCategories, $this->availableTags);
 
         Flux::modal('transaction.edit')->show();
     }
@@ -47,6 +50,42 @@ new class extends Component
         } else {
             $this->form->destination_account_id = null;
         }
+    }
+
+    /**
+     * @return Collection<int, string>
+     */
+    #[Computed]
+    public function availableTags(): Collection
+    {
+        $businessId = Auth::user()?->current_business_id;
+
+        $fromDb = $businessId === null
+            ? collect()
+            : Transaction::tagNamesForBusiness($businessId);
+
+        return $fromDb
+            ->merge($this->form->tags)
+            ->map(fn (mixed $tag): string => trim((string) $tag))
+            ->filter()
+            ->unique()
+            ->values();
+    }
+
+    public function createTag(): void
+    {
+        $name = trim($this->tagSearch);
+
+        if ($name === '' || mb_strlen($name) > 50) {
+            return;
+        }
+
+        if (! in_array($name, $this->form->tags, true)) {
+            $this->form->tags[] = $name;
+        }
+
+        $this->tagSearch = '';
+        unset($this->availableTags);
     }
 
     /**
@@ -280,6 +319,32 @@ new class extends Component
                 placeholder="{{ __('general.note_placeholder') }}"
             />
             <flux:error name="form.note" />
+        </flux:field>
+
+        <flux:field>
+            <flux:label>{{ __('general.tags') }}</flux:label>
+            <flux:pillbox
+                wire:model="form.tags"
+                variant="combobox"
+                multiple
+                placeholder="{{ __('general.select_tags') }}"
+            >
+                <x-slot name="input">
+                    <flux:pillbox.input wire:model="tagSearch" placeholder="{{ __('general.search') }}..." />
+                </x-slot>
+
+                @foreach ($this->availableTags as $tagName)
+                    <flux:pillbox.option :value="$tagName" wire:key="edit-tx-tag-{{ $tagName }}">
+                        {{ $tagName }}
+                    </flux:pillbox.option>
+                @endforeach
+
+                <flux:pillbox.option.create wire:click="createTag" min-length="1">
+                    {{ __('general.create_tag') }} «<span wire:text="tagSearch"></span>»
+                </flux:pillbox.option.create>
+            </flux:pillbox>
+            <flux:error name="form.tags" />
+            <flux:error name="form.tags.*" />
         </flux:field>
 
         <flux:button type="submit" variant="primary" color="teal" class="w-full">

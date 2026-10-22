@@ -12,6 +12,9 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Collection;
+use Spatie\Tags\HasTags;
+use Spatie\Tags\Tag;
 
 #[Fillable([
     'business_id',
@@ -36,7 +39,28 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class Transaction extends Model
 {
     /** @use HasFactory<TransactionFactory> */
-    use BelongsToBusiness, HasFactory, SoftDeletes;
+    use BelongsToBusiness, HasFactory, HasTags, SoftDeletes;
+
+    public static function tagTypeForBusiness(int $businessId): string
+    {
+        return "transaction.{$businessId}";
+    }
+
+    /**
+     * @return Collection<int, string>
+     */
+    public static function tagNamesForBusiness(int $businessId): Collection
+    {
+        return Tag::query()
+            ->withType(self::tagTypeForBusiness($businessId))
+            ->orderBy('order_column')
+            ->orderBy('id')
+            ->get()
+            ->map(fn (Tag $tag): string => (string) $tag->name)
+            ->filter()
+            ->unique()
+            ->values();
+    }
 
     /**
      * @return array<string, string>

@@ -42,6 +42,9 @@ class TransactionForm extends Form
 
     public string $note = '';
 
+    /** @var list<string> */
+    public array $tags = [];
+
     public function mount(): void
     {
         $this->transaction_date = $this->todayInput();
@@ -49,6 +52,8 @@ class TransactionForm extends Form
 
     public function setTransaction(Transaction $transaction): void
     {
+        $transaction->loadMissing('tags');
+
         $this->transaction = $transaction;
         $this->type = $transaction->type->value;
         $this->account_id = $transaction->account_id;
@@ -59,6 +64,10 @@ class TransactionForm extends Form
         $this->transaction_date = LocaleDate::formatInput($transaction->transaction_date);
         $this->reference_number = (string) ($transaction->reference_number ?? '');
         $this->note = (string) ($transaction->note ?? '');
+        $this->tags = $transaction->tags
+            ->map(fn ($tag): string => (string) $tag->name)
+            ->values()
+            ->all();
     }
 
     public function resetForm(): void
@@ -66,6 +75,7 @@ class TransactionForm extends Form
         $this->reset();
         $this->transaction = null;
         $this->type = TransactionType::Income->value;
+        $this->tags = [];
         $this->transaction_date = $this->todayInput();
     }
 
@@ -132,6 +142,8 @@ class TransactionForm extends Form
             'transaction_date' => $this->localeDateRules(),
             'reference_number' => ['nullable', 'string', 'max:100'],
             'note' => ['nullable', 'string', 'max:2000'],
+            'tags' => ['nullable', 'array'],
+            'tags.*' => ['string', 'max:50'],
         ];
     }
 
@@ -150,6 +162,8 @@ class TransactionForm extends Form
             'transaction_date' => __('general.transaction_date'),
             'reference_number' => __('general.reference_number'),
             'note' => __('general.note'),
+            'tags' => __('general.tags'),
+            'tags.*' => __('general.tags'),
         ];
     }
 
@@ -204,6 +218,8 @@ class TransactionForm extends Form
             'note' => ($validated['note'] ?? '') !== '' ? $validated['note'] : null,
         ]);
 
+        $this->syncTags($transaction, (int) $user->current_business_id, $validated['tags'] ?? []);
+
         $this->resetForm();
 
         return $transaction;
@@ -254,8 +270,25 @@ class TransactionForm extends Form
             'note' => ($validated['note'] ?? '') !== '' ? $validated['note'] : null,
         ]);
 
+        $this->syncTags($transaction, (int) $user->current_business_id, $validated['tags'] ?? []);
+
         $this->resetForm();
 
         return $transaction;
+    }
+
+    /**
+     * @param  list<string>|array<int, string>  $tags
+     */
+    private function syncTags(Transaction $transaction, int $businessId, array $tags): void
+    {
+        $names = collect($tags)
+            ->map(fn (mixed $tag): string => trim((string) $tag))
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
+        $transaction->syncTagsWithType($names, Transaction::tagTypeForBusiness($businessId));
     }
 }

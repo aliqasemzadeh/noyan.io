@@ -3,6 +3,7 @@
 use App\Enums\Accounting\TransactionType;
 use App\Models\Accounting\Transaction;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
@@ -20,6 +21,9 @@ new class extends Component
     #[Url]
     public string $typeFilter = '';
 
+    #[Url]
+    public string $tagFilter = '';
+
     public function mount(): void
     {
         Auth::user()?->ensureCurrentBusiness();
@@ -35,10 +39,30 @@ new class extends Component
         $this->resetPage();
     }
 
+    public function updatedTagFilter(): void
+    {
+        $this->resetPage();
+    }
+
     #[On('panels.accounting.transaction.index.table')]
     public function refreshTable(): void
     {
-        unset($this->transactions);
+        unset($this->transactions, $this->filterTags);
+    }
+
+    /**
+     * @return Collection<int, string>
+     */
+    #[Computed]
+    public function filterTags(): Collection
+    {
+        $businessId = Auth::user()?->current_business_id;
+
+        if ($businessId === null) {
+            return collect();
+        }
+
+        return Transaction::tagNamesForBusiness($businessId);
     }
 
     /**
@@ -50,7 +74,7 @@ new class extends Component
         $businessId = Auth::user()?->current_business_id;
 
         return Transaction::query()
-            ->with(['account', 'destinationAccount', 'party', 'category:id,name'])
+            ->with(['account', 'destinationAccount', 'party', 'category:id,name', 'tags'])
             ->when($businessId === null, fn ($query) => $query->whereRaw('1 = 0'))
             ->when($businessId !== null, fn ($query) => $query->where('business_id', $businessId))
             ->when($this->search !== '', function ($query): void {
@@ -68,6 +92,10 @@ new class extends Component
                 });
             })
             ->when($this->typeFilter !== '', fn ($query) => $query->where('type', $this->typeFilter))
+            ->when(
+                $this->tagFilter !== '' && $businessId !== null,
+                fn ($query) => $query->withAnyTags([$this->tagFilter], Transaction::tagTypeForBusiness($businessId))
+            )
             ->latest('transaction_date')
             ->latest('id')
             ->paginate(config('general.per_page', 15));
@@ -132,7 +160,7 @@ new class extends Component
     @endif
 
     <flux:card>
-        <div class="mb-4 grid gap-3 md:grid-cols-3">
+        <div class="mb-4 grid gap-3 md:grid-cols-4">
             <flux:input
                 wire:model.live.debounce.300ms="search"
                 icon="search"
@@ -149,6 +177,15 @@ new class extends Component
                     </flux:select.option>
                 @endforeach
             </flux:select>
+
+            <flux:select wire:model.live="tagFilter" searchable variant="listbox" placeholder="{{ __('general.all_tags') }}" clearable>
+                <flux:select.option value="">{{ __('general.all_tags') }}</flux:select.option>
+                @foreach ($this->filterTags as $tagName)
+                    <flux:select.option value="{{ $tagName }}" wire:key="filter-tx-tag-{{ $tagName }}">
+                        {{ $tagName }}
+                    </flux:select.option>
+                @endforeach
+            </flux:select>
         </div>
 
         <flux:table :paginate="$this->transactions">
@@ -158,6 +195,7 @@ new class extends Component
                 <flux:table.column>{{ __('general.account') }}</flux:table.column>
                 <flux:table.column>{{ __('general.party') }}</flux:table.column>
                 <flux:table.column>{{ __('general.category') }}</flux:table.column>
+                <flux:table.column>{{ __('general.tags') }}</flux:table.column>
                 <flux:table.column>{{ __('general.amount') }}</flux:table.column>
                 <flux:table.column>{{ __('general.reference_number') }}</flux:table.column>
                 <flux:table.column align="end">{{ __('general.actions') }}</flux:table.column>
@@ -185,6 +223,19 @@ new class extends Component
                         </flux:table.cell>
                         <flux:table.cell>
                             {{ $transaction->category?->name ?? '—' }}
+                        </flux:table.cell>
+                        <flux:table.cell>
+                            @if ($transaction->tags->isEmpty())
+                                —
+                            @else
+                                <div class="flex flex-wrap gap-1">
+                                    @foreach ($transaction->tags as $tag)
+                                        <flux:badge size="sm" color="zinc" wire:key="tx-{{ $transaction->id }}-tag-{{ $tag->id }}">
+                                            {{ $tag->name }}
+                                        </flux:badge>
+                                    @endforeach
+                                </div>
+                            @endif
                         </flux:table.cell>
                         <flux:table.cell>
                             <span dir="ltr">{{ $this->formatAmount((string) $transaction->amount) }} {{ $transaction->currency }}</span>
@@ -218,7 +269,7 @@ new class extends Component
                     </flux:table.row>
                 @empty
                     <flux:table.row>
-                        <flux:table.cell colspan="8">
+                        <flux:table.cell colspan="9">
                             {{ __('general.no_transactions') }}
                         </flux:table.cell>
                     </flux:table.row>
