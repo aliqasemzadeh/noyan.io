@@ -128,16 +128,173 @@ class AccountingAiTransactionTest extends TestCase
         AccountingAssistant::assertPrompted($prompt);
     }
 
+    public function test_tool_creates_batch_of_transactions(): void
+    {
+        [$user, $business, $currency, $account] = $this->actingBusinessOwnerWithBankAccount();
+
+        $result = (string) (new CreateTransaction)->handle(new Request([
+            'transactions' => [
+                [
+                    'type' => 'expense',
+                    'amount' => '1000',
+                    'account_number' => '5199858647',
+                    'note' => 'برداشت ۱',
+                ],
+                [
+                    'type' => 'income',
+                    'amount' => '2000',
+                    'account_number' => '5199858647',
+                    'note' => 'واریز ۱',
+                ],
+            ],
+        ]));
+
+        $this->assertStringContainsString('2', $result);
+        $this->assertDatabaseHas('transactions', [
+            'account_id' => $account->id,
+            'type' => TransactionType::Expense->value,
+            'amount' => '1000',
+        ]);
+        $this->assertDatabaseHas('transactions', [
+            'account_id' => $account->id,
+            'type' => TransactionType::Income->value,
+            'amount' => '2000',
+        ]);
+        $this->assertDatabaseCount('transactions', 2);
+    }
+
+    public function test_tool_batch_continues_when_one_item_fails(): void
+    {
+        [$user, $business, $currency, $account] = $this->actingBusinessOwnerWithBankAccount();
+
+        $result = (string) (new CreateTransaction)->handle(new Request([
+            'transactions' => [
+                [
+                    'type' => 'expense',
+                    'amount' => '1000',
+                    'account_number' => '9999999999',
+                ],
+                [
+                    'type' => 'income',
+                    'amount' => '2500',
+                    'account_number' => '5199858647',
+                ],
+            ],
+        ]));
+
+        $this->assertStringContainsString(__('general.ai_transaction_account_not_found'), $result);
+        $this->assertDatabaseCount('transactions', 1);
+        $this->assertDatabaseHas('transactions', [
+            'account_id' => $account->id,
+            'amount' => '2500',
+        ]);
+    }
+
+    public function test_tool_accepts_matching_expected_balance(): void
+    {
+        [$user, $business, $currency, $account] = $this->actingBusinessOwnerWithBankAccount();
+
+        $expected = bcsub((string) $account->current_balance, '1500000', 0);
+
+        $result = (string) (new CreateTransaction)->handle(new Request([
+            'type' => 'expense',
+            'amount' => '1500000',
+            'account_number' => '5199858647',
+            'expected_balance' => $expected,
+        ]));
+
+        $this->assertSame(__('general.ai_transaction_created', [
+            'type' => TransactionType::Expense->label(),
+            'amount' => '1500000',
+            'account' => $account->name,
+            'date' => LocaleDate::formatDate(now()->toDateString()),
+        ]), $result);
+
+        $this->assertDatabaseCount('transactions', 1);
+    }
+
+    public function test_tool_rejects_mismatched_expected_balance(): void
+    {
+        [$user, $business, $currency, $account] = $this->actingBusinessOwnerWithBankAccount();
+
+        $result = (string) (new CreateTransaction)->handle(new Request([
+            'type' => 'expense',
+            'amount' => '1500000',
+            'account_number' => '5199858647',
+            'expected_balance' => '1',
+        ]));
+
+        $this->assertStringContainsString($account->name, $result);
+        $this->assertStringContainsString($business->name, $result);
+        $this->assertDatabaseCount('transactions', 0);
+    }
+
+    public function test_tool_creates_fee_transaction_when_balance_gap_matches_shetab_fee(): void
+    {
+        [$user, $business, $currency, $account] = $this->actingBusinessOwnerWithBankAccount(
+            currencyCode: 'IRT',
+            currentBalance: '5000000',
+        );
+
+        $amount = '1000000';
+        $fee = '1100';
+        $expected = bcsub(bcsub('5000000', $amount, 0), $fee, 0);
+
+        $result = (string) (new CreateTransaction)->handle(new Request([
+            'type' => 'expense',
+            'amount' => $amount,
+            'account_number' => '5199858647',
+            'expected_balance' => $expected,
+            'note' => 'کارت به کارت',
+        ]));
+
+        $this->assertSame(__('general.ai_transaction_created_with_fee', [
+            'type' => TransactionType::Expense->label(),
+            'amount' => $amount,
+            'fee' => $fee,
+            'account' => $account->name,
+            'date' => LocaleDate::formatDate(now()->toDateString()),
+        ]), $result);
+
+        $this->assertDatabaseCount('transactions', 2);
+        $this->assertDatabaseHas('transactions', [
+            'account_id' => $account->id,
+            'amount' => $amount,
+            'note' => 'کارت به کارت',
+        ]);
+        $this->assertDatabaseHas('transactions', [
+            'account_id' => $account->id,
+            'amount' => $fee,
+            'note' => __('general.ai_transaction_fee_note'),
+        ]);
+        $this->assertSame($expected, (string) $account->fresh()->current_balance);
+    }
+
+    public function test_instructions_include_active_business_and_batch_guidance(): void
+    {
+        [$user, $business] = $this->actingBusinessOwnerWithBankAccount();
+
+        $instructions = (string) (new AccountingAssistant)->instructions();
+
+        $this->assertStringContainsString($business->name, $instructions);
+        $this->assertStringContainsString('transactions', $instructions);
+        $this->assertStringContainsString('expected_balance', $instructions);
+    }
+
     /**
      * @return array{0: User, 1: Business, 2: Currency, 3: Account}
      */
-    protected function actingBusinessOwnerWithBankAccount(): array
-    {
+    protected function actingBusinessOwnerWithBankAccount(
+        string $currencyCode = 'IRR',
+        string $currentBalance = '644031211',
+    ): array {
         $user = User::factory()->create();
-        $business = Business::factory()->for($user, 'owner')->create();
+        $business = Business::factory()->for($user, 'owner')->create([
+            'name' => 'کسب‌وکار تست',
+        ]);
         $user->forceFill(['current_business_id' => $business->id])->save();
         $currency = Currency::factory()->create([
-            'code' => 'IRR',
+            'code' => $currencyCode,
             'decimal_places' => 0,
         ]);
         $business->activateCurrency($currency, '1', true);
@@ -149,8 +306,8 @@ class AccountingAiTransactionTest extends TestCase
             'bank_name' => 'ملت',
             'account_number' => '5199858647',
             'sub_type' => AccountSubType::Bank,
-            'opening_balance' => '644031211',
-            'current_balance' => '644031211',
+            'opening_balance' => $currentBalance,
+            'current_balance' => $currentBalance,
         ]);
 
         $this->actingAs($user);
