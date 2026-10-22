@@ -63,13 +63,13 @@ class CategoryIndexTreeTest extends TestCase
         for ($i = 1; $i <= 16; $i++) {
             $root = Category::factory()->system()->expense()->create([
                 'code' => 'root-'.$i,
-                'name' => 'Root '.$i,
+                'name' => sprintf('RootCat-%02d', $i),
                 'slug' => 'root-'.$i,
                 'sort_order' => $i,
             ]);
             Category::factory()->system()->expense()->childOf($root)->create([
                 'code' => 'child-'.$i,
-                'name' => 'Child '.$i,
+                'name' => sprintf('ChildCat-%02d', $i),
                 'slug' => 'child-'.$i,
                 'sort_order' => 1,
             ]);
@@ -82,14 +82,14 @@ class CategoryIndexTreeTest extends TestCase
 
         $this->assertSame(16, $component->instance()->categories->total());
         $component
-            ->assertSee('Root 1')
-            ->assertDontSee('Root 16')
-            ->assertDontSee('Child 1')
+            ->assertSee('RootCat-01')
+            ->assertDontSee('RootCat-16')
+            ->assertDontSee('ChildCat-01')
             ->call('gotoPage', 2)
-            ->assertSee('Root 16')
-            ->assertDontSee('Root 1')
+            ->assertSee('RootCat-16')
+            ->assertDontSee('RootCat-01')
             ->call('toggleExpand', $roots[15]->id)
-            ->assertSee('Child 16');
+            ->assertSee('ChildCat-16');
     }
 
     public function test_accounting_search_shows_ancestors_of_matching_grandchild(): void
