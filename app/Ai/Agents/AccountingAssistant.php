@@ -32,10 +32,13 @@ class AccountingAssistant implements Agent, HasTools, RemembersConversationsCont
      */
     public function instructions(): Stringable|string
     {
+        $business = $this->activeBusinessBlock();
         $accounts = $this->existingAccountsBlock();
 
         return <<<PROMPT
 تو یک دستیار هوشمند حسابداری هستی. به فارسی و مختصر پاسخ بده.
+
+{$business}
 
 {$accounts}
 
@@ -55,10 +58,12 @@ class AccountingAssistant implements Agent, HasTools, RemembersConversationsCont
 - شماره حساب پیامک در لیست حساب‌های موجود بالاست.
 در این حالت:
 - فوراً create_transaction را صدا بزن (با account_number از پیامک).
+- اگر چند پیامک یا چند تراکنش در یک پیام بود، فقط یک بار create_transaction را با آرایه transactions صدا بزن (نه چند فراخوانی جدا).
+- همیشه «مانده»ی پیامک را در expected_balance بفرست تا با مانده حساب کسب‌وکار فعال چک شود.
+- مبلغ = مبلغ برداشت/واریز (نه مانده). کارمزد کارت‌به‌کارت را خودت حساب نکن؛ ابزار در صورت نیاز جدا ثبت می‌کند.
 - هرگز create_bank_account را صدا نزن.
 - هرگز نام بانک یا نام نمایشی حساب را نپرس.
 - برداشت = expense، واریز = income.
-- مبلغ = مبلغ برداشت/واریز (نه مانده).
 - تاریخ را از پیامک بگیر؛ اگر نبود امروز.
 - اگر شماره حساب در لیست نبود، فقط بپرس کدام حساب موجود است؛ حساب جدید نساز.
 
@@ -88,6 +93,17 @@ PROMPT;
             new CreateTransaction,
             new GetDailyExpenses,
         ];
+    }
+
+    protected function activeBusinessBlock(): string
+    {
+        $business = Auth::user()?->currentBusiness;
+
+        if ($business === null) {
+            return 'کسب‌وکار فعال: هیچ.';
+        }
+
+        return "کسب‌وکار فعال: {$business->name} (فقط روی همین کسب‌وکار تراکنش ثبت کن).";
     }
 
     protected function existingAccountsBlock(): string
