@@ -267,7 +267,7 @@ class AccountingAiTransactionTest extends TestCase
             'amount' => $fee,
             'note' => __('general.ai_transaction_fee_note'),
         ]);
-        $this->assertSame($expected, (string) $account->fresh()->current_balance);
+        $this->assertSame(0, bccomp($expected, (string) $account->fresh()->current_balance, 18));
     }
 
     public function test_instructions_include_active_business_and_batch_guidance(): void
