@@ -95,27 +95,26 @@ class TransactionTagsTest extends TestCase
             'account_id' => $account->id,
             'amount' => '5000',
             'base_amount' => '5000',
-            'note' => 'tagged-ala',
+            'reference_number' => 'TAGGED-ALA',
         ]);
         $tagged->syncTagsWithType(['آلا'], $tagType);
 
-        $other = Transaction::factory()->expense()->create([
+        Transaction::factory()->expense()->create([
             'business_id' => $account->business_id,
             'created_by' => $user->id,
             'account_id' => $account->id,
             'amount' => '7000',
             'base_amount' => '7000',
-            'note' => 'untagged',
+            'reference_number' => 'UNTAGGED-REF',
         ]);
 
         Livewire::actingAs($user)
             ->test('pages::panel.accounting.transaction.index')
+            ->assertSee('TAGGED-ALA')
+            ->assertSee('UNTAGGED-REF')
             ->set('tagFilter', 'آلا')
-            ->assertSee('tagged-ala')
-            ->assertDontSee('untagged');
-
-        $this->assertTrue($tagged->fresh()->tags->isNotEmpty());
-        $this->assertTrue($other->fresh()->tags->isEmpty());
+            ->assertSee('TAGGED-ALA')
+            ->assertDontSee('UNTAGGED-REF');
     }
 
     public function test_tag_names_are_scoped_per_business(): void
