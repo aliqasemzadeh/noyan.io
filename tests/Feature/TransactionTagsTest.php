@@ -33,7 +33,7 @@ class TransactionTagsTest extends TestCase
             ->set('form.category_id', $leaf->id)
             ->set('form.amount', '250000')
             ->set('form.transaction_date', $jalaliToday)
-            ->set('form.tags', ['آلا', 'محمد'])
+            ->set('form.tag_names', ['آلا', 'محمد'])
             ->call('save')
             ->assertHasNoErrors();
 
@@ -71,7 +71,7 @@ class TransactionTagsTest extends TestCase
             ->call('assignData', $transaction)
             ->set('form.amount', '1000')
             ->set('form.transaction_date', LocaleDate::formatInput($transaction->transaction_date))
-            ->set('form.tags', ['محمد'])
+            ->set('form.tag_names', ['محمد'])
             ->call('save')
             ->assertHasNoErrors();
 
