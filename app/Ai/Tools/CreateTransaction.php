@@ -54,7 +54,7 @@ class CreateTransaction implements Tool
             'note' => (string) $request->string('note'),
             'reference_number' => (string) $request->string('reference_number'),
             'expected_balance' => (string) $request->string('expected_balance'),
-        ]);
+        ])['message'];
     }
 
     /**
@@ -140,16 +140,16 @@ class CreateTransaction implements Tool
                 'expected_balance' => (string) ($item['expected_balance'] ?? ''),
             ]);
 
-            if ($this->isCreateSuccessMessage($result)) {
+            if ($result['ok']) {
                 $created++;
                 $lines[] = __('general.ai_transaction_batch_item_ok', [
                     'n' => $index,
-                    'message' => $result,
+                    'message' => $result['message'],
                 ]);
             } else {
                 $lines[] = __('general.ai_transaction_batch_item_failed', [
                     'n' => $index,
-                    'error' => $result,
+                    'error' => $result['message'],
                 ]);
             }
         }
