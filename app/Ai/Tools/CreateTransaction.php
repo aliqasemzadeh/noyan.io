@@ -176,8 +176,9 @@ class CreateTransaction implements Tool
      *     reference_number: string,
      *     expected_balance: string
      * }  $data
+     * @return array{ok: bool, message: string}
      */
-    protected function createOne(User $user, int $businessId, array $data): string
+    protected function createOne(User $user, int $businessId, array $data): array
     {
         $typeValue = strtolower(trim($data['type']));
         $amount = $this->normalizeDigits($data['amount']);
@@ -191,21 +192,21 @@ class CreateTransaction implements Tool
         $type = TransactionType::tryFrom($typeValue);
 
         if ($type === null || ! in_array($type, [TransactionType::Income, TransactionType::Expense], true)) {
-            return __('general.ai_transaction_invalid', [
+            return $this->fail(__('general.ai_transaction_invalid', [
                 'errors' => __('general.transaction_type'),
-            ]);
+            ]));
         }
 
         if ($amount === '' || ! is_numeric($amount) || bccomp($amount, '0', 18) !== 1) {
-            return __('general.ai_transaction_missing_fields', [
+            return $this->fail(__('general.ai_transaction_missing_fields', [
                 'fields' => __('general.amount'),
-            ]);
+            ]));
         }
 
         $account = $this->resolveAccount($businessId, $accountNumber, $accountName);
 
         if ($account === null) {
-            return __('general.ai_transaction_account_not_found');
+            return $this->fail(__('general.ai_transaction_account_not_found'));
         }
 
         $storageDate = $transactionDateInput !== ''
@@ -213,9 +214,9 @@ class CreateTransaction implements Tool
             : now()->toDateString();
 
         if ($storageDate === null) {
-            return __('general.ai_transaction_invalid', [
+            return $this->fail(__('general.ai_transaction_invalid', [
                 'errors' => __('general.transaction_date'),
-            ]);
+            ]));
         }
 
         $currencyCode = $account->currency?->code ?? 'IRR';
@@ -224,9 +225,9 @@ class CreateTransaction implements Tool
 
         if ($expectedBalance !== '') {
             if (! is_numeric($expectedBalance)) {
-                return __('general.ai_transaction_invalid', [
+                return $this->fail(__('general.ai_transaction_invalid', [
                     'errors' => __('general.current_balance'),
-                ]);
+                ]));
             }
 
             $projected = $this->projectBalance($type, $currentBalance, $amount);
@@ -237,13 +238,13 @@ class CreateTransaction implements Tool
                     : null;
 
                 if ($feeAmount === null) {
-                    return $this->balanceMismatchMessage(
+                    return $this->fail($this->balanceMismatchMessage(
                         $user,
                         $account,
                         $currentBalance,
                         $expectedBalance,
                         $projected,
-                    );
+                    ));
                 }
 
                 $projectedWithFee = $this->projectBalance(
@@ -253,13 +254,13 @@ class CreateTransaction implements Tool
                 );
 
                 if (bccomp($projectedWithFee, $expectedBalance, 18) !== 0) {
-                    return $this->balanceMismatchMessage(
+                    return $this->fail($this->balanceMismatchMessage(
                         $user,
                         $account,
                         $currentBalance,
                         $expectedBalance,
                         $projected,
-                    );
+                    ));
                 }
             }
         }
@@ -297,13 +298,13 @@ class CreateTransaction implements Tool
                     return $main;
                 });
 
-                return __('general.ai_transaction_created_with_fee', [
+                return $this->ok(__('general.ai_transaction_created_with_fee', [
                     'type' => $type->label(),
                     'amount' => $amount,
                     'fee' => $feeAmount,
                     'account' => $account->name,
                     'date' => LocaleDate::formatDate($transaction->transaction_date),
-                ]);
+                ]));
             }
 
             $transaction = app(ProcessTransactionAction::class)->handle($user, [
@@ -313,39 +314,33 @@ class CreateTransaction implements Tool
                 'note' => $note !== '' ? $note : null,
             ]);
         } catch (ValidationException $exception) {
-            return __('general.ai_transaction_invalid', [
+            return $this->fail(__('general.ai_transaction_invalid', [
                 'errors' => $exception->validator->errors()->first() ?: __('general.ai_error'),
-            ]);
+            ]));
         }
 
-        return __('general.ai_transaction_created', [
+        return $this->ok(__('general.ai_transaction_created', [
             'type' => $type->label(),
             'amount' => $amount,
             'account' => $account->name,
             'date' => LocaleDate::formatDate($transaction->transaction_date),
-        ]);
+        ]));
     }
 
-    protected function isCreateSuccessMessage(string $result): bool
+    /**
+     * @return array{ok: true, message: string}
+     */
+    protected function ok(string $message): array
     {
-        $created = __('general.ai_transaction_created', [
-            'type' => "\0",
-            'amount' => "\0",
-            'account' => "\0",
-            'date' => "\0",
-        ]);
-        $createdWithFee = __('general.ai_transaction_created_with_fee', [
-            'type' => "\0",
-            'amount' => "\0",
-            'fee' => "\0",
-            'account' => "\0",
-            'date' => "\0",
-        ]);
+        return ['ok' => true, 'message' => $message];
+    }
 
-        $createdStem = explode("\0", $created)[0];
-        $feeStem = explode("\0", $createdWithFee)[0];
-
-        return str_starts_with($result, $createdStem) || str_starts_with($result, $feeStem);
+    /**
+     * @return array{ok: false, message: string}
+     */
+    protected function fail(string $message): array
+    {
+        return ['ok' => false, 'message' => $message];
     }
 
     protected function projectBalance(TransactionType $type, string $currentBalance, string $amount): string
