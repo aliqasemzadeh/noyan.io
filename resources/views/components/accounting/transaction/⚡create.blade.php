@@ -48,8 +48,8 @@ new class extends Component
             ? collect()
             : Transaction::tagNamesForBusiness($businessId);
 
-        return $fromDb
-            ->merge($this->form->tags)
+        return collect($fromDb)
+            ->concat($this->form->tags)
             ->map(fn (mixed $tag): string => trim((string) $tag))
             ->filter()
             ->unique()

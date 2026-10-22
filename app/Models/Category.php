@@ -255,6 +255,140 @@ class Category extends Model
     }
 
     /**
+     * Nest a flat collection into a forest. Categories whose parent is missing from the set become roots.
+     *
+     * @param  SupportCollection<int, Category>  $categories
+     * @return SupportCollection<int, Category>
+     */
+    public static function nestForest(SupportCollection $categories): SupportCollection
+    {
+        $byId = $categories->keyBy('id');
+        /** @var array<int, list<Category>> $byParent */
+        $byParent = [];
+
+        foreach ($categories as $category) {
+            $parentKey = ($category->parent_id !== null && $byId->has($category->parent_id))
+                ? (int) $category->parent_id
+                : 0;
+
+            $byParent[$parentKey][] = $category;
+        }
+
+        $attach = function (Category $node) use (&$attach, $byParent): void {
+            $children = new SupportCollection($byParent[$node->id] ?? []);
+            $node->setRelation('children', $children->values());
+            $node->setAttribute('children_count', $children->count());
+
+            foreach ($children as $child) {
+                $attach($child);
+            }
+        };
+
+        $roots = new SupportCollection($byParent[0] ?? []);
+
+        foreach ($roots as $root) {
+            $attach($root);
+        }
+
+        return $roots->values();
+    }
+
+    /**
+     * Expand match ids to include every ancestor present in the collection.
+     *
+     * @param  SupportCollection<int, Category>  $byId
+     * @param  list<int>  $matchIds
+     * @return list<int>
+     */
+    public static function idsWithAncestors(SupportCollection $byId, array $matchIds): array
+    {
+        $visible = [];
+
+        foreach ($matchIds as $id) {
+            $currentId = (int) $id;
+            $guard = 0;
+
+            while ($currentId > 0 && $byId->has($currentId) && $guard < 50) {
+                $visible[$currentId] = true;
+                $parentId = $byId->get($currentId)->parent_id;
+                $currentId = $parentId !== null ? (int) $parentId : 0;
+                $guard++;
+            }
+        }
+
+        return array_map(intval(...), array_keys($visible));
+    }
+
+    /**
+     * Flatten a forest for table display according to expanded parent ids.
+     *
+     * @param  SupportCollection<int, Category>  $roots
+     * @param  list<int>  $expandedIds
+     * @param  list<int>  $matchedIds
+     * @return list<array{category: Category, depth: int, children_count: int, is_context: bool}>
+     */
+    public static function flattenForestForListing(
+        SupportCollection $roots,
+        array $expandedIds,
+        bool $expandAll = false,
+        array $matchedIds = [],
+    ): array {
+        $expandedLookup = array_fill_keys($expandedIds, true);
+        $matchedLookup = $matchedIds === [] ? null : array_fill_keys($matchedIds, true);
+        $rows = [];
+
+        $walk = function (SupportCollection $nodes, int $depth) use (&$walk, &$rows, $expandedLookup, $expandAll, $matchedLookup): void {
+            foreach ($nodes as $node) {
+                $children = $node->relationLoaded('children')
+                    ? $node->children
+                    : new SupportCollection;
+                $childrenCount = $children->count();
+
+                $rows[] = [
+                    'category' => $node,
+                    'depth' => $depth,
+                    'children_count' => $childrenCount,
+                    'is_context' => $matchedLookup !== null && ! isset($matchedLookup[$node->id]),
+                ];
+
+                if ($childrenCount > 0 && ($expandAll || isset($expandedLookup[$node->id]))) {
+                    $walk($children, $depth + 1);
+                }
+            }
+        };
+
+        $walk($roots, 0);
+
+        return $rows;
+    }
+
+    /**
+     * @param  SupportCollection<int, Category>  $roots
+     * @return list<int>
+     */
+    public static function expandableIdsFromForest(SupportCollection $roots): array
+    {
+        $ids = [];
+
+        $walk = function (SupportCollection $nodes) use (&$walk, &$ids): void {
+            foreach ($nodes as $node) {
+                $children = $node->relationLoaded('children')
+                    ? $node->children
+                    : new SupportCollection;
+
+                if ($children->isNotEmpty()) {
+                    $ids[] = (int) $node->id;
+                    $walk($children);
+                }
+            }
+        };
+
+        $walk($roots);
+
+        return $ids;
+    }
+
+    /**
      * Build select options with per-business leaf detection.
      *
      * @return SupportCollection<int, array{id: int, name: string, path: string, depth: int, is_leaf: bool, is_system: bool}>

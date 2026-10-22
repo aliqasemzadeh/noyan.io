@@ -51,12 +51,15 @@ class Transaction extends Model
      */
     public static function tagNamesForBusiness(int $businessId): Collection
     {
-        return Tag::query()
-            ->withType(self::tagTypeForBusiness($businessId))
-            ->orderBy('order_column')
-            ->orderBy('id')
-            ->get()
-            ->map(fn (Tag $tag): string => (string) $tag->name)
+        return collect(
+            Tag::query()
+                ->withType(self::tagTypeForBusiness($businessId))
+                ->orderBy('order_column')
+                ->orderBy('id')
+                ->get()
+                ->map(fn (Tag $tag): string => (string) $tag->name)
+                ->all()
+        )
             ->filter()
             ->unique()
             ->values();
