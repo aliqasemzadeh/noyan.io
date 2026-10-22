@@ -10,6 +10,7 @@ use App\Models\Category;
 use Flux\Flux;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Js;
 use Livewire\Attributes\Computed;
 use Livewire\Component;
 
@@ -40,36 +41,44 @@ new class extends Component
      * @return Collection<int, string>
      */
     #[Computed]
-    public function availableTags(): Collection
+    public function suggestedTags(): Collection
     {
         $businessId = Auth::user()?->current_business_id;
 
-        $fromDb = $businessId === null
-            ? collect()
-            : Transaction::tagNamesForBusiness($businessId);
+        if ($businessId === null) {
+            return collect();
+        }
 
-        return collect($fromDb)
-            ->concat($this->form->tags)
-            ->map(fn (mixed $tag): string => trim((string) $tag))
-            ->filter()
-            ->unique()
+        return Transaction::tagNamesForBusiness($businessId)
+            ->reject(fn (string $tag): bool => in_array($tag, $this->form->tag_names, true))
             ->values();
     }
 
-    public function createTag(): void
+    public function addTag(?string $name = null): void
     {
-        $name = trim($this->tagSearch);
+        $tag = trim($name ?? $this->tagSearch);
 
-        if ($name === '' || mb_strlen($name) > 50) {
+        if ($tag === '' || mb_strlen($tag) > 50) {
             return;
         }
 
-        if (! in_array($name, $this->form->tags, true)) {
-            $this->form->tags[] = $name;
+        if (! in_array($tag, $this->form->tag_names, true)) {
+            $this->form->tag_names[] = $tag;
         }
 
         $this->tagSearch = '';
-        unset($this->availableTags);
+        unset($this->suggestedTags);
+    }
+
+    public function removeTag(int $index): void
+    {
+        if (! array_key_exists($index, $this->form->tag_names)) {
+            return;
+        }
+
+        unset($this->form->tag_names[$index]);
+        $this->form->tag_names = array_values($this->form->tag_names);
+        unset($this->suggestedTags);
     }
 
     /**
@@ -278,28 +287,58 @@ new class extends Component
 
         <flux:field>
             <flux:label>{{ __('general.tags') }}</flux:label>
-            <flux:pillbox
-                wire:model="form.tags"
-                variant="combobox"
-                multiple
-                placeholder="{{ __('general.select_tags') }}"
-            >
-                <x-slot name="input">
-                    <flux:pillbox.input wire:model="tagSearch" placeholder="{{ __('general.search') }}..." />
-                </x-slot>
 
-                @foreach ($this->availableTags as $tagName)
-                    <flux:pillbox.option :value="$tagName" wire:key="create-tx-tag-{{ $tagName }}">
-                        {{ $tagName }}
-                    </flux:pillbox.option>
-                @endforeach
+            @if ($form->tag_names !== [])
+                <div class="mb-2 flex flex-wrap gap-1">
+                    @foreach ($form->tag_names as $index => $tagName)
+                        <flux:badge size="sm" color="zinc" wire:key="create-selected-tag-{{ $index }}-{{ $tagName }}">
+                            <span class="inline-flex items-center gap-1">
+                                {{ $tagName }}
+                                <button
+                                    type="button"
+                                    class="opacity-70 hover:opacity-100"
+                                    wire:click="removeTag({{ $index }})"
+                                    aria-label="{{ __('general.delete') }}"
+                                >
+                                    ×
+                                </button>
+                            </span>
+                        </flux:badge>
+                    @endforeach
+                </div>
+            @endif
 
-                <flux:pillbox.option.create wire:click="createTag" min-length="1">
-                    {{ __('general.create_tag') }} «<span wire:text="tagSearch"></span>»
-                </flux:pillbox.option.create>
-            </flux:pillbox>
-            <flux:error name="form.tags" />
-            <flux:error name="form.tags.*" />
+            <div class="flex gap-2">
+                <flux:input
+                    wire:model="tagSearch"
+                    wire:keydown.enter.prevent="addTag"
+                    placeholder="{{ __('general.select_tags') }}"
+                    clearable
+                    class="flex-1"
+                />
+                <flux:button type="button" variant="primary" color="zinc" icon="plus" wire:click="addTag">
+                    {{ __('general.create_tag') }}
+                </flux:button>
+            </div>
+
+            @if ($this->suggestedTags->isNotEmpty())
+                <div class="mt-2 flex flex-wrap gap-1">
+                    @foreach ($this->suggestedTags as $tagName)
+                        <flux:button
+                            type="button"
+                            size="xs"
+                            variant="ghost"
+                            wire:key="create-suggest-tag-{{ $tagName }}"
+                            wire:click="addTag({{ Js::from($tagName) }})"
+                        >
+                            {{ $tagName }}
+                        </flux:button>
+                    @endforeach
+                </div>
+            @endif
+
+            <flux:error name="form.tag_names" />
+            <flux:error name="form.tag_names.*" />
         </flux:field>
 
         <flux:button type="submit" variant="primary" color="teal" class="w-full">

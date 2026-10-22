@@ -39,19 +39,32 @@ class CategoryIndexTreeTest extends TestCase
             'sort_order' => 1,
         ]);
 
-        Livewire::actingAs($user)
+        $component = Livewire::actingAs($user)
             ->test('pages::panel.accounting.category.index')
-            ->assertOk()
-            ->assertSee('عملیاتی')
-            ->assertDontSee('حقوق پایه')
-            ->assertSeeHtml('data-depth="0"')
-            ->call('toggleExpand', $root->id)
-            ->assertSee('حقوق')
-            ->assertDontSee('حقوق پایه')
-            ->call('toggleExpand', $child->id)
-            ->assertSeeInOrder(['عملیاتی', 'حقوق', 'حقوق پایه'])
-            ->assertSeeHtml('data-depth="2"')
-            ->assertSeeHtml('data-category-id="'.$grandchild->id.'"');
+            ->assertOk();
+
+        $this->assertSame(
+            [$root->id],
+            array_map(fn (array $row): int => $row['category']->id, $component->instance()->rows),
+        );
+        $this->assertSame(0, $component->instance()->rows[0]['depth']);
+        $this->assertSame(1, $component->instance()->rows[0]['children_count']);
+
+        $component->call('toggleExpand', $root->id);
+
+        $this->assertSame(
+            [$root->id, $child->id],
+            array_map(fn (array $row): int => $row['category']->id, $component->instance()->rows),
+        );
+        $this->assertSame(1, $component->instance()->rows[1]['depth']);
+
+        $component->call('toggleExpand', $child->id);
+
+        $this->assertSame(
+            [$root->id, $child->id, $grandchild->id],
+            array_map(fn (array $row): int => $row['category']->id, $component->instance()->rows),
+        );
+        $this->assertSame(2, $component->instance()->rows[2]['depth']);
     }
 
     public function test_accounting_index_paginates_roots_only(): void
@@ -81,15 +94,22 @@ class CategoryIndexTreeTest extends TestCase
             ->assertOk();
 
         $this->assertSame(16, $component->instance()->categories->total());
-        $component
-            ->assertSee('RootCat-01')
-            ->assertDontSee('RootCat-16')
-            ->assertDontSee('ChildCat-01')
-            ->call('gotoPage', 2)
-            ->assertSee('RootCat-16')
-            ->assertDontSee('RootCat-01')
-            ->call('toggleExpand', $roots[15]->id)
-            ->assertSee('ChildCat-16');
+        $this->assertCount(15, $component->instance()->rows);
+        $this->assertSame($roots[0]->id, $component->instance()->rows[0]['category']->id);
+        $this->assertNotContains(
+            $roots[15]->id,
+            array_map(fn (array $row): int => $row['category']->id, $component->instance()->rows),
+        );
+
+        $component->call('gotoPage', 2);
+
+        $this->assertCount(1, $component->instance()->rows);
+        $this->assertSame($roots[15]->id, $component->instance()->rows[0]['category']->id);
+
+        $component->call('toggleExpand', $roots[15]->id);
+
+        $this->assertCount(2, $component->instance()->rows);
+        $this->assertSame(1, $component->instance()->rows[1]['depth']);
     }
 
     public function test_accounting_search_shows_ancestors_of_matching_grandchild(): void
@@ -106,22 +126,32 @@ class CategoryIndexTreeTest extends TestCase
             'name' => 'حقوق',
             'slug' => 'payroll',
         ]);
-        Category::factory()->system()->expense()->childOf($child)->create([
+        $grandchild = Category::factory()->system()->expense()->childOf($child)->create([
             'code' => 'bonus',
             'name' => 'پاداش ویژه',
             'slug' => 'bonus',
         ]);
-        Category::factory()->system()->expense()->create([
+        $unrelated = Category::factory()->system()->expense()->create([
             'code' => 'unrelated',
             'name' => 'متفرقه',
             'slug' => 'unrelated',
         ]);
 
-        Livewire::actingAs($user)
+        $component = Livewire::actingAs($user)
             ->test('pages::panel.accounting.category.index')
-            ->set('search', 'پاداش')
-            ->assertSeeInOrder(['عملیاتی', 'حقوق', 'پاداش ویژه'])
-            ->assertDontSee('متفرقه');
+            ->set('search', 'پاداش');
+
+        $this->assertSame(
+            [$root->id, $child->id, $grandchild->id],
+            array_map(fn (array $row): int => $row['category']->id, $component->instance()->rows),
+        );
+        $this->assertTrue($component->instance()->rows[0]['is_context']);
+        $this->assertTrue($component->instance()->rows[1]['is_context']);
+        $this->assertFalse($component->instance()->rows[2]['is_context']);
+        $this->assertNotContains(
+            $unrelated->id,
+            array_map(fn (array $row): int => $row['category']->id, $component->instance()->rows),
+        );
     }
 
     public function test_administrator_index_supports_expand_and_search(): void
@@ -139,16 +169,30 @@ class CategoryIndexTreeTest extends TestCase
             'slug' => 'payroll',
         ]);
 
-        Livewire::actingAs($admin)
+        $component = Livewire::actingAs($admin)
             ->test('pages::panel.administrator.category.index')
-            ->assertOk()
-            ->assertSee('عملیاتی')
-            ->assertDontSee('حقوق')
-            ->call('toggleExpand', $root->id)
-            ->assertSee('حقوق')
-            ->set('search', 'حقوق')
-            ->assertSeeInOrder(['عملیاتی', 'حقوق'])
-            ->assertSeeHtml('data-category-id="'.$child->id.'"');
+            ->assertOk();
+
+        $this->assertSame(
+            [$root->id],
+            array_map(fn (array $row): int => $row['category']->id, $component->instance()->rows),
+        );
+
+        $component->call('toggleExpand', $root->id);
+
+        $this->assertSame(
+            [$root->id, $child->id],
+            array_map(fn (array $row): int => $row['category']->id, $component->instance()->rows),
+        );
+
+        $component->set('search', 'حقوق');
+
+        $this->assertSame(
+            [$root->id, $child->id],
+            array_map(fn (array $row): int => $row['category']->id, $component->instance()->rows),
+        );
+        $this->assertTrue($component->instance()->rows[0]['is_context']);
+        $this->assertFalse($component->instance()->rows[1]['is_context']);
     }
 
     public function test_orphan_child_of_other_type_is_promoted_to_root(): void
@@ -160,19 +204,22 @@ class CategoryIndexTreeTest extends TestCase
             'name' => 'درآمد والد',
             'slug' => 'income-root',
         ]);
-        Category::factory()->system()->expense()->create([
+        $orphan = Category::factory()->system()->expense()->create([
             'parent_id' => $incomeParent->id,
             'code' => 'orphan-expense',
             'name' => 'هزینه یتیم',
             'slug' => 'orphan-expense',
         ]);
 
-        Livewire::actingAs($user)
+        $component = Livewire::actingAs($user)
             ->test('pages::panel.accounting.category.index')
-            ->set('type', CategoryType::Expense->value)
-            ->assertSee('هزینه یتیم')
-            ->assertSeeHtml('data-depth="0"')
-            ->assertDontSee('درآمد والد');
+            ->set('type', CategoryType::Expense->value);
+
+        $this->assertSame(
+            [$orphan->id],
+            array_map(fn (array $row): int => $row['category']->id, $component->instance()->rows),
+        );
+        $this->assertSame(0, $component->instance()->rows[0]['depth']);
     }
 
     /**
