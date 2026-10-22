@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Ai\Agents\AccountingAssistant;
 use App\Ai\Tools\CreateBankAccount;
 use App\Ai\Tools\CreateTransaction;
+use App\Ai\Tools\GetDailyExpenses;
 use App\Enums\AccountSubType;
 use App\Enums\AccountType;
 use App\Models\Accounting\Account;
@@ -260,9 +261,10 @@ class AccountingAiBankAccountTest extends TestCase
 
         $tools = [...$assistant->tools()];
 
-        $this->assertCount(2, $tools);
+        $this->assertCount(3, $tools);
         $this->assertInstanceOf(CreateBankAccount::class, $tools[0]);
         $this->assertInstanceOf(CreateTransaction::class, $tools[1]);
+        $this->assertInstanceOf(GetDailyExpenses::class, $tools[2]);
         $this->assertTrue(RememberConversation::appliesTo($assistant));
     }
 
