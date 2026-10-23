@@ -74,7 +74,7 @@ new class extends Component
         $businessId = Auth::user()?->current_business_id;
 
         return Transaction::query()
-            ->with(['account', 'destinationAccount', 'party', 'category:id,name', 'tags'])
+            ->with(['account', 'destinationAccount', 'party', 'category:id,name'])
             ->when($businessId === null, fn ($query) => $query->whereRaw('1 = 0'))
             ->when($businessId !== null, fn ($query) => $query->where('business_id', $businessId))
             ->when($this->search !== '', function ($query): void {
@@ -195,9 +195,7 @@ new class extends Component
                 <flux:table.column>{{ __('general.account') }}</flux:table.column>
                 <flux:table.column>{{ __('general.party') }}</flux:table.column>
                 <flux:table.column>{{ __('general.category') }}</flux:table.column>
-                <flux:table.column>{{ __('general.tags') }}</flux:table.column>
                 <flux:table.column>{{ __('general.amount') }}</flux:table.column>
-                <flux:table.column>{{ __('general.reference_number') }}</flux:table.column>
                 <flux:table.column align="end">{{ __('general.actions') }}</flux:table.column>
             </flux:table.columns>
 
@@ -225,27 +223,7 @@ new class extends Component
                             {{ $transaction->category?->name ?? '—' }}
                         </flux:table.cell>
                         <flux:table.cell>
-                            @if ($transaction->tags->isEmpty())
-                                —
-                            @else
-                                <div class="flex flex-wrap gap-1">
-                                    @foreach ($transaction->tags as $tag)
-                                        <flux:badge size="sm" color="zinc" wire:key="tx-{{ $transaction->id }}-tag-{{ $tag->id }}">
-                                            {{ $tag->name }}
-                                        </flux:badge>
-                                    @endforeach
-                                </div>
-                            @endif
-                        </flux:table.cell>
-                        <flux:table.cell>
                             <span dir="ltr">{{ $this->formatAmount((string) $transaction->amount) }} {{ $transaction->currency }}</span>
-                        </flux:table.cell>
-                        <flux:table.cell>
-                            @if ($transaction->reference_number)
-                                {{ $transaction->reference_number }}
-                            @else
-                                <flux:badge size="sm" color="green">{{ __('general.successful') }}</flux:badge>
-                            @endif
                         </flux:table.cell>
                         <flux:table.cell align="end">
                             <div class="flex justify-end gap-2">
@@ -273,7 +251,7 @@ new class extends Component
                     </flux:table.row>
                 @empty
                     <flux:table.row>
-                        <flux:table.cell colspan="9">
+                        <flux:table.cell colspan="7">
                             {{ __('general.no_transactions') }}
                         </flux:table.cell>
                     </flux:table.row>

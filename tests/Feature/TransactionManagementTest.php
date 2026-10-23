@@ -94,23 +94,6 @@ class TransactionManagementTest extends TestCase
         $this->assertSame([$older->id, $newer->id], $ids);
     }
 
-    public function test_transactions_index_shows_successful_when_reference_number_missing(): void
-    {
-        [$user, $account] = $this->prepareContext();
-
-        Transaction::factory()->create([
-            'business_id' => $account->business_id,
-            'created_by' => $user->id,
-            'account_id' => $account->id,
-            'currency' => $account->currency?->code ?? 'IRR',
-            'reference_number' => null,
-        ]);
-
-        Livewire::actingAs($user)
-            ->test('pages::panel.accounting.transaction.index')
-            ->assertSee(__('general.successful'));
-    }
-
     /**
      * @return array{0: User, 1: Account, 2: Category}
      */

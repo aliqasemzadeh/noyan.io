@@ -95,7 +95,6 @@ class TransactionTagsTest extends TestCase
             'account_id' => $account->id,
             'amount' => '5000',
             'base_amount' => '5000',
-            'reference_number' => 'TAGGED-ALA',
         ]);
         $tagged->syncTagsWithType(['آلا'], $tagType);
 
@@ -105,16 +104,15 @@ class TransactionTagsTest extends TestCase
             'account_id' => $account->id,
             'amount' => '7000',
             'base_amount' => '7000',
-            'reference_number' => 'UNTAGGED-REF',
         ]);
 
         Livewire::actingAs($user)
             ->test('pages::panel.accounting.transaction.index')
-            ->assertSee('TAGGED-ALA')
-            ->assertSee('UNTAGGED-REF')
+            ->assertSee('5,000')
+            ->assertSee('7,000')
             ->set('tagFilter', 'آلا')
-            ->assertSee('TAGGED-ALA')
-            ->assertDontSee('UNTAGGED-REF');
+            ->assertSee('5,000')
+            ->assertDontSee('7,000');
     }
 
     public function test_tag_names_are_scoped_per_business(): void
