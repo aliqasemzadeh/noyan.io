@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\Accounting\TransactionType;
+use App\Models\Accounting\Account;
 use App\Models\Accounting\Transaction;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
@@ -24,9 +25,19 @@ new class extends Component
     #[Url]
     public string $tagFilter = '';
 
+    #[Url]
+    public string $accountFilter = '';
+
+    #[Url]
+    public string $sortDirection = 'desc';
+
     public function mount(): void
     {
         Auth::user()?->ensureCurrentBusiness();
+
+        if (! in_array($this->sortDirection, ['asc', 'desc'], true)) {
+            $this->sortDirection = 'desc';
+        }
     }
 
     public function updatedSearch(): void
@@ -44,10 +55,24 @@ new class extends Component
         $this->resetPage();
     }
 
+    public function updatedAccountFilter(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatedSortDirection(): void
+    {
+        if (! in_array($this->sortDirection, ['asc', 'desc'], true)) {
+            $this->sortDirection = 'desc';
+        }
+
+        $this->resetPage();
+    }
+
     #[On('panels.accounting.transaction.index.table')]
     public function refreshTable(): void
     {
-        unset($this->transactions, $this->filterTags);
+        unset($this->transactions, $this->filterTags, $this->filterAccounts);
     }
 
     /**
@@ -66,12 +91,28 @@ new class extends Component
     }
 
     /**
+     * @return Collection<int, Account>
+     */
+    #[Computed]
+    public function filterAccounts(): Collection
+    {
+        $businessId = Auth::user()?->current_business_id;
+
+        if ($businessId === null) {
+            return collect();
+        }
+
+        return Account::cachedOptionsForBusiness($businessId);
+    }
+
+    /**
      * @return LengthAwarePaginator<int, Transaction>
      */
     #[Computed]
     public function transactions(): LengthAwarePaginator
     {
         $businessId = Auth::user()?->current_business_id;
+        $direction = $this->sortDirection === 'asc' ? 'asc' : 'desc';
 
         return Transaction::query()
             ->with(['account', 'destinationAccount', 'party', 'category:id,name'])
@@ -96,8 +137,16 @@ new class extends Component
                 $this->tagFilter !== '' && $businessId !== null,
                 fn ($query) => $query->withAnyTags([$this->tagFilter], Transaction::tagTypeForBusiness($businessId))
             )
-            ->orderByDesc('transaction_date')
-            ->orderByDesc('id')
+            ->when($this->accountFilter !== '', function ($query): void {
+                $accountId = (int) $this->accountFilter;
+
+                $query->where(function ($query) use ($accountId): void {
+                    $query->where('account_id', $accountId)
+                        ->orWhere('destination_account_id', $accountId);
+                });
+            })
+            ->orderBy('transaction_date', $direction)
+            ->orderBy('created_at', $direction)
             ->paginate(config('general.per_page', 15));
     }
 
@@ -160,7 +209,7 @@ new class extends Component
     @endif
 
     <flux:card>
-        <div class="mb-4 grid gap-3 md:grid-cols-4">
+        <div class="mb-4 grid gap-3 md:grid-cols-6">
             <flux:input
                 wire:model.live.debounce.300ms="search"
                 icon="search"
@@ -178,6 +227,15 @@ new class extends Component
                 @endforeach
             </flux:select>
 
+            <flux:select wire:model.live="accountFilter" searchable variant="listbox" placeholder="{{ __('general.all_accounts') }}" clearable>
+                <flux:select.option value="">{{ __('general.all_accounts') }}</flux:select.option>
+                @foreach ($this->filterAccounts as $account)
+                    <flux:select.option value="{{ $account->id }}" wire:key="filter-tx-account-{{ $account->id }}">
+                        {{ $account->name }}
+                    </flux:select.option>
+                @endforeach
+            </flux:select>
+
             <flux:select wire:model.live="tagFilter" searchable variant="listbox" placeholder="{{ __('general.all_tags') }}" clearable>
                 <flux:select.option value="">{{ __('general.all_tags') }}</flux:select.option>
                 @foreach ($this->filterTags as $tagName)
@@ -185,6 +243,11 @@ new class extends Component
                         {{ $tagName }}
                     </flux:select.option>
                 @endforeach
+            </flux:select>
+
+            <flux:select wire:model.live="sortDirection" variant="listbox" placeholder="{{ __('general.sort_newest_first') }}">
+                <flux:select.option value="desc">{{ __('general.sort_newest_first') }}</flux:select.option>
+                <flux:select.option value="asc">{{ __('general.sort_oldest_first') }}</flux:select.option>
             </flux:select>
         </div>
 

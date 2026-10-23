@@ -92,6 +92,99 @@ class TransactionManagementTest extends TestCase
         $ids = $component->get('transactions')->pluck('id')->all();
 
         $this->assertSame([$newer->id, $older->id], $ids);
+
+        $component->set('sortDirection', 'asc');
+
+        $this->assertSame(
+            [$older->id, $newer->id],
+            $component->get('transactions')->pluck('id')->all()
+        );
+    }
+
+    public function test_transactions_index_ties_break_on_created_at(): void
+    {
+        [$user, $account] = $this->prepareContext();
+
+        $earlier = Transaction::factory()->create([
+            'business_id' => $account->business_id,
+            'created_by' => $user->id,
+            'account_id' => $account->id,
+            'currency' => $account->currency?->code ?? 'IRR',
+            'transaction_date' => '2026-10-05',
+            'amount' => '100',
+            'base_amount' => '100',
+            'created_at' => '2026-10-05 08:00:00',
+            'updated_at' => '2026-10-05 08:00:00',
+        ]);
+
+        $later = Transaction::factory()->create([
+            'business_id' => $account->business_id,
+            'created_by' => $user->id,
+            'account_id' => $account->id,
+            'currency' => $account->currency?->code ?? 'IRR',
+            'transaction_date' => '2026-10-05',
+            'amount' => '200',
+            'base_amount' => '200',
+            'created_at' => '2026-10-05 12:00:00',
+            'updated_at' => '2026-10-05 12:00:00',
+        ]);
+
+        $component = Livewire::actingAs($user)
+            ->test('pages::panel.accounting.transaction.index');
+
+        $this->assertSame(
+            [$later->id, $earlier->id],
+            $component->get('transactions')->pluck('id')->all()
+        );
+    }
+
+    public function test_transactions_index_filters_by_account_including_destination(): void
+    {
+        [$user, $account] = $this->prepareContext();
+
+        $otherAccount = Account::factory()->create([
+            'business_id' => $account->business_id,
+            'currency_id' => $account->currency_id,
+            'current_balance' => '5000',
+            'is_active' => true,
+        ]);
+
+        $onAccount = Transaction::factory()->create([
+            'business_id' => $account->business_id,
+            'created_by' => $user->id,
+            'account_id' => $account->id,
+            'currency' => $account->currency?->code ?? 'IRR',
+            'amount' => '100',
+            'base_amount' => '100',
+        ]);
+
+        $transferIntoAccount = Transaction::factory()->transfer()->create([
+            'business_id' => $account->business_id,
+            'created_by' => $user->id,
+            'account_id' => $otherAccount->id,
+            'destination_account_id' => $account->id,
+            'currency' => $account->currency?->code ?? 'IRR',
+            'amount' => '200',
+            'base_amount' => '200',
+        ]);
+
+        Transaction::factory()->create([
+            'business_id' => $account->business_id,
+            'created_by' => $user->id,
+            'account_id' => $otherAccount->id,
+            'currency' => $account->currency?->code ?? 'IRR',
+            'amount' => '300',
+            'base_amount' => '300',
+        ]);
+
+        $ids = Livewire::actingAs($user)
+            ->test('pages::panel.accounting.transaction.index')
+            ->set('accountFilter', (string) $account->id)
+            ->get('transactions')
+            ->pluck('id')
+            ->all();
+
+        $this->assertEqualsCanonicalizing([$onAccount->id, $transferIntoAccount->id], $ids);
     }
 
     /**
