@@ -377,6 +377,12 @@ new class extends Component
                                     >
                                         {{ __('general.edit') }}
                                     </flux:menu.item>
+                                    <flux:menu.item
+                                        icon="refresh-cw"
+                                        wire:click="$dispatch('panels.accounting.account.rebalance.assign-data', { account: {{ $account->id }} })"
+                                    >
+                                        {{ __('general.rebalance_account') }}
+                                    </flux:menu.item>
                                     <flux:menu.separator />
                                     <flux:menu.item
                                         variant="danger"
@@ -402,5 +408,6 @@ new class extends Component
 
     <livewire:accounting.account.create :key="'account-create'" />
     <livewire:accounting.account.edit :key="'account-edit'" />
+    <livewire:accounting.account.rebalance :key="'account-rebalance'" />
     <livewire:accounting.account.delete :key="'account-delete'" />
 </div>

@@ -2,12 +2,16 @@
 
 namespace Tests\Feature;
 
+use App\Actions\Accounts\RebalanceAccountAction;
+use App\Enums\Accounting\TransactionType;
 use App\Enums\AccountSubType;
 use App\Enums\AccountType;
 use App\Models\Accounting\Account;
+use App\Models\Accounting\Transaction;
 use App\Models\Business;
 use App\Models\Currency;
 use App\Models\User;
+use App\Support\AccountValidationRules;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Livewire\Livewire;
@@ -320,5 +324,135 @@ class AccountManagementTest extends TestCase
             ->assertSee('2,500')
             ->assertSee('3,500')
             ->assertSee('6,000');
+    }
+
+    public function test_rebalance_recalculates_current_balance_from_transactions(): void
+    {
+        $user = User::factory()->create();
+        $business = Business::factory()->for($user, 'owner')->create();
+        $user->forceFill(['current_business_id' => $business->id])->save();
+        $currency = Currency::factory()->create([
+            'code' => 'IRR',
+            'decimal_places' => 0,
+        ]);
+        $business->activateCurrency($currency, '1');
+
+        $account = Account::factory()->create([
+            'business_id' => $business->id,
+            'currency_id' => $currency->id,
+            'name' => 'Cash Desk',
+            'opening_balance' => '1000',
+            'current_balance' => '9999',
+        ]);
+
+        $otherAccount = Account::factory()->create([
+            'business_id' => $business->id,
+            'currency_id' => $currency->id,
+            'name' => 'Bank',
+            'opening_balance' => '0',
+            'current_balance' => '0',
+        ]);
+
+        Transaction::factory()->create([
+            'business_id' => $business->id,
+            'created_by' => $user->id,
+            'account_id' => $account->id,
+            'type' => TransactionType::Income,
+            'amount' => '500',
+            'base_amount' => '500',
+            'currency' => 'IRR',
+        ]);
+
+        Transaction::factory()->expense()->create([
+            'business_id' => $business->id,
+            'created_by' => $user->id,
+            'account_id' => $account->id,
+            'amount' => '200',
+            'base_amount' => '200',
+            'currency' => 'IRR',
+        ]);
+
+        Transaction::factory()->transfer()->create([
+            'business_id' => $business->id,
+            'created_by' => $user->id,
+            'account_id' => $account->id,
+            'destination_account_id' => $otherAccount->id,
+            'amount' => '100',
+            'base_amount' => '100',
+            'currency' => 'IRR',
+        ]);
+
+        Transaction::factory()->transfer()->create([
+            'business_id' => $business->id,
+            'created_by' => $user->id,
+            'account_id' => $otherAccount->id,
+            'destination_account_id' => $account->id,
+            'amount' => '50',
+            'base_amount' => '50',
+            'currency' => 'IRR',
+        ]);
+
+        $deleted = Transaction::factory()->create([
+            'business_id' => $business->id,
+            'created_by' => $user->id,
+            'account_id' => $account->id,
+            'type' => TransactionType::Income,
+            'amount' => '999',
+            'base_amount' => '999',
+            'currency' => 'IRR',
+        ]);
+        $deleted->delete();
+
+        Livewire::actingAs($user)
+            ->test('accounting.account.rebalance')
+            ->call('assignData', $account)
+            ->call('rebalance')
+            ->assertHasNoErrors()
+            ->assertDispatched('panels.accounting.account.index.table')
+            ->assertDispatched('panels.accounting.account.view.refresh');
+
+        $this->assertSame(
+            '1250',
+            AccountValidationRules::normalizeBalance((string) $account->fresh()->current_balance)
+        );
+    }
+
+    public function test_rebalance_action_computes_balance_from_opening_only_when_no_transactions(): void
+    {
+        $account = Account::factory()->create([
+            'opening_balance' => '250.50',
+            'current_balance' => '0',
+        ]);
+
+        $rebalanced = app(RebalanceAccountAction::class)->handle($account);
+
+        $this->assertSame(
+            '250.5',
+            AccountValidationRules::normalizeBalance((string) $rebalanced->current_balance)
+        );
+    }
+
+    public function test_user_cannot_rebalance_account_from_another_business(): void
+    {
+        $user = User::factory()->create();
+        $business = Business::factory()->for($user, 'owner')->create();
+        $otherBusiness = Business::factory()->create();
+        $user->forceFill(['current_business_id' => $business->id])->save();
+
+        $foreignAccount = Account::factory()->create([
+            'business_id' => $otherBusiness->id,
+            'opening_balance' => '100',
+            'current_balance' => '50',
+        ]);
+
+        Livewire::actingAs($user)
+            ->test('accounting.account.rebalance')
+            ->call('assignData', $foreignAccount)
+            ->assertForbidden();
+
+        $this->assertSame(
+            '50',
+            AccountValidationRules::normalizeBalance((string) $foreignAccount->fresh()->current_balance)
+        );
     }
 }

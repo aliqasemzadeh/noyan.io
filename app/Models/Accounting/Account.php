@@ -2,10 +2,12 @@
 
 namespace App\Models\Accounting;
 
+use App\Enums\Accounting\TransactionType;
 use App\Enums\AccountSubType;
 use App\Enums\AccountType;
 use App\Models\Business;
 use App\Models\Currency;
+use App\Support\AccountValidationRules;
 use Database\Factories\AccountFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -91,6 +93,51 @@ class Account extends Model
         return $this->iban
             ?: $this->account_number
             ?: $this->card_number;
+    }
+
+    /**
+     * Recompute current balance from opening balance + ledger transactions.
+     */
+    public function balanceFromTransactions(): string
+    {
+        $accountId = (int) $this->id;
+
+        $totals = Transaction::query()
+            ->where(function ($query) use ($accountId): void {
+                $query->where('account_id', $accountId)
+                    ->orWhere('destination_account_id', $accountId);
+            })
+            ->toBase()
+            ->selectRaw(
+                'COALESCE(SUM(CASE WHEN type = ? AND account_id = ? THEN amount ELSE 0 END), 0) as income_total,
+                COALESCE(SUM(CASE WHEN type = ? AND account_id = ? THEN amount ELSE 0 END), 0) as expense_total,
+                COALESCE(SUM(CASE WHEN type = ? AND account_id = ? THEN amount ELSE 0 END), 0) as transfer_out_total,
+                COALESCE(SUM(CASE WHEN type = ? AND destination_account_id = ? THEN amount ELSE 0 END), 0) as transfer_in_total',
+                [
+                    TransactionType::Income->value,
+                    $accountId,
+                    TransactionType::Expense->value,
+                    $accountId,
+                    TransactionType::Transfer->value,
+                    $accountId,
+                    TransactionType::Transfer->value,
+                    $accountId,
+                ]
+            )
+            ->first();
+
+        $opening = (string) $this->opening_balance;
+        $income = (string) ($totals->income_total ?? '0');
+        $expense = (string) ($totals->expense_total ?? '0');
+        $transferOut = (string) ($totals->transfer_out_total ?? '0');
+        $transferIn = (string) ($totals->transfer_in_total ?? '0');
+
+        $balance = bcadd($opening, $income, 18);
+        $balance = bcsub($balance, $expense, 18);
+        $balance = bcsub($balance, $transferOut, 18);
+        $balance = bcadd($balance, $transferIn, 18);
+
+        return AccountValidationRules::normalizeBalance($balance);
     }
 
     /**
