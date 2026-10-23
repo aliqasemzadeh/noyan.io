@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Enums\Accounting\TransactionType;
 use App\Models\Accounting\Account;
+use App\Models\Accounting\Transaction;
 use App\Models\Business;
 use App\Models\Category;
 use App\Models\Currency;
@@ -57,6 +58,57 @@ class TransactionManagementTest extends TestCase
         $this->actingAs($user)
             ->get(route('accounting.transactions.index'))
             ->assertOk();
+    }
+
+    public function test_transactions_index_is_ordered_by_date_ascending(): void
+    {
+        [$user, $account] = $this->prepareContext();
+
+        $newer = Transaction::factory()->create([
+            'business_id' => $account->business_id,
+            'created_by' => $user->id,
+            'account_id' => $account->id,
+            'currency' => $account->currency?->code ?? 'IRR',
+            'transaction_date' => '2026-10-10',
+            'amount' => '200',
+            'base_amount' => '200',
+            'reference_number' => 'NEWER',
+        ]);
+
+        $older = Transaction::factory()->create([
+            'business_id' => $account->business_id,
+            'created_by' => $user->id,
+            'account_id' => $account->id,
+            'currency' => $account->currency?->code ?? 'IRR',
+            'transaction_date' => '2026-10-01',
+            'amount' => '100',
+            'base_amount' => '100',
+            'reference_number' => 'OLDER',
+        ]);
+
+        $component = Livewire::actingAs($user)
+            ->test('pages::panel.accounting.transaction.index');
+
+        $ids = $component->get('transactions')->pluck('id')->all();
+
+        $this->assertSame([$older->id, $newer->id], $ids);
+    }
+
+    public function test_transactions_index_shows_successful_when_reference_number_missing(): void
+    {
+        [$user, $account] = $this->prepareContext();
+
+        Transaction::factory()->create([
+            'business_id' => $account->business_id,
+            'created_by' => $user->id,
+            'account_id' => $account->id,
+            'currency' => $account->currency?->code ?? 'IRR',
+            'reference_number' => null,
+        ]);
+
+        Livewire::actingAs($user)
+            ->test('pages::panel.accounting.transaction.index')
+            ->assertSee(__('general.successful'));
     }
 
     /**

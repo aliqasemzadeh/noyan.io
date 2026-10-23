@@ -96,8 +96,8 @@ new class extends Component
                 $this->tagFilter !== '' && $businessId !== null,
                 fn ($query) => $query->withAnyTags([$this->tagFilter], Transaction::tagTypeForBusiness($businessId))
             )
-            ->latest('transaction_date')
-            ->latest('id')
+            ->orderBy('transaction_date')
+            ->orderBy('id')
             ->paginate(config('general.per_page', 15));
     }
 
@@ -241,7 +241,11 @@ new class extends Component
                             <span dir="ltr">{{ $this->formatAmount((string) $transaction->amount) }} {{ $transaction->currency }}</span>
                         </flux:table.cell>
                         <flux:table.cell>
-                            {{ $transaction->reference_number ?: '—' }}
+                            @if ($transaction->reference_number)
+                                {{ $transaction->reference_number }}
+                            @else
+                                <flux:badge size="sm" color="green">{{ __('general.successful') }}</flux:badge>
+                            @endif
                         </flux:table.cell>
                         <flux:table.cell align="end">
                             <div class="flex justify-end gap-2">
