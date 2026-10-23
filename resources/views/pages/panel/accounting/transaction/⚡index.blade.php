@@ -96,8 +96,8 @@ new class extends Component
                 $this->tagFilter !== '' && $businessId !== null,
                 fn ($query) => $query->withAnyTags([$this->tagFilter], Transaction::tagTypeForBusiness($businessId))
             )
-            ->orderBy('transaction_date')
-            ->orderBy('id')
+            ->orderByDesc('transaction_date')
+            ->orderByDesc('id')
             ->paginate(config('general.per_page', 15));
     }
 

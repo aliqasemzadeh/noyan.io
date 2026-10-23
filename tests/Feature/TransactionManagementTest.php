@@ -60,7 +60,7 @@ class TransactionManagementTest extends TestCase
             ->assertOk();
     }
 
-    public function test_transactions_index_is_ordered_by_date_ascending(): void
+    public function test_transactions_index_is_ordered_by_date_descending(): void
     {
         [$user, $account] = $this->prepareContext();
 
@@ -91,7 +91,7 @@ class TransactionManagementTest extends TestCase
 
         $ids = $component->get('transactions')->pluck('id')->all();
 
-        $this->assertSame([$older->id, $newer->id], $ids);
+        $this->assertSame([$newer->id, $older->id], $ids);
     }
 
     /**
