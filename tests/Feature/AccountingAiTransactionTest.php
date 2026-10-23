@@ -25,6 +25,7 @@ class AccountingAiTransactionTest extends TestCase
         [$user, $business, $currency, $account] = $this->actingBusinessOwnerWithBankAccount();
 
         $result = (string) (new CreateTransaction)->handle(new Request([
+            'confirmed' => true,
             'type' => 'expense',
             'amount' => '1,500,000',
             'account_number' => '5199858647',
@@ -56,6 +57,7 @@ class AccountingAiTransactionTest extends TestCase
         [$user, $business, $currency, $account] = $this->actingBusinessOwnerWithBankAccount();
 
         (new CreateTransaction)->handle(new Request([
+            'confirmed' => true,
             'type' => 'income',
             'amount' => '۲,۵۰۰,۰۰۰',
             'account_number' => '۵۱۹۹۸۵۸۶۴۷',
@@ -76,6 +78,7 @@ class AccountingAiTransactionTest extends TestCase
         $accountCountBefore = Account::query()->count();
 
         $result = (string) (new CreateTransaction)->handle(new Request([
+            'confirmed' => true,
             'type' => 'expense',
             'amount' => '1000',
             'account_number' => '9999999999',
@@ -92,6 +95,7 @@ class AccountingAiTransactionTest extends TestCase
         [$user, $business, $currency, $account] = $this->actingBusinessOwnerWithBankAccount();
 
         $result = (string) (new CreateTransaction)->handle(new Request([
+            'confirmed' => true,
             'type' => 'expense',
             'amount' => '500',
             'account_name' => $account->name,
@@ -133,6 +137,7 @@ class AccountingAiTransactionTest extends TestCase
         [$user, $business, $currency, $account] = $this->actingBusinessOwnerWithBankAccount();
 
         $result = (string) (new CreateTransaction)->handle(new Request([
+            'confirmed' => true,
             'transactions' => [
                 [
                     'type' => 'expense',
@@ -168,6 +173,7 @@ class AccountingAiTransactionTest extends TestCase
         [$user, $business, $currency, $account] = $this->actingBusinessOwnerWithBankAccount();
 
         $result = (string) (new CreateTransaction)->handle(new Request([
+            'confirmed' => true,
             'transactions' => [
                 [
                     'type' => 'expense',
@@ -190,6 +196,60 @@ class AccountingAiTransactionTest extends TestCase
         ]);
     }
 
+    public function test_tool_previews_without_creating_when_not_confirmed(): void
+    {
+        [$user, $business, $currency, $account] = $this->actingBusinessOwnerWithBankAccount();
+
+        $expected = bcsub((string) $account->current_balance, '1500000', 0);
+
+        $result = (string) (new CreateTransaction)->handle(new Request([
+            'confirmed' => false,
+            'type' => 'expense',
+            'amount' => '1500000',
+            'account_number' => '5199858647',
+            'expected_balance' => $expected,
+        ]));
+
+        $this->assertStringContainsString(__('general.ai_transaction_preview_ask_confirm'), $result);
+        $this->assertStringContainsString($account->name, $result);
+        $this->assertDatabaseCount('transactions', 0);
+        $this->assertSame(
+            (string) $account->current_balance,
+            (string) $account->fresh()->current_balance,
+        );
+    }
+
+    public function test_tool_defaults_to_preview_when_confirmed_omitted(): void
+    {
+        [$user, $business, $currency, $account] = $this->actingBusinessOwnerWithBankAccount();
+
+        $result = (string) (new CreateTransaction)->handle(new Request([
+            'type' => 'expense',
+            'amount' => '1500000',
+            'account_number' => '5199858647',
+        ]));
+
+        $this->assertStringContainsString(__('general.ai_transaction_preview_ask_confirm'), $result);
+        $this->assertDatabaseCount('transactions', 0);
+    }
+
+    public function test_tool_preview_rejects_mismatched_expected_balance_without_writing(): void
+    {
+        [$user, $business, $currency, $account] = $this->actingBusinessOwnerWithBankAccount();
+
+        $result = (string) (new CreateTransaction)->handle(new Request([
+            'confirmed' => false,
+            'type' => 'expense',
+            'amount' => '1500000',
+            'account_number' => '5199858647',
+            'expected_balance' => '1',
+        ]));
+
+        $this->assertStringContainsString($account->name, $result);
+        $this->assertStringContainsString($business->name, $result);
+        $this->assertDatabaseCount('transactions', 0);
+    }
+
     public function test_tool_accepts_matching_expected_balance(): void
     {
         [$user, $business, $currency, $account] = $this->actingBusinessOwnerWithBankAccount();
@@ -197,6 +257,7 @@ class AccountingAiTransactionTest extends TestCase
         $expected = bcsub((string) $account->current_balance, '1500000', 0);
 
         $result = (string) (new CreateTransaction)->handle(new Request([
+            'confirmed' => true,
             'type' => 'expense',
             'amount' => '1500000',
             'account_number' => '5199858647',
@@ -218,6 +279,7 @@ class AccountingAiTransactionTest extends TestCase
         [$user, $business, $currency, $account] = $this->actingBusinessOwnerWithBankAccount();
 
         $result = (string) (new CreateTransaction)->handle(new Request([
+            'confirmed' => true,
             'type' => 'expense',
             'amount' => '1500000',
             'account_number' => '5199858647',
@@ -241,6 +303,7 @@ class AccountingAiTransactionTest extends TestCase
         $expected = bcsub(bcsub('5000000', $amount, 0), $fee, 0);
 
         $result = (string) (new CreateTransaction)->handle(new Request([
+            'confirmed' => true,
             'type' => 'expense',
             'amount' => $amount,
             'account_number' => '5199858647',
@@ -270,6 +333,75 @@ class AccountingAiTransactionTest extends TestCase
         $this->assertSame(0, bccomp($expected, (string) $account->fresh()->current_balance, 18));
     }
 
+    public function test_tool_batch_preview_uses_running_balance_for_expected_checks(): void
+    {
+        [$user, $business, $currency, $account] = $this->actingBusinessOwnerWithBankAccount(
+            currentBalance: '10000000',
+        );
+
+        $firstAmount = '1500000';
+        $secondAmount = '2000000';
+        $afterFirst = bcsub('10000000', $firstAmount, 0);
+        $afterSecond = bcsub($afterFirst, $secondAmount, 0);
+
+        $result = (string) (new CreateTransaction)->handle(new Request([
+            'confirmed' => false,
+            'transactions' => [
+                [
+                    'type' => 'expense',
+                    'amount' => $firstAmount,
+                    'account_number' => '5199858647',
+                    'expected_balance' => $afterFirst,
+                ],
+                [
+                    'type' => 'expense',
+                    'amount' => $secondAmount,
+                    'account_number' => '5199858647',
+                    'expected_balance' => $afterSecond,
+                ],
+            ],
+        ]));
+
+        $this->assertStringContainsString('2', $result);
+        $this->assertStringContainsString(__('general.ai_transaction_preview_ask_confirm'), $result);
+        $this->assertStringContainsString('قابل ثبت', $result);
+        $this->assertDatabaseCount('transactions', 0);
+    }
+
+    public function test_tool_batch_creates_with_sequential_expected_balances(): void
+    {
+        [$user, $business, $currency, $account] = $this->actingBusinessOwnerWithBankAccount(
+            currentBalance: '10000000',
+        );
+
+        $firstAmount = '1500000';
+        $secondAmount = '2000000';
+        $afterFirst = bcsub('10000000', $firstAmount, 0);
+        $afterSecond = bcsub($afterFirst, $secondAmount, 0);
+
+        $result = (string) (new CreateTransaction)->handle(new Request([
+            'confirmed' => true,
+            'transactions' => [
+                [
+                    'type' => 'expense',
+                    'amount' => $firstAmount,
+                    'account_number' => '5199858647',
+                    'expected_balance' => $afterFirst,
+                ],
+                [
+                    'type' => 'expense',
+                    'amount' => $secondAmount,
+                    'account_number' => '5199858647',
+                    'expected_balance' => $afterSecond,
+                ],
+            ],
+        ]));
+
+        $this->assertStringContainsString('2', $result);
+        $this->assertDatabaseCount('transactions', 2);
+        $this->assertSame(0, bccomp($afterSecond, (string) $account->fresh()->current_balance, 18));
+    }
+
     public function test_instructions_include_active_business_and_batch_guidance(): void
     {
         [$user, $business] = $this->actingBusinessOwnerWithBankAccount();
@@ -279,6 +411,8 @@ class AccountingAiTransactionTest extends TestCase
         $this->assertStringContainsString($business->name, $instructions);
         $this->assertStringContainsString('transactions', $instructions);
         $this->assertStringContainsString('expected_balance', $instructions);
+        $this->assertStringContainsString('confirmed=false', $instructions);
+        $this->assertStringContainsString('confirmed=true', $instructions);
     }
 
     /**

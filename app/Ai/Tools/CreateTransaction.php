@@ -24,7 +24,7 @@ class CreateTransaction implements Tool
      */
     public function description(): Stringable|string
     {
-        return 'ثبت یک یا چند تراکنش از پیامک بانکی (برداشت/واریز) روی حساب موجود. اگر چند پیامک در پیام هست همه را در transactions بفرست. همیشه مانده پیامک را در expected_balance بفرست. هرگز حساب بانکی جدید نساز.';
+        return 'پیش‌نمایش یا ثبت یک یا چند تراکنش از پیامک بانکی (برداشت/واریز) روی حساب موجود. ابتدا با confirmed=false اعتبارسنجی و پیش‌نمایش بگیر؛ فقط بعد از تأیید صریح کاربر با confirmed=true ثبت کن. اگر چند پیامک در پیام هست همه را در transactions بفرست. همیشه مانده پیامک را در expected_balance بفرست. هرگز حساب بانکی جدید نساز.';
     }
 
     /**
@@ -39,13 +39,14 @@ class CreateTransaction implements Tool
             return __('general.business_required');
         }
 
+        $confirmed = $request->boolean('confirmed');
         $transactions = $request->array('transactions');
 
         if ($transactions !== []) {
-            return $this->handleBatch($user, (int) $businessId, $transactions);
+            return $this->handleBatch($user, (int) $businessId, $transactions, $confirmed);
         }
 
-        return $this->createOne($user, (int) $businessId, [
+        $result = $this->createOne($user, (int) $businessId, [
             'type' => (string) $request->string('type'),
             'amount' => (string) $request->string('amount'),
             'account_number' => (string) $request->string('account_number'),
@@ -54,7 +55,13 @@ class CreateTransaction implements Tool
             'note' => (string) $request->string('note'),
             'reference_number' => (string) $request->string('reference_number'),
             'expected_balance' => (string) $request->string('expected_balance'),
-        ])['message'];
+        ], $confirmed);
+
+        if (! $confirmed && $result['ok']) {
+            return $result['message']."\n".__('general.ai_transaction_preview_ask_confirm');
+        }
+
+        return $result['message'];
     }
 
     /**
@@ -84,6 +91,8 @@ class CreateTransaction implements Tool
         ];
 
         return [
+            'confirmed' => $schema->boolean()
+                ->description('false یا خالی = فقط پیش‌نمایش و چک مانده بدون ثبت؛ true = ثبت واقعی فقط بعد از تأیید کاربر'),
             'transactions' => $schema->array()
                 ->items($schema->object($itemFields))
                 ->description('وقتی چند پیامک یا چند تراکنش در یک پیام هست همه را اینجا بفرست (یک فراخوانی)'),
@@ -109,11 +118,13 @@ class CreateTransaction implements Tool
     /**
      * @param  list<mixed>  $transactions
      */
-    protected function handleBatch(User $user, int $businessId, array $transactions): string
+    protected function handleBatch(User $user, int $businessId, array $transactions, bool $confirmed): string
     {
         $lines = [];
-        $created = 0;
+        $okCount = 0;
         $index = 0;
+        /** @var array<int, string> $runningBalances */
+        $runningBalances = [];
 
         foreach ($transactions as $item) {
             $index++;
@@ -138,10 +149,10 @@ class CreateTransaction implements Tool
                 'note' => (string) ($item['note'] ?? ''),
                 'reference_number' => (string) ($item['reference_number'] ?? ''),
                 'expected_balance' => (string) ($item['expected_balance'] ?? ''),
-            ]);
+            ], $confirmed, $runningBalances);
 
             if ($result['ok']) {
-                $created++;
+                $okCount++;
                 $lines[] = __('general.ai_transaction_batch_item_ok', [
                     'n' => $index,
                     'message' => $result['message'],
@@ -158,11 +169,22 @@ class CreateTransaction implements Tool
             return __('general.ai_transaction_batch_empty');
         }
 
-        return __('general.ai_transaction_batch_summary', [
-            'created' => $created,
+        $summaryKey = $confirmed
+            ? 'general.ai_transaction_batch_summary'
+            : 'general.ai_transaction_batch_preview_summary';
+
+        $summary = __($summaryKey, [
+            'created' => $okCount,
+            'ready' => $okCount,
             'total' => $index,
             'items' => implode("\n", $lines),
         ]);
+
+        if (! $confirmed && $okCount > 0) {
+            $summary .= "\n".__('general.ai_transaction_preview_ask_confirm');
+        }
+
+        return $summary;
     }
 
     /**
@@ -176,10 +198,16 @@ class CreateTransaction implements Tool
      *     reference_number: string,
      *     expected_balance: string
      * }  $data
+     * @param  array<int, string>  $runningBalances
      * @return array{ok: bool, message: string}
      */
-    protected function createOne(User $user, int $businessId, array $data): array
-    {
+    protected function createOne(
+        User $user,
+        int $businessId,
+        array $data,
+        bool $confirmed,
+        array &$runningBalances = [],
+    ): array {
         $typeValue = strtolower(trim($data['type']));
         $amount = $this->normalizeDigits($data['amount']);
         $accountNumber = $this->normalizeDigits($data['account_number']);
@@ -220,8 +248,11 @@ class CreateTransaction implements Tool
         }
 
         $currencyCode = $account->currency?->code ?? 'IRR';
-        $currentBalance = (string) ($account->current_balance ?? '0');
+        $accountId = (int) $account->id;
+        $currentBalance = $runningBalances[$accountId]
+            ?? (string) ($account->current_balance ?? '0');
         $feeAmount = null;
+        $projected = $this->projectBalance($type, $currentBalance, $amount);
 
         if ($expectedBalance !== '') {
             if (! is_numeric($expectedBalance)) {
@@ -229,8 +260,6 @@ class CreateTransaction implements Tool
                     'errors' => __('general.current_balance'),
                 ]));
             }
-
-            $projected = $this->projectBalance($type, $currentBalance, $amount);
 
             if (bccomp($projected, $expectedBalance, 18) !== 0) {
                 $feeAmount = $type === TransactionType::Expense
@@ -262,7 +291,32 @@ class CreateTransaction implements Tool
                         $projected,
                     ));
                 }
+
+                $projected = $projectedWithFee;
             }
+        }
+
+        $debitTotal = $feeAmount !== null
+            ? bcadd($amount, $feeAmount, 18)
+            : $amount;
+
+        if (! $confirmed) {
+            $runningBalances[$accountId] = $projected;
+
+            return $this->ok(__('general.ai_transaction_preview_ok', [
+                'type' => $type->label(),
+                'amount' => $this->formatAmount($amount),
+                'account' => $account->name,
+                'current' => $this->formatAmount($currentBalance),
+                'projected' => $this->formatAmount($projected),
+                'expected' => $expectedBalance !== ''
+                    ? $this->formatAmount($expectedBalance)
+                    : '—',
+                'fee' => $feeAmount !== null
+                    ? $this->formatAmount($feeAmount)
+                    : '—',
+                'date' => LocaleDate::formatDate($storageDate),
+            ]));
         }
 
         $exchangeRate = BusinessCurrency::query()
@@ -271,7 +325,7 @@ class CreateTransaction implements Tool
             ->value('exchange_rate_to_base') ?? '1';
 
         $payloadBase = [
-            'account_id' => (int) $account->id,
+            'account_id' => $accountId,
             'transaction_date' => $storageDate,
             'currency' => $currencyCode,
             'exchange_rate' => (string) $exchangeRate,
@@ -298,6 +352,8 @@ class CreateTransaction implements Tool
                     return $main;
                 });
 
+                $runningBalances[$accountId] = $projected;
+
                 return $this->ok(__('general.ai_transaction_created_with_fee', [
                     'type' => $type->label(),
                     'amount' => $amount,
@@ -318,6 +374,8 @@ class CreateTransaction implements Tool
                 'errors' => $exception->validator->errors()->first() ?: __('general.ai_error'),
             ]));
         }
+
+        $runningBalances[$accountId] = $this->projectBalance($type, $currentBalance, $debitTotal);
 
         return $this->ok(__('general.ai_transaction_created', [
             'type' => $type->label(),
