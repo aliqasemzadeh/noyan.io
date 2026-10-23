@@ -5,6 +5,8 @@ namespace App\Ai\Agents;
 use App\Ai\Tools\CreateBankAccount;
 use App\Ai\Tools\CreateTransaction;
 use App\Ai\Tools\GetDailyExpenses;
+use App\Ai\Tools\ImportInvoice;
+use App\Ai\Tools\ImportQuote;
 use App\Models\Accounting\Account;
 use Illuminate\Support\Facades\Auth;
 use Laravel\Ai\Attributes\MaxSteps;
@@ -20,7 +22,7 @@ use Laravel\Ai\Providers\Tools\ProviderTool;
 use Stringable;
 
 #[Provider('gap')]
-#[MaxSteps(5)]
+#[MaxSteps(7)]
 #[Timeout(120)]
 class AccountingAssistant implements Agent, HasTools, RemembersConversationsContract
 {
@@ -83,6 +85,16 @@ class AccountingAssistant implements Agent, HasTools, RemembersConversationsCont
 - مبلغ برداشت/واریز را نادیده بگیر؛ تراکنش نساز.
 - مانده = opening/current balance.
 
+5) وارد کردن پیش‌فاکتور / استعلام قیمت / فاکتور از اکسل (import_quote یا import_invoice):
+- وقتی کاربر فایل اکسل آپلود کرده و در پیام `file_path=` آمده، یا گفته فایل را وارد/ایمپورت کن:
+الف) اگر نام فایل یا متن کاربر شامل «فاکتور» است و «پیش فاکتور/پیش‌فاکتور/استعلام/پیشنهاد» نیست → import_invoice با همان file_path و confirmed=false.
+ب) اگر شامل «پیش فاکتور»، «پیش‌فاکتور»، «استعلام»، «پیشنهاد قیمت» است، یا نام فایل پیش‌فروش است → import_quote با confirmed=false.
+ج) اگر مطمئن نیستی، اول import_quote را با confirmed=false امتحان کن؛ اگر ابزار گفت نوع سند فاکتور است، همان مسیر را با import_invoice تکرار کن.
+- خروجی فارسی ابزار را عیناً بده و صبر کن تا کاربر تأیید کند.
+- فقط بعد از تأیید صریح («آره»، «بله»، «ثبت کن»، «تأیید») همان file_path را با confirmed=true بفرست.
+- بدون تأیید هرگز confirmed=true نگذار.
+- خودت اکسل را پارس نکن و اقلام را حدس نزن؛ فقط ابزار را صدا بزن.
+
 خروجی فارسی ابزار را عیناً به کاربر بده. اگر هیچ ابزاری نیاز نبود، مختصر و دقیق به فارسی پاسخ بده.
 PROMPT;
     }
@@ -98,6 +110,8 @@ PROMPT;
             new CreateBankAccount,
             new CreateTransaction,
             new GetDailyExpenses,
+            new ImportQuote,
+            new ImportInvoice,
         ];
     }
 

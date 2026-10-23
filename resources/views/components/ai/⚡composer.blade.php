@@ -4,12 +4,14 @@ use App\Ai\Agents\AccountingAssistant;
 use App\Ai\Agents\UserAssistant;
 use Flux\Flux;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Laravel\Ai\Enums\Lab;
 use Laravel\Ai\Files\Base64Audio;
 use Laravel\Ai\Transcription;
 use Livewire\Attributes\Locked;
 use Livewire\Component;
+use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Livewire\WithFileUploads;
 
 new class extends Component
@@ -35,6 +37,9 @@ new class extends Component
 
     /** @var TemporaryUploadedFile|null */
     public $audio = null;
+
+    /** @var TemporaryUploadedFile|null */
+    public $document = null;
 
     public function mount(string $context = 'accounting'): void
     {
@@ -111,15 +116,79 @@ new class extends Component
         Flux::toast(__('general.ai_voice_ready'));
     }
 
+    public function updatedDocument(): void
+    {
+        if ($this->document === null || $this->context !== 'accounting') {
+            return;
+        }
+
+        try {
+            $this->validate([
+                'document' => [
+                    'required',
+                    'file',
+                    'max:10240',
+                    'mimes:xlsx,xls',
+                ],
+            ], attributes: [
+                'document' => __('general.ai_document'),
+            ]);
+        } catch (ValidationException $exception) {
+            $this->reset('document');
+
+            Flux::toast($exception->validator->errors()->first('document') ?: __('general.ai_error'), variant: 'danger');
+
+            return;
+        }
+
+        Flux::toast(__('general.ai_document_ready'));
+    }
+
+    public function clearDocument(): void
+    {
+        $this->reset('document');
+    }
+
     public function sendPrompt(): void
     {
+        $hasDocument = $this->context === 'accounting' && $this->document !== null;
+
         $this->validate([
-            'prompt' => ['required', 'string', 'max:2000'],
+            'prompt' => [$hasDocument ? 'nullable' : 'required', 'string', 'max:2000'],
+            'document' => [
+                'nullable',
+                'file',
+                'max:10240',
+                'mimes:xlsx,xls',
+            ],
         ], attributes: [
             'prompt' => __('general.ai_prompt'),
+            'document' => __('general.ai_document'),
         ]);
 
         $promptText = trim($this->prompt);
+        $storedDocumentPath = null;
+
+        if ($hasDocument && $this->document instanceof TemporaryUploadedFile) {
+            $extension = strtolower($this->document->getClientOriginalExtension() ?: 'xlsx');
+            $storedDocumentPath = $this->document->storeAs(
+                'ai-imports',
+                Str::uuid()->toString().'.'.$extension,
+                'local',
+            );
+
+            $originalName = $this->document->getClientOriginalName();
+            $promptText = trim($promptText."\n".__('general.ai_document_prompt_suffix', [
+                'file' => $originalName,
+                'path' => $storedDocumentPath,
+            ]));
+        }
+
+        if ($promptText === '') {
+            Flux::toast(__('general.ai_prompt').' / '.__('general.ai_document'), variant: 'danger');
+
+            return;
+        }
 
         $this->messages[] = [
             'role' => 'user',
@@ -160,7 +229,7 @@ new class extends Component
             'content' => $reply,
         ];
         $this->conversationId = $response->conversationId ?? $this->conversationId;
-        $this->reset(['prompt', 'audio']);
+        $this->reset(['prompt', 'audio', 'document']);
         $this->isRecording = false;
 
         if ($this->context === 'users') {
@@ -170,6 +239,8 @@ new class extends Component
         if ($this->context === 'accounting') {
             $this->dispatch('panels.accounting.account.index.table');
             $this->dispatch('panels.accounting.transaction.index.table');
+            $this->dispatch('panels.accounting.quote.index.table');
+            $this->dispatch('panels.accounting.invoice.index.table');
         }
 
         Flux::toast(__('general.ai_prompt_sent'));
@@ -242,6 +313,13 @@ new class extends Component
                     return
                 }
             }
+        },
+        pickDocumentFile() {
+            if (this.uploading || this.recorderActive || $wire.isTranscribing) {
+                return
+            }
+
+            this.$refs.documentInput?.click()
         },
         pickAudioFile() {
             if (this.uploading || this.recorderActive || $wire.isTranscribing) {
@@ -347,6 +425,21 @@ new class extends Component
         x-on:livewire-upload-error="uploading = false; progress = 0"
     />
 
+    @if ($context === 'accounting')
+        <input
+            type="file"
+            class="hidden"
+            x-ref="documentInput"
+            wire:model="document"
+            accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+            x-on:livewire-upload-start="uploading = true; progress = 0"
+            x-on:livewire-upload-progress="progress = $event.detail.progress"
+            x-on:livewire-upload-finish="uploading = false; progress = 0"
+            x-on:livewire-upload-cancel="uploading = false; progress = 0"
+            x-on:livewire-upload-error="uploading = false; progress = 0"
+        />
+    @endif
+
     <div
         x-ref="messages"
         class="min-h-0 flex-1 space-y-4 overflow-y-auto pe-1"
@@ -423,6 +516,20 @@ new class extends Component
         </flux:text>
     </div>
 
+    @if ($context === 'accounting' && $document)
+        <div class="flex shrink-0 items-center justify-between gap-2 rounded-xl border border-teal-500/20 bg-teal-500/5 px-3 py-2 text-sm">
+            <flux:text class="truncate">{{ $document->getClientOriginalName() }}</flux:text>
+            <flux:button
+                type="button"
+                size="xs"
+                variant="ghost"
+                icon="x"
+                wire:click="clearDocument"
+                :aria-label="__('general.cancel')"
+            />
+        </div>
+    @endif
+
     <form wire:submit="sendPrompt" class="shrink-0 rounded-2xl border border-zinc-200/80 bg-white p-2 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
         <flux:composer
             wire:model="prompt"
@@ -434,6 +541,18 @@ new class extends Component
             submit="enter"
         >
             <x-slot name="actionsLeading">
+                @if ($context === 'accounting')
+                    <flux:button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        icon="paperclip"
+                        x-on:click="pickDocumentFile()"
+                        x-bind:disabled="uploading || recorderActive || isRecording || $wire.isTranscribing"
+                        :aria-label="__('general.ai_document')"
+                    />
+                @endif
+
                 <flux:button
                     type="button"
                     size="sm"
@@ -471,5 +590,6 @@ new class extends Component
 
         <flux:error name="prompt" />
         <flux:error name="audio" />
+        <flux:error name="document" />
     </form>
 </div>
