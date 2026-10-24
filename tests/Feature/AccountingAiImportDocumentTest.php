@@ -81,6 +81,7 @@ class AccountingAiImportDocumentTest extends TestCase
     public function test_import_quote_preview_does_not_persist(): void
     {
         [$user, $business] = $this->actingBusinessOwner();
+        $this->ensureParty($business->id, 'مدرسه حضرت زینب (س)');
         $path = $this->storeQuoteFixture();
 
         $result = (string) (new ImportQuote)->handle(new Request([
@@ -99,6 +100,7 @@ class AccountingAiImportDocumentTest extends TestCase
     public function test_import_quote_confirmed_queues_job_without_persisting(): void
     {
         [$user, $business] = $this->actingBusinessOwner();
+        $this->ensureParty($business->id, 'مدرسه حضرت زینب (س)');
         $path = $this->storeQuoteFixture();
 
         Queue::fake();
@@ -117,6 +119,24 @@ class AccountingAiImportDocumentTest extends TestCase
                 && $job->filePath === $path
                 && $job->kind === FormalSaleDocumentKind::Quote->value;
         });
+    }
+
+    public function test_import_quote_fails_when_party_missing(): void
+    {
+        $this->actingBusinessOwner();
+        $path = $this->storeQuoteFixture(partyName: 'طرف حساب ناشناس');
+
+        Queue::fake();
+
+        $result = (string) (new ImportQuote)->handle(new Request([
+            'confirmed' => false,
+            'file_path' => $path,
+        ]));
+
+        $this->assertStringContainsString('طرف حساب ناشناس', $result);
+        $this->assertStringContainsString('create_party', $result);
+        $this->assertDatabaseCount('quotes', 0);
+        Queue::assertNothingPushed();
     }
 
     public function test_import_quote_job_creates_draft_and_links_matching_product(): void
@@ -156,6 +176,7 @@ class AccountingAiImportDocumentTest extends TestCase
     public function test_import_quote_job_leaves_product_unlinked_when_not_found(): void
     {
         [$user, $business] = $this->actingBusinessOwner();
+        $party = $this->ensureParty($business->id, 'دبیرستان نام آوران');
         $path = $this->storeQuoteFixture(
             partyName: 'دبیرستان نام آوران',
             productTitle: 'کالای ناشناس',
@@ -172,13 +193,64 @@ class AccountingAiImportDocumentTest extends TestCase
 
         $this->assertNotNull($quote);
         $this->assertNull($quote->items->first()->product_id);
-        $this->assertNull($quote->party_id);
+        $this->assertSame($party->id, $quote->party_id);
         $this->assertSame('دبیرستان نام آوران', $quote->party_name);
+    }
+
+    public function test_import_quote_job_does_not_create_guest_when_party_missing(): void
+    {
+        [$user, $business] = $this->actingBusinessOwner();
+        $path = $this->storeQuoteFixture(partyName: 'دبیرستان نام آوران');
+
+        (new ImportFormalSaleDocumentJob(
+            $user->id,
+            $business->id,
+            $path,
+            FormalSaleDocumentKind::Quote->value,
+        ))->handle();
+
+        $this->assertDatabaseCount('quotes', 0);
+    }
+
+    public function test_import_matches_party_by_national_id_when_name_differs(): void
+    {
+        [$user, $business] = $this->actingBusinessOwner();
+        $party = Party::factory()->create([
+            'business_id' => $business->id,
+            'name' => 'نام ذخیره‌شده متفاوت',
+            'national_id' => '0013542419',
+            'is_customer' => true,
+        ]);
+
+        $absolute = $this->makeFormalSaleExcel(
+            title: 'پیش فروش کالا و خدمات',
+            partyName: 'نام روی فایل',
+            serial: 'NID-1',
+            issueDate: '1405/07/27',
+            items: [
+                ['title' => 'کالا', 'quantity' => '1', 'unit_price' => '1000'],
+            ],
+            partyNationalId: 'شناسه ملی :0013542419',
+        );
+        $path = $this->storeAbsoluteExcel($absolute);
+
+        (new ImportFormalSaleDocumentJob(
+            $user->id,
+            $business->id,
+            $path,
+            FormalSaleDocumentKind::Quote->value,
+        ))->handle();
+
+        $quote = Quote::query()->first();
+
+        $this->assertNotNull($quote);
+        $this->assertSame($party->id, $quote->party_id);
     }
 
     public function test_import_invoice_confirmed_queues_job_without_persisting(): void
     {
         [$user, $business] = $this->actingBusinessOwner();
+        $this->ensureParty($business->id, 'آموزش و پرورش ناحیه 2');
         $path = $this->storeInvoiceFixture();
 
         Queue::fake();
@@ -202,6 +274,7 @@ class AccountingAiImportDocumentTest extends TestCase
     public function test_import_invoice_job_creates_sale_draft_and_skips_header_row(): void
     {
         [$user, $business] = $this->actingBusinessOwner();
+        $this->ensureParty($business->id, 'آموزش و پرورش ناحیه 2');
         $path = $this->storeInvoiceFixture();
 
         (new ImportFormalSaleDocumentJob(
@@ -249,6 +322,7 @@ class AccountingAiImportDocumentTest extends TestCase
 
         $this->assertStringContainsString('import_quote', $instructions);
         $this->assertStringContainsString('import_invoice', $instructions);
+        $this->assertStringContainsString('create_party', $instructions);
         $this->assertStringContainsString('file_path', $instructions);
         $this->assertStringContainsString('صف', $instructions);
     }
@@ -355,6 +429,16 @@ class AccountingAiImportDocumentTest extends TestCase
         return $relative;
     }
 
+    protected function ensureParty(int $businessId, string $name): Party
+    {
+        return Party::factory()->create([
+            'business_id' => $businessId,
+            'name' => $name,
+            'is_customer' => true,
+            'is_active' => true,
+        ]);
+    }
+
     /**
      * @param  list<array{title: string, quantity: string, unit_price: string}>  $items
      */
@@ -365,6 +449,11 @@ class AccountingAiImportDocumentTest extends TestCase
         string $issueDate,
         array $items,
         ?string $skipTitleWithoutQty = null,
+        ?string $partyNationalId = null,
+        ?string $partyEconomicCode = null,
+        ?string $partyPhone = null,
+        ?string $partyAddress = null,
+        ?string $partyPostalCode = null,
     ): string {
         $spreadsheet = new Spreadsheet;
         $sheet = $spreadsheet->getActiveSheet();
@@ -373,6 +462,26 @@ class AccountingAiImportDocumentTest extends TestCase
         $sheet->setCellValue('BC1', $serial);
         $sheet->setCellValue('BC3', $issueDate);
         $sheet->setCellValue('K14', $partyName);
+
+        if ($partyEconomicCode !== null) {
+            $sheet->setCellValue('AC14', $partyEconomicCode);
+        }
+
+        if ($partyNationalId !== null) {
+            $sheet->setCellValue('AU16', $partyNationalId);
+        }
+
+        if ($partyPostalCode !== null) {
+            $sheet->setCellValue('AB16', $partyPostalCode);
+        }
+
+        if ($partyAddress !== null) {
+            $sheet->setCellValue('E18', $partyAddress);
+        }
+
+        if ($partyPhone !== null) {
+            $sheet->setCellValue('AY18', $partyPhone);
+        }
 
         $row = 21;
 

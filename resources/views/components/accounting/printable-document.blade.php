@@ -268,7 +268,7 @@
             </div>
             <div class="flex min-h-20 flex-col justify-between border p-2 text-black" style="border-color: {{ $borderColor }};">
                 <p class="text-center font-bold">{{ __('general.buyer_stamp_signature') }}</p>
-                <div class="border-t border-dashed border-zinc-400 pt-1"></div>
+                <p class="text-center text-[10px]">{{ __('general.delivery_receipt_date') }}: —</p>
             </div>
         </div>
 

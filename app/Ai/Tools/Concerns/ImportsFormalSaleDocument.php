@@ -65,17 +65,54 @@ trait ImportsFormalSaleDocument
         }
 
         $matcher = app(ImportDocumentMatcher::class);
-        $party = $matcher->findParty($businessId, $document->partyName);
+        $party = $matcher->findParty($businessId, $document);
+
+        if ($party === null) {
+            return $this->importFail($this->partyNotFoundMessage($document));
+        }
+
         $items = $matcher->matchItems($businessId, $document->items);
 
         return [
             'ok' => true,
             'message' => '',
             'document' => $document,
-            'party_id' => $party?->id,
+            'party_id' => $party->id,
             'party_name' => $document->partyName,
             'items' => $items,
         ];
+    }
+
+    protected function partyNotFoundMessage(FormalSaleDocument $document): string
+    {
+        $details = [];
+
+        if (filled($document->partyNationalId)) {
+            $details[] = __('general.national_id').': '.$document->partyNationalId;
+        }
+
+        if (filled($document->partyEconomicCode)) {
+            $details[] = __('general.economic_code').': '.$document->partyEconomicCode;
+        }
+
+        if (filled($document->partyPhone)) {
+            $details[] = __('general.phone').': '.$document->partyPhone;
+        }
+
+        if (filled($document->partyPostalCode)) {
+            $details[] = __('general.postal_code').': '.$document->partyPostalCode;
+        }
+
+        if (filled($document->partyAddress)) {
+            $details[] = __('general.address').': '.$document->partyAddress;
+        }
+
+        return __('general.ai_document_import_party_not_found', [
+            'party' => $document->partyName,
+            'details' => $details === []
+                ? __('general.ai_document_import_party_not_found_no_details')
+                : implode(' | ', $details),
+        ]);
     }
 
     /**
@@ -127,9 +164,7 @@ trait ImportsFormalSaleDocument
         return __('general.ai_document_import_preview', [
             'type' => $documentLabel,
             'party' => $partyName,
-            'party_link' => $partyId !== null
-                ? __('general.ai_document_import_party_linked')
-                : __('general.ai_document_import_party_guest'),
+            'party_link' => __('general.ai_document_import_party_linked'),
             'date' => LocaleDate::formatDate($document->issueDate),
             'serial' => $document->serial ?: '—',
             'items_count' => count($items),

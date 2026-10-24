@@ -3,6 +3,7 @@
 namespace App\Ai\Agents;
 
 use App\Ai\Tools\CreateBankAccount;
+use App\Ai\Tools\CreateParty;
 use App\Ai\Tools\CreateTransaction;
 use App\Ai\Tools\GetDailyExpenses;
 use App\Ai\Tools\ImportInvoice;
@@ -92,6 +93,16 @@ class AccountingAssistant implements Agent, HasTools, RemembersConversationsCont
 - بعد از تأیید، ابزار ثبت را در صف می‌گذارد و پیام صف را برمی‌گرداند؛ همان را عیناً بده و منتظر نتیجهٔ ثبت نمان.
 - بدون تأیید هرگز confirmed=true نگذار.
 - خودت اکسل را پارس نکن و اقلام را حدس نزن؛ فقط ابزار را صدا بزن.
+- اگر ابزار گفت طرف‌حساب یافت نشد، create_party را با عین نام و فیلدهای گزارش‌شده صدا بزن (حدس نزن)؛ بعد از ساخت موفق دوباره ایمپورت را پیشنهاد بده.
+
+6) ساخت طرف‌حساب (create_party) — وقتی:
+- کاربر صریحاً طرف‌حساب/مشتری/خریدار بساز خواسته، یا
+- ایمپورت به‌خاطر نبود طرف‌حساب خطا داده است.
+قواعد:
+- name الزامی است؛ عین نام خریدار فایل یا متن کاربر را بفرست؛ هرگز کوتاه/حدس نکن.
+- اگر در پیام یا خطای ایمپورت کد ملی، کد اقتصادی، تلفن، آدرس یا کد پستی آمده، همان‌ها را هم بفرست.
+- اگر طرف‌حساب با همان نام یا نام حقوقی از قبل باشد، ابزار خطا می‌دهد؛ دوباره نساز.
+- بعد از موفقیت، پیام ابزار را عیناً بده.
 
 خروجی فارسی ابزار را عیناً به کاربر بده. اگر هیچ ابزاری نیاز نبود، مختصر و دقیق به فارسی پاسخ بده.
 PROMPT;
@@ -110,6 +121,7 @@ PROMPT;
             new GetDailyExpenses,
             new ImportQuote,
             new ImportInvoice,
+            new CreateParty,
         ];
     }
 

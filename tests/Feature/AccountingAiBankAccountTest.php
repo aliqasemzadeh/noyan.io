@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Ai\Agents\AccountingAssistant;
 use App\Ai\Tools\CreateBankAccount;
+use App\Ai\Tools\CreateParty;
 use App\Ai\Tools\CreateTransaction;
 use App\Ai\Tools\GetDailyExpenses;
 use App\Ai\Tools\ImportInvoice;
@@ -263,12 +264,13 @@ class AccountingAiBankAccountTest extends TestCase
 
         $tools = [...$assistant->tools()];
 
-        $this->assertCount(5, $tools);
+        $this->assertCount(6, $tools);
         $this->assertInstanceOf(CreateBankAccount::class, $tools[0]);
         $this->assertInstanceOf(CreateTransaction::class, $tools[1]);
         $this->assertInstanceOf(GetDailyExpenses::class, $tools[2]);
         $this->assertInstanceOf(ImportQuote::class, $tools[3]);
         $this->assertInstanceOf(ImportInvoice::class, $tools[4]);
+        $this->assertInstanceOf(CreateParty::class, $tools[5]);
         $this->assertTrue(RememberConversation::appliesTo($assistant));
     }
 

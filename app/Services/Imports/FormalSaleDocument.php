@@ -23,6 +23,11 @@ readonly class FormalSaleDocument
         public ?string $serial,
         public ?string $issueDate,
         public ?string $partyName,
+        public ?string $partyEconomicCode,
+        public ?string $partyNationalId,
+        public ?string $partyPostalCode,
+        public ?string $partyPhone,
+        public ?string $partyAddress,
         public array $items,
     ) {}
 }

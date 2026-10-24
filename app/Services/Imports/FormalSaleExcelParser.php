@@ -40,6 +40,12 @@ class FormalSaleExcelParser
         }
 
         $partyName = $this->cellString($sheet, 'K14');
+        $partyEconomicCode = $this->valueAfterLabel($sheet, 'AC14', ['شماره اقتصادی']);
+        $partyNationalId = $this->valueAfterLabel($sheet, 'AU16', ['شناسه ملی']);
+        $partyPostalCode = $this->valueAfterLabel($sheet, 'AB16', ['کد پستی ده رقمی', 'کد پستی']);
+        $partyPhone = $this->valueAfterLabel($sheet, 'AY18', ['تلفن / فکس', 'تلفن', 'فکس']);
+        $partyAddress = $this->resolveBuyerAddress($sheet);
+
         $items = $this->parseItems($sheet);
 
         if ($items === []) {
@@ -52,6 +58,11 @@ class FormalSaleExcelParser
             serial: $serial !== '' ? $serial : null,
             issueDate: $issueDate,
             partyName: $partyName !== '' ? $partyName : null,
+            partyEconomicCode: $partyEconomicCode,
+            partyNationalId: $partyNationalId,
+            partyPostalCode: $partyPostalCode,
+            partyPhone: $partyPhone,
+            partyAddress: $partyAddress,
             items: $items,
         );
     }
@@ -133,6 +144,70 @@ class FormalSaleExcelParser
         return $items;
     }
 
+    protected function resolveBuyerAddress(Worksheet $sheet): ?string
+    {
+        $address = $this->valueAfterLabel($sheet, 'E18', ['نشانی'])
+            ?? $this->nonEmptyCell($sheet, 'E18');
+        $province = $this->nonEmptyCell($sheet, 'I16');
+        $city = $this->nonEmptyCell($sheet, 'U16');
+
+        $parts = array_values(array_filter(
+            [$address, $province !== null ? 'استان '.$province : null, $city !== null ? 'شهرستان '.$city : null],
+            fn (?string $part): bool => $part !== null && $part !== '',
+        ));
+
+        if ($parts === []) {
+            return null;
+        }
+
+        return implode('، ', $parts);
+    }
+
+    protected function nonEmptyCell(Worksheet $sheet, string $coordinate): ?string
+    {
+        $value = $this->cellString($sheet, $coordinate);
+
+        return $value !== '' ? $value : null;
+    }
+
+    /**
+     * @param  list<string>  $labels
+     */
+    protected function valueAfterLabel(Worksheet $sheet, string $coordinate, array $labels): ?string
+    {
+        $raw = $this->cellString($sheet, $coordinate);
+
+        if ($raw === '') {
+            return null;
+        }
+
+        foreach ($labels as $label) {
+            $pattern = '/^'.preg_quote($label, '/').'\s*:?\s*/u';
+            $stripped = preg_replace($pattern, '', $raw);
+
+            if (is_string($stripped) && $stripped !== $raw) {
+                $raw = trim($stripped);
+                break;
+            }
+        }
+
+        $raw = trim($raw);
+        $raw = rtrim($raw, ':');
+        $raw = trim($raw);
+
+        if ($raw === '') {
+            return null;
+        }
+
+        foreach ($labels as $label) {
+            if ($raw === $label || $raw === $label.':') {
+                return null;
+            }
+        }
+
+        return $this->normalizeDigits($raw);
+    }
+
     protected function cellString(Worksheet $sheet, string $coordinate): string
     {
         $value = $sheet->getCell($coordinate)->getCalculatedValue();
@@ -154,14 +229,20 @@ class FormalSaleExcelParser
 
     protected function normalizeAmount(string $value): string
     {
+        $value = $this->normalizeDigits($value);
+        $value = str_replace(['٬', '،', ','], '', $value);
+
+        return preg_replace('/\s+/u', '', $value) ?? '';
+    }
+
+    protected function normalizeDigits(string $value): string
+    {
         $persian = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
         $arabic = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
         $english = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
 
         $value = str_replace($persian, $english, $value);
-        $value = str_replace($arabic, $english, $value);
-        $value = str_replace(['٬', '،', ','], '', $value);
 
-        return preg_replace('/\s+/u', '', $value) ?? '';
+        return str_replace($arabic, $english, $value);
     }
 }

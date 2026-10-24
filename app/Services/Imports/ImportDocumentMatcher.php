@@ -86,35 +86,55 @@ class ImportDocumentMatcher
         return $aliases[$unit] ?? null;
     }
 
-    public function findParty(int $businessId, ?string $partyName): ?Party
+    public function findParty(int $businessId, FormalSaleDocument $document): ?Party
     {
-        $partyName = trim((string) $partyName);
+        $base = Party::query()
+            ->where('business_id', $businessId)
+            ->where('is_active', true);
+
+        $nationalId = trim((string) $document->partyNationalId);
+        if ($nationalId !== '') {
+            $byNationalId = (clone $base)->where('national_id', $nationalId)->first();
+
+            if ($byNationalId !== null) {
+                return $byNationalId;
+            }
+        }
+
+        $economicCode = trim((string) $document->partyEconomicCode);
+        if ($economicCode !== '') {
+            $byEconomicCode = (clone $base)->where('economic_code', $economicCode)->first();
+
+            if ($byEconomicCode !== null) {
+                return $byEconomicCode;
+            }
+        }
+
+        $phone = trim((string) $document->partyPhone);
+        if ($phone !== '') {
+            $byPhone = (clone $base)
+                ->where(function ($query) use ($phone): void {
+                    $query->where('phone', $phone)
+                        ->orWhere('mobile', $phone);
+                })
+                ->first();
+
+            if ($byPhone !== null) {
+                return $byPhone;
+            }
+        }
+
+        $partyName = trim((string) $document->partyName);
 
         if ($partyName === '') {
             return null;
         }
 
-        $exact = Party::query()
-            ->where('business_id', $businessId)
-            ->where('is_active', true)
+        return (clone $base)
             ->where(function ($query) use ($partyName): void {
                 $query->where('name', $partyName)
                     ->orWhere('legal_name', $partyName);
             })
-            ->first();
-
-        if ($exact !== null) {
-            return $exact;
-        }
-
-        return Party::query()
-            ->where('business_id', $businessId)
-            ->where('is_active', true)
-            ->where(function ($query) use ($partyName): void {
-                $query->where('name', 'like', '%'.$partyName.'%')
-                    ->orWhere('legal_name', 'like', '%'.$partyName.'%');
-            })
-            ->orderBy('name')
             ->first();
     }
 
