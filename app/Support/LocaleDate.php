@@ -132,7 +132,8 @@ class LocaleDate
     /**
      * Parse SMS-style Jalali short dates near a reference day (default: today).
      *
-     * Accepts full Y/m/d, Gregorian Y-m-d, d/m/Y, d/m/yy, and d/m (day/month).
+     * Accepts full Y/m/d, Gregorian Y-m-d, d/m/Y, d/m/yy, y/m/d (SMS), and d/m (day/month).
+     * Optional time suffix like -16:18 or " 16:18" is ignored for the storage date.
      * Two-digit years and missing years resolve to the candidate closest to $reference.
      */
     public static function toStorageDateNearToday(
@@ -141,6 +142,34 @@ class LocaleDate
         ?string $locale = null,
     ): ?string {
         return self::parseNearTodayDate($value, $reference, $locale)?->toDateString();
+    }
+
+    /**
+     * Parse SMS date (and optional time) for chronological sorting.
+     */
+    public static function parseNearTodayDateTime(
+        ?string $value,
+        ?CarbonInterface $reference = null,
+        ?string $locale = null,
+    ): ?CarbonInterface {
+        if ($value === null) {
+            return null;
+        }
+
+        $normalized = self::normalizeDateDigits(trim($value));
+
+        if ($normalized === '') {
+            return null;
+        }
+
+        [$datePart, $hour, $minute, $second] = self::splitDateAndTime($normalized);
+        $date = self::parseNearTodayDate($datePart, $reference, $locale);
+
+        if ($date === null) {
+            return null;
+        }
+
+        return $date->copy()->setTime($hour, $minute, $second);
     }
 
     public static function parseNearTodayDate(
@@ -158,6 +187,8 @@ class LocaleDate
             return null;
         }
 
+        [$value] = self::splitDateAndTime($value);
+
         $strict = self::parseFilterDate($value, $locale);
 
         if ($strict !== null) {
@@ -173,8 +204,8 @@ class LocaleDate
 
         try {
             if (preg_match('/^(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{2}|\d{4})$/', $value, $matches) === 1) {
-                $day = (int) $matches[1];
-                $month = (int) $matches[2];
+                $first = (int) $matches[1];
+                $second = (int) $matches[2];
                 $yearPart = $matches[3];
 
                 if (strlen($yearPart) === 4) {
@@ -184,12 +215,20 @@ class LocaleDate
                         return null;
                     }
 
-                    return Jalalian::fromFormat('Y/m/d', sprintf('%04d/%02d/%02d', $year, $month, $day))
+                    // Full Jalali with day/month/year order (rare in SMS) vs year-first handled by parseFilterDate.
+                    return Jalalian::fromFormat('Y/m/d', sprintf('%04d/%02d/%02d', $year, $second, $first))
                         ->toCarbon()
                         ->startOfDay();
                 }
 
-                return self::bestTwoDigitYearDate($day, $month, (int) $yearPart, $reference);
+                // Short form dd/mm/yy (02/08/05) and bank SMS yy/mm/dd (05/08/02); pick closest to today.
+                $dayMonthYear = self::bestTwoDigitYearDate($first, $second, (int) $yearPart, $reference);
+                $yearMonthDay = self::bestTwoDigitYearDateForYmd($first, $second, (int) $yearPart, $reference);
+
+                return self::closestToReference(array_values(array_filter([
+                    $dayMonthYear,
+                    $yearMonthDay,
+                ])), $reference);
             }
 
             if (preg_match('/^(\d{1,2})[-\/.](\d{1,2})$/', $value, $matches) === 1) {
@@ -203,6 +242,44 @@ class LocaleDate
         }
 
         return null;
+    }
+
+    /**
+     * @return array{0: string, 1: int, 2: int, 3: int}
+     */
+    protected static function splitDateAndTime(string $value): array
+    {
+        if (preg_match('/^(.+?)(?:[\sT]|-)(\d{1,2}):(\d{2})(?::(\d{2}))?$/', $value, $matches) === 1) {
+            return [
+                rtrim($matches[1], " \t"),
+                (int) $matches[2],
+                (int) $matches[3],
+                isset($matches[4]) && $matches[4] !== '' ? (int) $matches[4] : 0,
+            ];
+        }
+
+        return [$value, 0, 0, 0];
+    }
+
+    protected static function bestTwoDigitYearDateForYmd(
+        int $twoDigitYear,
+        int $month,
+        int $day,
+        CarbonInterface $reference,
+    ): ?CarbonInterface {
+        $twoDigitYear = $twoDigitYear % 100;
+        $candidates = [];
+
+        foreach ([13, 14] as $century) {
+            $year = ($century * 100) + $twoDigitYear;
+            $carbon = self::tryJalaliDay($year, $month, $day);
+
+            if ($carbon !== null) {
+                $candidates[] = $carbon;
+            }
+        }
+
+        return self::closestToReference($candidates, $reference);
     }
 
     protected static function normalizeDateDigits(string $value): string
