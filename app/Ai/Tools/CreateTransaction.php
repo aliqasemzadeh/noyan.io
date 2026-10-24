@@ -353,6 +353,7 @@ class CreateTransaction implements Tool
         array $data,
         bool $confirmed,
         array &$runningBalances = [],
+        bool $forceSkip = false,
     ): array {
         $typeValue = strtolower(trim($data['type']));
         $amount = $this->normalizeDigits($data['amount']);
@@ -402,22 +403,25 @@ class CreateTransaction implements Tool
         $projected = $this->projectBalance($type, $currentBalance, $amount);
         $balanceMatched = false;
 
+        if ($forceSkip || ($expectedBalance !== '' && is_numeric($expectedBalance) && bccomp($currentBalance, $expectedBalance, 18) === 0)) {
+            $runningBalances[$accountId] = $currentBalance;
+            $skipBalance = $expectedBalance !== '' && is_numeric($expectedBalance)
+                ? $expectedBalance
+                : $currentBalance;
+
+            return $this->result(true, 'skipped', __('general.ai_transaction_already_registered', [
+                'type' => $type->label(),
+                'amount' => $this->formatAmount($amount),
+                'account' => $account->name,
+                'balance' => $this->formatAmount($skipBalance),
+                'date' => LocaleDate::formatDate($storageDate),
+            ]));
+        }
+
         if ($expectedBalance !== '') {
             if (! is_numeric($expectedBalance)) {
                 return $this->fail(__('general.ai_transaction_invalid', [
                     'errors' => __('general.current_balance'),
-                ]));
-            }
-
-            if (bccomp($currentBalance, $expectedBalance, 18) === 0) {
-                $runningBalances[$accountId] = $currentBalance;
-
-                return $this->result(true, 'skipped', __('general.ai_transaction_already_registered', [
-                    'type' => $type->label(),
-                    'amount' => $this->formatAmount($amount),
-                    'account' => $account->name,
-                    'balance' => $this->formatAmount($expectedBalance),
-                    'date' => LocaleDate::formatDate($storageDate),
                 ]));
             }
 
