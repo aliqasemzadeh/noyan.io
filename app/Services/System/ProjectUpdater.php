@@ -50,6 +50,18 @@ class ProjectUpdater
             return $migrateExit;
         }
 
+        $permissionsExit = $this->runner->artisan(
+            ['permissions:sync'],
+            $onOutput,
+            'php artisan permissions:sync',
+        );
+
+        if ($permissionsExit !== 0) {
+            $onOutput(PHP_EOL.__('general.system_update_failed').PHP_EOL);
+
+            return $permissionsExit;
+        }
+
         foreach (['cache:clear', 'route:clear', 'view:clear', 'config:clear'] as $command) {
             $exitCode = $this->runner->artisan(
                 [$command],

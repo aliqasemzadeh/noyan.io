@@ -45,6 +45,7 @@ class AdministratorPermissions
             'business' => __('general.businesses'),
             'currency' => __('general.currencies'),
             'category' => __('general.system_categories'),
+            'ticket' => __('general.support'),
             'function' => __('general.system_functions'),
             'backup' => __('general.system_backups'),
             'setting' => __('general.system_settings'),

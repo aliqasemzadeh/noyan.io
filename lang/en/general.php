@@ -1097,8 +1097,9 @@ return [
     'command_run' => 'Run',
     'quick_update' => 'Quick update',
     'full_update' => 'Full update',
-    'quick_update_confirm' => 'Run a quick update? (git pull, migrate, and cache clears)',
-    'full_update_confirm' => 'Run a full update? (includes composer and npm build)',
+    'quick_update_confirm' => 'Run a quick update? (git pull, migrate, permissions sync, and cache clears)',
+    'full_update_confirm' => 'Run a full update? (includes composer, npm build, and permissions sync)',
+
     'system_update_started' => 'Starting :mode',
     'system_update_finished' => 'Update finished successfully.',
     'system_update_failed' => 'Update stopped with errors.',

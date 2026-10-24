@@ -1097,8 +1097,9 @@ return [
     'command_run' => 'اجرا',
     'quick_update' => 'به‌روزرسانی سریع',
     'full_update' => 'به‌روزرسانی کامل',
-    'quick_update_confirm' => 'به‌روزرسانی سریع انجام شود؟ (git pull، migrate و پاک‌سازی کش)',
-    'full_update_confirm' => 'به‌روزرسانی کامل انجام شود؟ (شامل composer و npm build)',
+    'quick_update_confirm' => 'به‌روزرسانی سریع انجام شود؟ (git pull، migrate، همگام‌سازی مجوزها و پاک‌سازی کش)',
+    'full_update_confirm' => 'به‌روزرسانی کامل انجام شود؟ (شامل composer، npm build و همگام‌سازی مجوزها)',
+
     'system_update_started' => 'شروع :mode',
     'system_update_finished' => 'به‌روزرسانی با موفقیت انجام شد.',
     'system_update_failed' => 'به‌روزرسانی با خطا متوقف شد.',
