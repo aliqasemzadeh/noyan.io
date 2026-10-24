@@ -28,8 +28,9 @@ new class extends Component
 
     public string $assistantReply = '';
 
-    /** @var list<array{role: string, content: string}> */
+    /** @var list<array{role: string, content: string, attachment?: array{name: string}|null}> */
     public array $messages = [];
+
 
     public bool $isTranscribing = false;
 
@@ -167,7 +168,9 @@ new class extends Component
         ]);
 
         $promptText = trim($this->prompt);
-        $storedDocumentPath = null;
+        $displayText = $promptText;
+        $agentPrompt = $promptText;
+        $attachment = null;
 
         if ($hasDocument && $this->document instanceof TemporaryUploadedFile) {
             $extension = strtolower($this->document->getClientOriginalExtension() ?: 'xlsx');
@@ -178,13 +181,21 @@ new class extends Component
             );
 
             $originalName = $this->document->getClientOriginalName();
-            $promptText = trim($promptText."\n".__('general.ai_document_prompt_suffix', [
+            $attachment = ['name' => $originalName];
+
+            $displaySuffix = __('general.ai_document_prompt_display', [
+                'file' => $originalName,
+            ]);
+            $agentSuffix = __('general.ai_document_prompt_suffix', [
                 'file' => $originalName,
                 'path' => $storedDocumentPath,
-            ]));
+            ]);
+
+            $displayText = trim($displayText."\n".$displaySuffix);
+            $agentPrompt = trim($agentPrompt."\n".$agentSuffix);
         }
 
-        if ($promptText === '') {
+        if ($agentPrompt === '') {
             Flux::toast(__('general.ai_prompt').' / '.__('general.ai_document'), variant: 'danger');
 
             return;
@@ -192,12 +203,13 @@ new class extends Component
 
         $this->messages[] = [
             'role' => 'user',
-            'content' => $promptText,
+            'content' => $displayText,
+            'attachment' => $attachment,
         ];
 
         try {
             if ($this->context === 'users') {
-                $response = (new UserAssistant)->prompt($promptText);
+                $response = (new UserAssistant)->prompt($agentPrompt);
             } else {
                 $user = auth()->user();
 
@@ -210,8 +222,9 @@ new class extends Component
 
                 $response = (new AccountingAssistant)
                     ->continueOrStart($this->conversationId, $user)
-                    ->prompt($promptText);
+                    ->prompt($agentPrompt);
             }
+
         } catch (\Throwable $exception) {
             report($exception);
 
@@ -447,8 +460,19 @@ new class extends Component
         @forelse ($messages as $message)
             @if ($message['role'] === 'user')
                 <div class="flex items-end justify-end gap-2">
-                    <div class="max-w-[min(100%,42rem)] rounded-2xl rounded-ee-md bg-teal-600 px-4 py-2.5 text-sm leading-6 text-white shadow-sm whitespace-pre-wrap">
-                        {{ $message['content'] }}
+                    <div class="max-w-[min(100%,42rem)] space-y-2">
+                        @if (! empty($message['attachment']['name']))
+                            <div class="flex justify-end">
+                                <flux:badge size="sm" color="teal" icon="file-spreadsheet" class="max-w-full truncate">
+                                    {{ $message['attachment']['name'] }}
+                                </flux:badge>
+                            </div>
+                        @endif
+                        @if (filled($message['content']))
+                            <div class="rounded-2xl rounded-ee-md bg-teal-600 px-4 py-2.5 text-sm leading-6 text-white shadow-sm whitespace-pre-wrap">
+                                {{ $message['content'] }}
+                            </div>
+                        @endif
                     </div>
                     <div class="mb-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-teal-600 text-xs font-semibold text-white">
                         {{ mb_substr(__('general.ai_assistant_you'), 0, 1) }}

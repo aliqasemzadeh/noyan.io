@@ -138,8 +138,11 @@ return [
     'ai_daily_expenses_item' => ':n) :amount — :account:detail',
     'ai_document' => 'فایل اکسل',
     'ai_document_ready' => 'فایل اکسل آماده ارسال است.',
+    'ai_document_prompt_display' => 'فایل اکسل «:file» آپلود شد. این فایل را وارد کن.',
     'ai_document_prompt_suffix' => "فایل اکسل «:file» آپلود شد. این فایل را وارد کن.\nfile_path=:path",
-    'ai_document_import_file_missing' => 'فایل اکسل پیدا نشد. مسیر file_path را بررسی کنید یا دوباره آپلود کنید.',
+    'ai_document_import_queued' => 'درخواست وارد کردن فایل در صف قرار گرفت. به‌زودی براتون وارد می‌کنیم.',
+    'ai_document_import_file_missing' => 'فایل اکسل پیدا نشد. دوباره آپلود کنید.',
+
     'ai_document_import_unknown_type' => 'نوع سند اکسل تشخیص داده نشد. عنوان باید «پیش فروش کالا و خدمات» یا «فروش کالا و خدمات» باشد.',
     'ai_document_import_kind_mismatch' => 'این فایل برای :expected نیست (تشخیص داده شد: :actual). ابزار مناسب را صدا بزنید.',
     'ai_document_import_invalid_date' => 'تاریخ سند اکسل نامعتبر است.',

@@ -138,8 +138,11 @@ return [
     'ai_daily_expenses_item' => ':n) :amount — :account:detail',
     'ai_document' => 'Excel file',
     'ai_document_ready' => 'Excel file is ready to send.',
+    'ai_document_prompt_display' => 'Excel file “:file” was uploaded. Import this file.',
     'ai_document_prompt_suffix' => "Excel file “:file” was uploaded. Import this file.\nfile_path=:path",
-    'ai_document_import_file_missing' => 'Excel file was not found. Check file_path or upload again.',
+    'ai_document_import_queued' => 'Your import was queued. We’ll import it for you shortly.',
+    'ai_document_import_file_missing' => 'Excel file was not found. Please upload it again.',
+
     'ai_document_import_unknown_type' => 'Could not detect the Excel document type. Title must be “پیش فروش کالا و خدمات” or “فروش کالا و خدمات”.',
     'ai_document_import_kind_mismatch' => 'This file is not a :expected (detected: :actual). Call the matching tool.',
     'ai_document_import_invalid_date' => 'The Excel document date is invalid.',
