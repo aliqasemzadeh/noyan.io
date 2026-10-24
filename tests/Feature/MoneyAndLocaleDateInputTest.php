@@ -62,8 +62,16 @@ class MoneyAndLocaleDateInputTest extends TestCase
 
         $this->assertSame($expected, LocaleDate::toStorageDateNearToday('02/08', $reference));
         $this->assertSame($expected, LocaleDate::toStorageDateNearToday('02/08/05', $reference));
+        $this->assertSame($expected, LocaleDate::toStorageDateNearToday('05/08/02', $reference));
         $this->assertSame($expected, LocaleDate::toStorageDateNearToday('۰۲/۰۸', $reference));
         $this->assertSame($expected, LocaleDate::toStorageDateNearToday('1405/08/02', $reference));
+        $this->assertSame($expected, LocaleDate::toStorageDateNearToday('05/08/02-16:18', $reference));
+
+        $withTime = LocaleDate::parseNearTodayDateTime('05/08/02-16:18', $reference);
+        $this->assertNotNull($withTime);
+        $this->assertSame($expected, $withTime->toDateString());
+        $this->assertSame(16, $withTime->hour);
+        $this->assertSame(18, $withTime->minute);
 
         $this->assertNull(LocaleDate::toStorageDate('02/08'));
         $this->assertNull(LocaleDate::toStorageDate('02/08/05'));

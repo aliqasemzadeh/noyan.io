@@ -198,7 +198,7 @@ class AccountingAiTransactionTest extends TestCase
         ]);
     }
 
-    public function test_tool_previews_without_creating_when_not_confirmed(): void
+    public function test_tool_auto_creates_when_expected_balance_matches_without_confirm(): void
     {
         [$user, $business, $currency, $account] = $this->actingBusinessOwnerWithBankAccount();
 
@@ -212,16 +212,13 @@ class AccountingAiTransactionTest extends TestCase
             'expected_balance' => $expected,
         ]));
 
-        $this->assertStringContainsString(__('general.ai_transaction_preview_ask_confirm'), $result);
+        $this->assertStringNotContainsString(__('general.ai_transaction_preview_ask_confirm'), $result);
         $this->assertStringContainsString($account->name, $result);
-        $this->assertDatabaseCount('transactions', 0);
-        $this->assertSame(
-            (string) $account->current_balance,
-            (string) $account->fresh()->current_balance,
-        );
+        $this->assertDatabaseCount('transactions', 1);
+        $this->assertSame(0, bccomp($expected, (string) $account->fresh()->current_balance, 18));
     }
 
-    public function test_tool_defaults_to_preview_when_confirmed_omitted(): void
+    public function test_tool_defaults_to_preview_when_expected_balance_omitted(): void
     {
         [$user, $business, $currency, $account] = $this->actingBusinessOwnerWithBankAccount();
 
@@ -335,7 +332,7 @@ class AccountingAiTransactionTest extends TestCase
         $this->assertSame(0, bccomp($expected, (string) $account->fresh()->current_balance, 18));
     }
 
-    public function test_tool_batch_preview_uses_running_balance_for_expected_checks(): void
+    public function test_tool_batch_auto_creates_when_expected_balances_match_without_confirm(): void
     {
         [$user, $business, $currency, $account] = $this->actingBusinessOwnerWithBankAccount(
             currentBalance: '10000000',
@@ -364,10 +361,9 @@ class AccountingAiTransactionTest extends TestCase
             ],
         ]));
 
-        $this->assertStringContainsString('2', $result);
-        $this->assertStringContainsString(__('general.ai_transaction_preview_ask_confirm'), $result);
-        $this->assertStringContainsString('قابل ثبت', $result);
-        $this->assertDatabaseCount('transactions', 0);
+        $this->assertStringNotContainsString(__('general.ai_transaction_preview_ask_confirm'), $result);
+        $this->assertDatabaseCount('transactions', 2);
+        $this->assertSame(0, bccomp($afterSecond, (string) $account->fresh()->current_balance, 18));
     }
 
     public function test_tool_batch_creates_with_sequential_expected_balances(): void
@@ -413,16 +409,18 @@ class AccountingAiTransactionTest extends TestCase
         $this->assertStringContainsString($business->name, $instructions);
         $this->assertStringContainsString('transactions', $instructions);
         $this->assertStringContainsString('expected_balance', $instructions);
-        $this->assertStringContainsString('confirmed=false', $instructions);
         $this->assertStringContainsString('confirmed=true', $instructions);
         $this->assertStringContainsString('02/08', $instructions);
+        $this->assertStringContainsString('بدون تأیید', $instructions);
     }
 
-    public function test_tool_preview_accepts_short_jalali_sms_date_near_today(): void
+    public function test_tool_auto_creates_with_short_jalali_sms_date_near_today(): void
     {
         $this->travelTo(Jalalian::fromFormat('Y/m/d', '1405/08/02')->toCarbon()->setTime(12, 0));
 
         [$user, $business, $currency, $account] = $this->actingBusinessOwnerWithBankAccount();
+
+        $expected = bcsub((string) $account->current_balance, '1500000', 0);
 
         $result = (string) (new CreateTransaction)->handle(new Request([
             'confirmed' => false,
@@ -430,22 +428,23 @@ class AccountingAiTransactionTest extends TestCase
             'amount' => '1500000',
             'account_number' => '5199858647',
             'transaction_date' => '02/08',
-            'expected_balance' => bcsub((string) $account->current_balance, '1500000', 0),
+            'expected_balance' => $expected,
         ]));
 
         $this->assertStringContainsString(LocaleDate::formatDate(now()->toDateString()), $result);
-        $this->assertStringContainsString(__('general.ai_transaction_preview_ask_confirm'), $result);
+        $this->assertStringNotContainsString(__('general.ai_transaction_preview_ask_confirm'), $result);
         $this->assertStringNotContainsString('هشدار:', $result);
-        $this->assertDatabaseCount('transactions', 0);
+        $this->assertDatabaseCount('transactions', 1);
     }
 
-    public function test_tool_preview_warns_when_date_is_far_from_today(): void
+    public function test_tool_auto_creates_and_warns_when_date_is_far_from_today(): void
     {
         $this->travelTo(Jalalian::fromFormat('Y/m/d', '1405/08/02')->toCarbon()->setTime(12, 0));
 
         [$user, $business, $currency, $account] = $this->actingBusinessOwnerWithBankAccount();
 
         $farDate = LocaleDate::toStorageDate('1405/01/01');
+        $expected = bcsub((string) $account->current_balance, '1500000', 0);
 
         $result = (string) (new CreateTransaction)->handle(new Request([
             'confirmed' => false,
@@ -453,18 +452,18 @@ class AccountingAiTransactionTest extends TestCase
             'amount' => '1500000',
             'account_number' => '5199858647',
             'transaction_date' => '1405/01/01',
-            'expected_balance' => bcsub((string) $account->current_balance, '1500000', 0),
+            'expected_balance' => $expected,
         ]));
 
         $this->assertStringContainsString(__('general.ai_transaction_date_far', [
             'date' => LocaleDate::formatDate($farDate),
             'days' => (int) abs(now()->startOfDay()->diffInDays($farDate)),
         ]), $result);
-        $this->assertStringContainsString(__('general.ai_transaction_preview_ask_confirm'), $result);
-        $this->assertDatabaseCount('transactions', 0);
+        $this->assertStringNotContainsString(__('general.ai_transaction_preview_ask_confirm'), $result);
+        $this->assertDatabaseCount('transactions', 1);
     }
 
-    public function test_tool_preview_warns_when_date_is_before_latest_account_transaction(): void
+    public function test_tool_auto_creates_and_warns_when_date_is_before_latest_account_transaction(): void
     {
         $this->travelTo(Jalalian::fromFormat('Y/m/d', '1405/08/02')->toCarbon()->setTime(12, 0));
 
@@ -482,6 +481,7 @@ class AccountingAiTransactionTest extends TestCase
         ]);
 
         $older = LocaleDate::toStorageDate('1405/08/01');
+        $expected = bcsub((string) $account->fresh()->current_balance, '1500000', 0);
 
         $result = (string) (new CreateTransaction)->handle(new Request([
             'confirmed' => false,
@@ -489,17 +489,17 @@ class AccountingAiTransactionTest extends TestCase
             'amount' => '1500000',
             'account_number' => '5199858647',
             'transaction_date' => '01/08',
-            'expected_balance' => bcsub((string) $account->fresh()->current_balance, '1500000', 0),
+            'expected_balance' => $expected,
         ]));
 
         $this->assertStringContainsString(__('general.ai_transaction_date_out_of_order', [
             'date' => LocaleDate::formatDate($older),
             'last' => LocaleDate::formatDate(now()->toDateString()),
         ]), $result);
-        $this->assertDatabaseCount('transactions', 1);
+        $this->assertDatabaseCount('transactions', 2);
     }
 
-    public function test_tool_batch_reorders_by_date_for_expected_balance_checks(): void
+    public function test_tool_batch_reorders_by_datetime_and_auto_creates(): void
     {
         $this->travelTo(Jalalian::fromFormat('Y/m/d', '1405/08/02')->toCarbon()->setTime(12, 0));
 
@@ -519,23 +519,116 @@ class AccountingAiTransactionTest extends TestCase
                     'type' => 'expense',
                     'amount' => $secondAmount,
                     'account_number' => '5199858647',
-                    'transaction_date' => '02/08',
+                    'transaction_date' => '02/08-16:18',
                     'expected_balance' => $afterSecond,
                 ],
                 [
                     'type' => 'expense',
                     'amount' => $firstAmount,
                     'account_number' => '5199858647',
-                    'transaction_date' => '01/08',
+                    'transaction_date' => '02/08-10:17',
                     'expected_balance' => $afterFirst,
                 ],
             ],
         ]));
 
         $this->assertStringContainsString(__('general.ai_transaction_batch_reordered_by_date'), $result);
-        $this->assertStringContainsString(__('general.ai_transaction_preview_ask_confirm'), $result);
-        $this->assertStringContainsString('قابل ثبت', $result);
+        $this->assertStringNotContainsString(__('general.ai_transaction_preview_ask_confirm'), $result);
+        $this->assertDatabaseCount('transactions', 2);
+        $this->assertSame(0, bccomp($afterSecond, (string) $account->fresh()->current_balance, 18));
+    }
+
+    public function test_tool_batch_skips_already_applied_middle_transaction(): void
+    {
+        $this->travelTo(Jalalian::fromFormat('Y/m/d', '1405/08/02')->toCarbon()->setTime(12, 0));
+
+        $opening = '10000000';
+        $firstAmount = '1500000';
+        $middleAmount = '2000000';
+        $lastAmount = '500000';
+        $afterFirst = bcsub($opening, $firstAmount, 0);
+        $afterMiddle = bcsub($afterFirst, $middleAmount, 0);
+        $afterLast = bcsub($afterMiddle, $lastAmount, 0);
+
+        [$user, $business, $currency, $account] = $this->actingBusinessOwnerWithBankAccount(
+            currentBalance: $afterMiddle,
+        );
+
+        $result = (string) (new CreateTransaction)->handle(new Request([
+            'confirmed' => false,
+            'transactions' => [
+                [
+                    'type' => 'expense',
+                    'amount' => $lastAmount,
+                    'account_number' => '5199858647',
+                    'transaction_date' => '02/08-16:18',
+                    'expected_balance' => $afterLast,
+                ],
+                [
+                    'type' => 'expense',
+                    'amount' => $middleAmount,
+                    'account_number' => '5199858647',
+                    'transaction_date' => '02/08-12:00',
+                    'expected_balance' => $afterMiddle,
+                ],
+                [
+                    'type' => 'expense',
+                    'amount' => $firstAmount,
+                    'account_number' => '5199858647',
+                    'transaction_date' => '02/08-09:00',
+                    'expected_balance' => $afterFirst,
+                ],
+            ],
+        ]));
+
+        $this->assertStringContainsString(__('general.ai_transaction_already_registered', [
+            'type' => TransactionType::Expense->label(),
+            'amount' => number_format((float) $middleAmount, 0, '.', ','),
+            'account' => $account->name,
+            'balance' => number_format((float) $afterMiddle, 0, '.', ','),
+            'date' => LocaleDate::formatDate(now()->toDateString()),
+        ]), $result);
+        $this->assertStringNotContainsString(__('general.ai_transaction_preview_ask_confirm'), $result);
+        $this->assertDatabaseCount('transactions', 1);
+        $this->assertDatabaseHas('transactions', [
+            'account_id' => $account->id,
+            'amount' => $lastAmount,
+        ]);
+        $this->assertSame(0, bccomp($afterLast, (string) $account->fresh()->current_balance, 18));
+    }
+
+    public function test_tool_batch_skips_all_when_balances_already_match(): void
+    {
+        $opening = '10000000';
+        $amount = '1500000';
+        $after = bcsub($opening, $amount, 0);
+
+        [$user, $business, $currency, $account] = $this->actingBusinessOwnerWithBankAccount(
+            currentBalance: $after,
+        );
+
+        $result = (string) (new CreateTransaction)->handle(new Request([
+            'confirmed' => false,
+            'transactions' => [
+                [
+                    'type' => 'expense',
+                    'amount' => $amount,
+                    'account_number' => '5199858647',
+                    'expected_balance' => $after,
+                ],
+            ],
+        ]));
+
+        $this->assertStringContainsString(__('general.ai_transaction_already_registered', [
+            'type' => TransactionType::Expense->label(),
+            'amount' => number_format((float) $amount, 0, '.', ','),
+            'account' => $account->name,
+            'balance' => number_format((float) $after, 0, '.', ','),
+            'date' => LocaleDate::formatDate(now()->toDateString()),
+        ]), $result);
+        $this->assertStringNotContainsString(__('general.ai_transaction_preview_ask_confirm'), $result);
         $this->assertDatabaseCount('transactions', 0);
+        $this->assertSame(0, bccomp($after, (string) $account->fresh()->current_balance, 18));
     }
 
     /**
