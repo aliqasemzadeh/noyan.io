@@ -193,7 +193,7 @@ new class extends Component
                 wire:navigate
                 :current="request()->routeIs('user.support.*')"
             >
-                {{ __('general.tickets') }}
+                {{ __('general.support') }}
             </flux:sidebar.item>
         @elseif (request()->routeIs('sale.*'))
             <flux:sidebar.item
