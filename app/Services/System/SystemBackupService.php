@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use RuntimeException;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class SystemBackupService
 {
@@ -47,22 +48,18 @@ class SystemBackupService
         return trim(Artisan::output());
     }
 
+    public function download(string $path): StreamedResponse
+    {
+        $path = $this->assertValidBackupPath($path);
+
+        return Storage::disk($this->disk())->download($path, basename($path));
+    }
+
     public function delete(string $path): void
     {
-        $path = ltrim(str_replace('\\', '/', $path), '/');
-        $prefix = trim($this->backupName(), '/').'/';
+        $path = $this->assertValidBackupPath($path);
 
-        if ($path === '' || str_contains($path, '..') || ! str_starts_with($path, $prefix)) {
-            throw new RuntimeException(__('general.backup_delete_invalid'));
-        }
-
-        $disk = Storage::disk($this->disk());
-
-        if (! $disk->exists($path)) {
-            throw new RuntimeException(__('general.backup_not_found'));
-        }
-
-        $disk->delete($path);
+        Storage::disk($this->disk())->delete($path);
     }
 
     public function disk(): string
@@ -87,5 +84,21 @@ class SystemBackupService
         }
 
         return number_format($size, $unit === 0 ? 0 : 2).' '.$units[$unit];
+    }
+
+    private function assertValidBackupPath(string $path): string
+    {
+        $path = ltrim(str_replace('\\', '/', $path), '/');
+        $prefix = trim($this->backupName(), '/').'/';
+
+        if ($path === '' || str_contains($path, '..') || ! str_starts_with($path, $prefix)) {
+            throw new RuntimeException(__('general.backup_delete_invalid'));
+        }
+
+        if (! Storage::disk($this->disk())->exists($path)) {
+            throw new RuntimeException(__('general.backup_not_found'));
+        }
+
+        return $path;
     }
 }

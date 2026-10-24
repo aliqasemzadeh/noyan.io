@@ -84,6 +84,37 @@ class SystemBackupPageTest extends TestCase
         Storage::disk('local')->assertMissing($path);
     }
 
+    public function test_download_backup_returns_file(): void
+    {
+        Storage::fake('local');
+
+        config(['backup.backup.name' => 'noyan-test']);
+
+        $path = 'noyan-test/2026-01-01-00-00-00.zip';
+        Storage::disk('local')->put($path, 'zip-content');
+
+        $user = $this->grantAdministratorAccess(User::factory()->create());
+
+        Livewire::actingAs($user)
+            ->test('pages::panel.administrator.system-management.backup.index')
+            ->call('downloadBackup', $path)
+            ->assertFileDownloaded('2026-01-01-00-00-00.zip');
+    }
+
+    public function test_download_backup_rejects_invalid_path(): void
+    {
+        Storage::fake('local');
+
+        config(['backup.backup.name' => 'noyan-test']);
+
+        $user = $this->grantAdministratorAccess(User::factory()->create());
+
+        Livewire::actingAs($user)
+            ->test('pages::panel.administrator.system-management.backup.index')
+            ->call('downloadBackup', '../secret.zip')
+            ->assertNoFileDownloaded();
+    }
+
     public function test_sidebar_includes_backup_and_settings_links(): void
     {
         $user = $this->grantAdministratorAccess(User::factory()->create());

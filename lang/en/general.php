@@ -1210,6 +1210,7 @@ return [
     'backup_deleted' => 'Backup file deleted.',
     'backup_delete_invalid' => 'Invalid backup file path.',
     'backup_not_found' => 'Backup file not found.',
+    'download' => 'Download',
     'support' => 'Support',
     'tickets' => 'Tickets',
     'ticket' => 'Ticket',

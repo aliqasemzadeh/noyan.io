@@ -1210,6 +1210,7 @@ return [
     'backup_deleted' => 'فایل پشتیبان حذف شد.',
     'backup_delete_invalid' => 'مسیر فایل پشتیبان نامعتبر است.',
     'backup_not_found' => 'فایل پشتیبان پیدا نشد.',
+    'download' => 'دانلود',
     'support' => 'پشتیبانی',
     'tickets' => 'تیکت‌ها',
     'ticket' => 'تیکت',

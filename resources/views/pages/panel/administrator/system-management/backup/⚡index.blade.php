@@ -51,6 +51,15 @@ new class extends Component
         }
     }
 
+    public function downloadBackup(string $path)
+    {
+        try {
+            return app(SystemBackupService::class)->download($path);
+        } catch (\RuntimeException $exception) {
+            Flux::toast($exception->getMessage(), variant: 'danger');
+        }
+    }
+
     public function confirmDelete(string $path): void
     {
         $this->deletingPath = $path;
@@ -150,15 +159,27 @@ new class extends Component
                             <flux:table.cell>{{ $this->formatSize($backup['size']) }}</flux:table.cell>
                             <flux:table.cell>{{ $this->formatDate($backup['last_modified']) }}</flux:table.cell>
                             <flux:table.cell align="end">
-                                <flux:tooltip content="{{ __('general.delete') }}">
-                                    <flux:button
-                                        size="xs"
-                                        variant="danger"
-                                        icon="trash"
-                                        icon:variant="outline"
-                                        wire:click="confirmDelete({{ \Illuminate\Support\Js::from($backup['path']) }})"
-                                    />
-                                </flux:tooltip>
+                                <div class="flex justify-end gap-2">
+                                    <flux:tooltip content="{{ __('general.download') }}">
+                                        <flux:button
+                                            size="xs"
+                                            variant="primary"
+                                            color="teal"
+                                            icon="download"
+                                            icon:variant="outline"
+                                            wire:click="downloadBackup({{ \Illuminate\Support\Js::from($backup['path']) }})"
+                                        />
+                                    </flux:tooltip>
+                                    <flux:tooltip content="{{ __('general.delete') }}">
+                                        <flux:button
+                                            size="xs"
+                                            variant="danger"
+                                            icon="trash"
+                                            icon:variant="outline"
+                                            wire:click="confirmDelete({{ \Illuminate\Support\Js::from($backup['path']) }})"
+                                        />
+                                    </flux:tooltip>
+                                </div>
                             </flux:table.cell>
                         </flux:table.row>
                     @endforeach

@@ -49,4 +49,28 @@ class SystemBackupServiceTest extends TestCase
 
         app(SystemBackupService::class)->delete('../secret.zip');
     }
+
+    public function test_download_returns_file_response_for_valid_backup(): void
+    {
+        Storage::fake('local');
+        config(['backup.backup.name' => 'noyan-test']);
+
+        $path = 'noyan-test/2026-01-01-00-00-00.zip';
+        Storage::disk('local')->put($path, 'zip-content');
+
+        $response = app(SystemBackupService::class)->download($path);
+
+        $this->assertSame(200, $response->getStatusCode());
+        $this->assertStringContainsString('2026-01-01-00-00-00.zip', (string) $response->headers->get('Content-Disposition'));
+    }
+
+    public function test_download_rejects_paths_outside_backup_prefix(): void
+    {
+        Storage::fake('local');
+        config(['backup.backup.name' => 'noyan-test']);
+
+        $this->expectException(RuntimeException::class);
+
+        app(SystemBackupService::class)->download('../secret.zip');
+    }
 }
