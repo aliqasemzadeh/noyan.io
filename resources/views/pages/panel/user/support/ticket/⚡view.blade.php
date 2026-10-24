@@ -121,7 +121,7 @@ new class extends Component
                 {{ __('general.dashboard') }}
             </flux:breadcrumbs.item>
             <flux:breadcrumbs.item :href="route('user.support.tickets.index')" wire:navigate>
-                {{ __('general.tickets') }}
+                {{ __('general.support') }}
             </flux:breadcrumbs.item>
             <flux:breadcrumbs.item>
                 {{ $ticket->title }}

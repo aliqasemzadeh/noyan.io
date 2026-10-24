@@ -49,7 +49,7 @@ new class extends Component
 };
 ?>
 
-<x-slot name="title">{{ __('general.tickets') }} - {{ __('general.app_name') }}</x-slot>
+<x-slot name="title">{{ __('general.support') }} - {{ __('general.app_name') }}</x-slot>
 
 <div class="space-y-6">
     <div>
@@ -58,13 +58,13 @@ new class extends Component
                 {{ __('general.dashboard') }}
             </flux:breadcrumbs.item>
             <flux:breadcrumbs.item>
-                {{ __('general.tickets') }}
+                {{ __('general.support') }}
             </flux:breadcrumbs.item>
         </flux:breadcrumbs>
 
         <div class="mt-4 flex items-center justify-between">
             <flux:heading size="xl" level="1">
-                {{ __('general.tickets') }}
+                {{ __('general.support') }}
             </flux:heading>
 
             <flux:button
