@@ -97,6 +97,7 @@ class MobileOtpLoginTest extends TestCase
             ->assertRedirect(route('dashboard'));
 
         $this->assertAuthenticatedAs($user);
+        $this->assertNotNull($user->fresh()->remember_token);
     }
 
     public function test_invalid_otp_does_not_log_user_in(): void

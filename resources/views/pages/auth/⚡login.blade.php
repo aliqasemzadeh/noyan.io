@@ -80,7 +80,7 @@ class extends Component
             return null;
         }
 
-        $result = $user->attemptLoginUsingOneTimePassword($this->code);
+        $result = $user->attemptLoginUsingOneTimePassword($this->code, remember: true);
 
         if (! $result->isOk()) {
             $message = $result === ConsumeOneTimePasswordResult::IncorrectOneTimePassword
