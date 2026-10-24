@@ -136,6 +136,38 @@ new class extends Component
                     {{ __('general.system_categories') }}
                 </flux:sidebar.item>
             @endcan
+
+            @if (auth()->user()?->can('ticket_view') || auth()->user()?->can('ticket_category_view'))
+                <flux:sidebar.group
+                    expandable
+                    :expanded="request()->routeIs('system.support.*')"
+                    icon="life-buoy"
+                    heading="{{ __('general.support') }}"
+                    class="grid"
+                >
+                    @can('ticket_view')
+                        <flux:sidebar.item
+                            icon="tickets"
+                            :href="route('system.support.tickets.index')"
+                            wire:navigate
+                            :current="request()->routeIs('system.support.tickets.*')"
+                        >
+                            {{ __('general.tickets') }}
+                        </flux:sidebar.item>
+                    @endcan
+
+                    @can('ticket_category_view')
+                        <flux:sidebar.item
+                            icon="folder-kanban"
+                            :href="route('system.support.ticket-categories.index')"
+                            wire:navigate
+                            :current="request()->routeIs('system.support.ticket-categories.*')"
+                        >
+                            {{ __('general.ticket_categories') }}
+                        </flux:sidebar.item>
+                    @endcan
+                </flux:sidebar.group>
+            @endif
         @elseif (request()->routeIs('user.*'))
             <flux:sidebar.item
                 icon="home"
@@ -153,6 +185,15 @@ new class extends Component
                 :current="request()->routeIs('user.businesses.*')"
             >
                 {{ __('general.my_businesses') }}
+            </flux:sidebar.item>
+
+            <flux:sidebar.item
+                icon="life-buoy"
+                :href="route('user.support.tickets.index')"
+                wire:navigate
+                :current="request()->routeIs('user.support.*')"
+            >
+                {{ __('general.tickets') }}
             </flux:sidebar.item>
         @elseif (request()->routeIs('sale.*'))
             <flux:sidebar.item

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Support\TicketFileController;
 use App\Models\ShortLink;
 use Illuminate\Support\Facades\Route;
 
@@ -83,6 +84,16 @@ Route::middleware('auth')->group(function () {
             ->middleware('permission:category_view')
             ->name('categories.index');
 
+        Route::livewire('/support/tickets', 'pages::panel.administrator.support.ticket.index')
+            ->middleware('permission:ticket_view')
+            ->name('support.tickets.index');
+        Route::livewire('/support/tickets/{ticket}', 'pages::panel.administrator.support.ticket.view')
+            ->middleware('permission:ticket_view')
+            ->name('support.tickets.view');
+        Route::livewire('/support/ticket-categories', 'pages::panel.administrator.support.ticket.category.index')
+            ->middleware('permission:ticket_category_view')
+            ->name('support.ticket-categories.index');
+
         Route::livewire('/functions', 'pages::panel.administrator.system-management.function.index')
             ->middleware('permission:function_view')
             ->name('functions.index');
@@ -99,6 +110,13 @@ Route::middleware('auth')->group(function () {
     Route::prefix('user')->name('user.')->group(function () {
         Route::livewire('/businesses/create', 'pages::panel.user.business.create')->name('businesses.create');
 
+        Route::livewire('/support/tickets', 'pages::panel.user.support.ticket.index')
+            ->name('support.tickets.index');
+        Route::livewire('/support/tickets/create', 'pages::panel.user.support.ticket.create')
+            ->name('support.tickets.create');
+        Route::livewire('/support/tickets/{ticket}', 'pages::panel.user.support.ticket.view')
+            ->name('support.tickets.view');
+
         Route::middleware('business.selected')->group(function () {
             Route::livewire('/', 'pages::panel.user.dashboard.index')->name('dashboard');
             Route::livewire('/businesses', 'pages::panel.user.business.index')->name('businesses.index');
@@ -111,6 +129,9 @@ Route::middleware('auth')->group(function () {
                 ->name('businesses.quote-preview');
         });
     });
+
+    Route::get('/support/ticket-files/{ticketFile}', [TicketFileController::class, 'show'])
+        ->name('support.ticket-files.show');
 
     Route::prefix('accounting')->name('accounting.')->middleware(['business.selected', 'business.panel:accounting'])->group(function () {
         Route::livewire('/', 'pages::panel.accounting.dashboard.index')->name('dashboard');
