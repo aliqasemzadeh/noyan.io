@@ -1235,6 +1235,10 @@ return [
     'ticket_status_closed' => 'بسته شده',
     'ticket_images' => 'تصاویر',
     'ticket_image' => 'تصویر',
+    'ticket_images_upload_heading' => 'تصاویر را رها کنید یا کلیک کنید',
+    'ticket_images_upload_hint' => 'JPG، PNG، WEBP، GIF تا ۵ مگابایت (حداکثر ۵ فایل)',
+    'remove_ticket_image' => 'حذف تصویر',
+
     'ticket_reply' => 'پاسخ',
     'send_reply' => 'ارسال پاسخ',
     'close_ticket' => 'بستن تیکت',

@@ -25,6 +25,16 @@ class TicketForm extends Form
     /** @var array<int, TemporaryUploadedFile> */
     public array $images = [];
 
+    public function removeImage(int $index): void
+    {
+        if (! isset($this->images[$index])) {
+            return;
+        }
+
+        unset($this->images[$index]);
+        $this->images = array_values($this->images);
+    }
+
     /**
      * @return array<string, mixed>
      */

@@ -34,6 +34,11 @@ new class extends Component
             ?? collect();
     }
 
+    public function removeImage(int $index): void
+    {
+        $this->form->removeImage($index);
+    }
+
     public function save(): void
     {
         $user = Auth::user();
@@ -81,7 +86,12 @@ new class extends Component
 
             <flux:field>
                 <flux:label>{{ __('general.ticket_category') }}</flux:label>
-                <flux:select wire:model="form.ticket_category_id" searchable placeholder="{{ __('general.ticket_category') }}">
+                <flux:select
+                    wire:model="form.ticket_category_id"
+                    variant="listbox"
+                    searchable
+                    placeholder="{{ __('general.ticket_category') }}"
+                >
                     @foreach ($this->categories as $category)
                         <flux:select.option value="{{ $category->id }}" wire:key="create-category-{{ $category->id }}">
                             {{ $category->title }}
@@ -95,6 +105,7 @@ new class extends Component
                 <flux:label>{{ __('general.optional_business') }}</flux:label>
                 <flux:select
                     wire:model="form.business_id"
+                    variant="listbox"
                     searchable
                     clearable
                     placeholder="{{ __('general.select_business_optional') }}"
@@ -114,12 +125,12 @@ new class extends Component
                 <flux:error name="form.body" />
             </flux:field>
 
-            <flux:field>
-                <flux:label>{{ __('general.ticket_images') }}</flux:label>
-                <flux:input type="file" wire:model="form.images" multiple accept="image/*" />
-                <flux:error name="form.images" />
-                <flux:error name="form.images.*" />
-            </flux:field>
+            <x-support.ticket-image-upload
+                model="form.images"
+                :files="$form->images"
+                error-prefix="form.images"
+                remove-action="removeImage"
+            />
 
             <flux:button type="submit" variant="primary" color="teal" class="w-full">
                 {{ __('general.save') }}

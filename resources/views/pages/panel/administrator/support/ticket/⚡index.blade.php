@@ -106,7 +106,7 @@ new class extends Component
                 clearable
             />
 
-            <flux:select wire:model.live="status" searchable clearable placeholder="{{ __('general.status') }}">
+            <flux:select wire:model.live="status" variant="listbox" searchable clearable placeholder="{{ __('general.status') }}">
                 @foreach (TicketStatus::cases() as $ticketStatus)
                     <flux:select.option value="{{ $ticketStatus->value }}" wire:key="status-{{ $ticketStatus->value }}">
                         {{ $ticketStatus->label() }}
@@ -114,7 +114,7 @@ new class extends Component
                 @endforeach
             </flux:select>
 
-            <flux:select wire:model.live="categoryId" searchable clearable placeholder="{{ __('general.ticket_category') }}">
+            <flux:select wire:model.live="categoryId" variant="listbox" searchable clearable placeholder="{{ __('general.ticket_category') }}">
                 @foreach ($this->categories as $category)
                     <flux:select.option value="{{ $category->id }}" wire:key="category-{{ $category->id }}">
                         {{ $category->title }}

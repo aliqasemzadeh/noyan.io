@@ -21,6 +21,16 @@ new class extends Component
     /** @var array<int, mixed> */
     public array $images = [];
 
+    public function removeImage(int $index): void
+    {
+        if (! isset($this->images[$index])) {
+            return;
+        }
+
+        unset($this->images[$index]);
+        $this->images = array_values($this->images);
+    }
+
     public function mount(Ticket $ticket): void
     {
         abort_unless($ticket->ownedBy(Auth::user()), 403);
@@ -164,12 +174,12 @@ new class extends Component
                     <flux:error name="body" />
                 </flux:field>
 
-                <flux:field>
-                    <flux:label>{{ __('general.ticket_images') }}</flux:label>
-                    <flux:input type="file" wire:model="images" multiple accept="image/*" />
-                    <flux:error name="images" />
-                    <flux:error name="images.*" />
-                </flux:field>
+                <x-support.ticket-image-upload
+                    model="images"
+                    :files="$images"
+                    error-prefix="images"
+                    remove-action="removeImage"
+                />
 
                 <flux:button type="submit" variant="primary" color="teal" class="w-full">
                     {{ __('general.send_reply') }}

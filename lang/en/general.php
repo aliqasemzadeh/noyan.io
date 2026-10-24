@@ -1235,6 +1235,10 @@ return [
     'ticket_status_closed' => 'Closed',
     'ticket_images' => 'Images',
     'ticket_image' => 'Image',
+    'ticket_images_upload_heading' => 'Drop images or click to browse',
+    'ticket_images_upload_hint' => 'JPG, PNG, WEBP, GIF up to 5MB (max 5 files)',
+    'remove_ticket_image' => 'Remove image',
+
     'ticket_reply' => 'Reply',
     'send_reply' => 'Send reply',
     'close_ticket' => 'Close ticket',
