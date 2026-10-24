@@ -7,6 +7,7 @@ use App\Ai\Tools\CreateTransaction;
 use App\Enums\Accounting\TransactionType;
 use App\Enums\AccountSubType;
 use App\Models\Accounting\Account;
+use App\Models\Accounting\Transaction;
 use App\Models\Business;
 use App\Models\Currency;
 use App\Models\User;
@@ -14,6 +15,7 @@ use App\Support\LocaleDate;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Ai\Tools\Request;
 use Livewire\Livewire;
+use Morilog\Jalali\Jalalian;
 use Tests\TestCase;
 
 class AccountingAiTransactionTest extends TestCase
@@ -413,6 +415,127 @@ class AccountingAiTransactionTest extends TestCase
         $this->assertStringContainsString('expected_balance', $instructions);
         $this->assertStringContainsString('confirmed=false', $instructions);
         $this->assertStringContainsString('confirmed=true', $instructions);
+        $this->assertStringContainsString('02/08', $instructions);
+    }
+
+    public function test_tool_preview_accepts_short_jalali_sms_date_near_today(): void
+    {
+        $this->travelTo(Jalalian::fromFormat('Y/m/d', '1405/08/02')->toCarbon()->setTime(12, 0));
+
+        [$user, $business, $currency, $account] = $this->actingBusinessOwnerWithBankAccount();
+
+        $result = (string) (new CreateTransaction)->handle(new Request([
+            'confirmed' => false,
+            'type' => 'expense',
+            'amount' => '1500000',
+            'account_number' => '5199858647',
+            'transaction_date' => '02/08',
+            'expected_balance' => bcsub((string) $account->current_balance, '1500000', 0),
+        ]));
+
+        $this->assertStringContainsString(LocaleDate::formatDate(now()->toDateString()), $result);
+        $this->assertStringContainsString(__('general.ai_transaction_preview_ask_confirm'), $result);
+        $this->assertStringNotContainsString('هشدار:', $result);
+        $this->assertDatabaseCount('transactions', 0);
+    }
+
+    public function test_tool_preview_warns_when_date_is_far_from_today(): void
+    {
+        $this->travelTo(Jalalian::fromFormat('Y/m/d', '1405/08/02')->toCarbon()->setTime(12, 0));
+
+        [$user, $business, $currency, $account] = $this->actingBusinessOwnerWithBankAccount();
+
+        $farDate = LocaleDate::toStorageDate('1405/01/01');
+
+        $result = (string) (new CreateTransaction)->handle(new Request([
+            'confirmed' => false,
+            'type' => 'expense',
+            'amount' => '1500000',
+            'account_number' => '5199858647',
+            'transaction_date' => '1405/01/01',
+            'expected_balance' => bcsub((string) $account->current_balance, '1500000', 0),
+        ]));
+
+        $this->assertStringContainsString(__('general.ai_transaction_date_far', [
+            'date' => LocaleDate::formatDate($farDate),
+            'days' => (int) abs(now()->startOfDay()->diffInDays($farDate)),
+        ]), $result);
+        $this->assertStringContainsString(__('general.ai_transaction_preview_ask_confirm'), $result);
+        $this->assertDatabaseCount('transactions', 0);
+    }
+
+    public function test_tool_preview_warns_when_date_is_before_latest_account_transaction(): void
+    {
+        $this->travelTo(Jalalian::fromFormat('Y/m/d', '1405/08/02')->toCarbon()->setTime(12, 0));
+
+        [$user, $business, $currency, $account] = $this->actingBusinessOwnerWithBankAccount();
+
+        Transaction::factory()->create([
+            'business_id' => $business->id,
+            'created_by' => $user->id,
+            'account_id' => $account->id,
+            'type' => TransactionType::Income,
+            'transaction_date' => now()->toDateString(),
+            'currency' => $currency->code,
+            'amount' => '1000',
+            'base_amount' => '1000',
+        ]);
+
+        $older = LocaleDate::toStorageDate('1405/08/01');
+
+        $result = (string) (new CreateTransaction)->handle(new Request([
+            'confirmed' => false,
+            'type' => 'expense',
+            'amount' => '1500000',
+            'account_number' => '5199858647',
+            'transaction_date' => '01/08',
+            'expected_balance' => bcsub((string) $account->fresh()->current_balance, '1500000', 0),
+        ]));
+
+        $this->assertStringContainsString(__('general.ai_transaction_date_out_of_order', [
+            'date' => LocaleDate::formatDate($older),
+            'last' => LocaleDate::formatDate(now()->toDateString()),
+        ]), $result);
+        $this->assertDatabaseCount('transactions', 1);
+    }
+
+    public function test_tool_batch_reorders_by_date_for_expected_balance_checks(): void
+    {
+        $this->travelTo(Jalalian::fromFormat('Y/m/d', '1405/08/02')->toCarbon()->setTime(12, 0));
+
+        [$user, $business, $currency, $account] = $this->actingBusinessOwnerWithBankAccount(
+            currentBalance: '10000000',
+        );
+
+        $firstAmount = '1500000';
+        $secondAmount = '2000000';
+        $afterFirst = bcsub('10000000', $firstAmount, 0);
+        $afterSecond = bcsub($afterFirst, $secondAmount, 0);
+
+        $result = (string) (new CreateTransaction)->handle(new Request([
+            'confirmed' => false,
+            'transactions' => [
+                [
+                    'type' => 'expense',
+                    'amount' => $secondAmount,
+                    'account_number' => '5199858647',
+                    'transaction_date' => '02/08',
+                    'expected_balance' => $afterSecond,
+                ],
+                [
+                    'type' => 'expense',
+                    'amount' => $firstAmount,
+                    'account_number' => '5199858647',
+                    'transaction_date' => '01/08',
+                    'expected_balance' => $afterFirst,
+                ],
+            ],
+        ]));
+
+        $this->assertStringContainsString(__('general.ai_transaction_batch_reordered_by_date'), $result);
+        $this->assertStringContainsString(__('general.ai_transaction_preview_ask_confirm'), $result);
+        $this->assertStringContainsString('قابل ثبت', $result);
+        $this->assertDatabaseCount('transactions', 0);
     }
 
     /**

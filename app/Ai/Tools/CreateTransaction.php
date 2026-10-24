@@ -6,9 +6,11 @@ use App\Actions\Transactions\ProcessTransactionAction;
 use App\Enums\Accounting\TransactionType;
 use App\Models\Accounting\Account;
 use App\Models\Accounting\BusinessCurrency;
+use App\Models\Accounting\Transaction;
 use App\Models\User;
 use App\Support\Accounting\ShetabTransferFee;
 use App\Support\LocaleDate;
+use Carbon\Carbon;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -81,7 +83,7 @@ class CreateTransaction implements Tool
             'account_name' => $schema->string()
                 ->description('نام نمایشی حساب موجود اگر شماره مشخص نیست'),
             'transaction_date' => $schema->string()
-                ->description('تاریخ تراکنش جلالی مثل 1403/07/01 یا میلادی Y-m-d؛ خالی = امروز'),
+                ->description('تاریخ تراکنش جلالی کامل مثل 1405/08/02، کوتاه پیامک مثل 02/08 یا 02/08/05 (روز/ماه[/سال])، یا میلادی Y-m-d؛ خالی = امروز. سال کوتاه را ابزار نزدیک امروز کامل می‌کند'),
             'note' => $schema->string()
                 ->description('یادداشت اختیاری از متن پیامک'),
             'reference_number' => $schema->string()
@@ -105,7 +107,7 @@ class CreateTransaction implements Tool
             'account_name' => $schema->string()
                 ->description('نام نمایشی حساب موجود'),
             'transaction_date' => $schema->string()
-                ->description('تاریخ تراکنش؛ خالی = امروز'),
+                ->description('تاریخ تراکنش جلالی کامل/کوتاه پیامک یا میلادی؛ خالی = امروز'),
             'note' => $schema->string()
                 ->description('یادداشت اختیاری'),
             'reference_number' => $schema->string()
@@ -122,12 +124,18 @@ class CreateTransaction implements Tool
     {
         $lines = [];
         $okCount = 0;
-        $index = 0;
         /** @var array<int, string> $runningBalances */
         $runningBalances = [];
 
-        foreach ($transactions as $item) {
-            $index++;
+        [$ordered, $reordered] = $this->orderBatchChronologically($transactions);
+
+        if ($ordered === []) {
+            return __('general.ai_transaction_batch_empty');
+        }
+
+        foreach ($ordered as $entry) {
+            $index = $entry['original_index'];
+            $item = $entry['item'];
 
             if (! is_array($item)) {
                 $lines[] = __('general.ai_transaction_batch_item_failed', [
@@ -165,10 +173,7 @@ class CreateTransaction implements Tool
             }
         }
 
-        if ($index === 0) {
-            return __('general.ai_transaction_batch_empty');
-        }
-
+        $total = count($ordered);
         $summaryKey = $confirmed
             ? 'general.ai_transaction_batch_summary'
             : 'general.ai_transaction_batch_preview_summary';
@@ -176,15 +181,72 @@ class CreateTransaction implements Tool
         $summary = __($summaryKey, [
             'created' => $okCount,
             'ready' => $okCount,
-            'total' => $index,
+            'total' => $total,
             'items' => implode("\n", $lines),
         ]);
+
+        if ($reordered) {
+            $summary = __('general.ai_transaction_batch_reordered_by_date')."\n".$summary;
+        }
 
         if (! $confirmed && $okCount > 0) {
             $summary .= "\n".__('general.ai_transaction_preview_ask_confirm');
         }
 
         return $summary;
+    }
+
+    /**
+     * @param  list<mixed>  $transactions
+     * @return array{0: list<array{original_index: int, item: mixed, sort_date: string}>, 1: bool}
+     */
+    protected function orderBatchChronologically(array $transactions): array
+    {
+        $entries = [];
+
+        foreach (array_values($transactions) as $offset => $item) {
+            $originalIndex = $offset + 1;
+            $sortDate = '9999-12-31';
+
+            if (is_array($item)) {
+                $rawDate = trim((string) ($item['transaction_date'] ?? ''));
+                $resolved = $rawDate !== ''
+                    ? LocaleDate::toStorageDateNearToday($rawDate)
+                    : now()->toDateString();
+
+                if ($resolved !== null) {
+                    $sortDate = $resolved;
+                }
+            }
+
+            $entries[] = [
+                'original_index' => $originalIndex,
+                'item' => $item,
+                'sort_date' => $sortDate,
+            ];
+        }
+
+        $before = array_map(
+            fn (array $entry): int => $entry['original_index'],
+            $entries,
+        );
+
+        usort($entries, function (array $a, array $b): int {
+            $dateCompare = $a['sort_date'] <=> $b['sort_date'];
+
+            if ($dateCompare !== 0) {
+                return $dateCompare;
+            }
+
+            return $a['original_index'] <=> $b['original_index'];
+        });
+
+        $after = array_map(
+            fn (array $entry): int => $entry['original_index'],
+            $entries,
+        );
+
+        return [$entries, $before !== $after];
     }
 
     /**
@@ -238,7 +300,7 @@ class CreateTransaction implements Tool
         }
 
         $storageDate = $transactionDateInput !== ''
-            ? LocaleDate::toStorageDate($transactionDateInput)
+            ? LocaleDate::toStorageDateNearToday($transactionDateInput)
             : now()->toDateString();
 
         if ($storageDate === null) {
@@ -249,6 +311,7 @@ class CreateTransaction implements Tool
 
         $currencyCode = $account->currency?->code ?? 'IRR';
         $accountId = (int) $account->id;
+        $dateWarnings = $this->dateRiskWarnings($accountId, $storageDate);
         $currentBalance = $runningBalances[$accountId]
             ?? (string) ($account->current_balance ?? '0');
         $feeAmount = null;
@@ -303,7 +366,7 @@ class CreateTransaction implements Tool
         if (! $confirmed) {
             $runningBalances[$accountId] = $projected;
 
-            return $this->ok(__('general.ai_transaction_preview_ok', [
+            $message = __('general.ai_transaction_preview_ok', [
                 'type' => $type->label(),
                 'amount' => $this->formatAmount($amount),
                 'account' => $account->name,
@@ -316,7 +379,13 @@ class CreateTransaction implements Tool
                     ? $this->formatAmount($feeAmount)
                     : '—',
                 'date' => LocaleDate::formatDate($storageDate),
-            ]));
+            ]);
+
+            if ($dateWarnings !== []) {
+                $message .= "\n".implode("\n", $dateWarnings);
+            }
+
+            return $this->ok($message);
         }
 
         $exchangeRate = BusinessCurrency::query()
@@ -408,6 +477,37 @@ class CreateTransaction implements Tool
             TransactionType::Expense => bcsub($currentBalance, $amount, 18),
             default => $currentBalance,
         };
+    }
+
+    /**
+     * @return list<string>
+     */
+    protected function dateRiskWarnings(int $accountId, string $storageDate): array
+    {
+        $warnings = [];
+        $today = now()->startOfDay();
+        $date = Carbon::parse($storageDate)->startOfDay();
+        $daysFromToday = (int) abs($date->diffInDays($today));
+
+        if ($daysFromToday > 2) {
+            $warnings[] = __('general.ai_transaction_date_far', [
+                'date' => LocaleDate::formatDate($storageDate),
+                'days' => $daysFromToday,
+            ]);
+        }
+
+        $lastDate = Transaction::query()
+            ->where('account_id', $accountId)
+            ->max('transaction_date');
+
+        if ($lastDate !== null && $storageDate < Carbon::parse((string) $lastDate)->toDateString()) {
+            $warnings[] = __('general.ai_transaction_date_out_of_order', [
+                'date' => LocaleDate::formatDate($storageDate),
+                'last' => LocaleDate::formatDate((string) $lastDate),
+            ]);
+        }
+
+        return $warnings;
     }
 
     protected function balanceMismatchMessage(

@@ -128,4 +128,173 @@ class LocaleDate
     {
         return self::parseFilterDate($value, $locale)?->toDateString();
     }
+
+    /**
+     * Parse SMS-style Jalali short dates near a reference day (default: today).
+     *
+     * Accepts full Y/m/d, Gregorian Y-m-d, d/m/Y, d/m/yy, and d/m (day/month).
+     * Two-digit years and missing years resolve to the candidate closest to $reference.
+     */
+    public static function toStorageDateNearToday(
+        ?string $value,
+        ?CarbonInterface $reference = null,
+        ?string $locale = null,
+    ): ?string {
+        return self::parseNearTodayDate($value, $reference, $locale)?->toDateString();
+    }
+
+    public static function parseNearTodayDate(
+        ?string $value,
+        ?CarbonInterface $reference = null,
+        ?string $locale = null,
+    ): ?CarbonInterface {
+        if ($value === null) {
+            return null;
+        }
+
+        $value = self::normalizeDateDigits(trim($value));
+
+        if ($value === '') {
+            return null;
+        }
+
+        $strict = self::parseFilterDate($value, $locale);
+
+        if ($strict !== null) {
+            return $strict;
+        }
+
+        if (! self::usesJalali($locale)) {
+            return null;
+        }
+
+        $reference ??= now()->startOfDay();
+        $reference = $reference->copy()->startOfDay();
+
+        try {
+            if (preg_match('/^(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{2}|\d{4})$/', $value, $matches) === 1) {
+                $day = (int) $matches[1];
+                $month = (int) $matches[2];
+                $yearPart = $matches[3];
+
+                if (strlen($yearPart) === 4) {
+                    $year = (int) $yearPart;
+
+                    if ($year >= 1700) {
+                        return null;
+                    }
+
+                    return Jalalian::fromFormat('Y/m/d', sprintf('%04d/%02d/%02d', $year, $month, $day))
+                        ->toCarbon()
+                        ->startOfDay();
+                }
+
+                return self::bestTwoDigitYearDate($day, $month, (int) $yearPart, $reference);
+            }
+
+            if (preg_match('/^(\d{1,2})[-\/.](\d{1,2})$/', $value, $matches) === 1) {
+                $day = (int) $matches[1];
+                $month = (int) $matches[2];
+
+                return self::bestDayMonthDate($day, $month, $reference);
+            }
+        } catch (Throwable) {
+            return null;
+        }
+
+        return null;
+    }
+
+    protected static function normalizeDateDigits(string $value): string
+    {
+        $persian = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
+        $arabic = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
+        $english = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+
+        $value = str_replace($persian, $english, $value);
+
+        return str_replace($arabic, $english, $value);
+    }
+
+    protected static function bestTwoDigitYearDate(
+        int $day,
+        int $month,
+        int $twoDigitYear,
+        CarbonInterface $reference,
+    ): ?CarbonInterface {
+        $twoDigitYear = $twoDigitYear % 100;
+        $candidates = [];
+
+        foreach ([13, 14] as $century) {
+            $year = ($century * 100) + $twoDigitYear;
+            $carbon = self::tryJalaliDay($year, $month, $day);
+
+            if ($carbon !== null) {
+                $candidates[] = $carbon;
+            }
+        }
+
+        return self::closestToReference($candidates, $reference);
+    }
+
+    protected static function bestDayMonthDate(
+        int $day,
+        int $month,
+        CarbonInterface $reference,
+    ): ?CarbonInterface {
+        $jalaliRef = Jalalian::fromDateTime($reference);
+        $candidates = [];
+
+        foreach ([$jalaliRef->getYear() - 1, $jalaliRef->getYear(), $jalaliRef->getYear() + 1] as $year) {
+            $carbon = self::tryJalaliDay($year, $month, $day);
+
+            if ($carbon !== null) {
+                $candidates[] = $carbon;
+            }
+        }
+
+        $withinTwoDays = array_values(array_filter(
+            $candidates,
+            fn (CarbonInterface $candidate): bool => (int) abs($candidate->diffInDays($reference)) <= 2,
+        ));
+
+        if ($withinTwoDays !== []) {
+            return self::closestToReference($withinTwoDays, $reference);
+        }
+
+        return self::closestToReference($candidates, $reference);
+    }
+
+    protected static function tryJalaliDay(int $year, int $month, int $day): ?CarbonInterface
+    {
+        try {
+            return Jalalian::fromFormat('Y/m/d', sprintf('%04d/%02d/%02d', $year, $month, $day))
+                ->toCarbon()
+                ->startOfDay();
+        } catch (Throwable) {
+            return null;
+        }
+    }
+
+    /**
+     * @param  list<CarbonInterface>  $candidates
+     */
+    protected static function closestToReference(array $candidates, CarbonInterface $reference): ?CarbonInterface
+    {
+        if ($candidates === []) {
+            return null;
+        }
+
+        usort(
+            $candidates,
+            function (CarbonInterface $a, CarbonInterface $b) use ($reference): int {
+                $diffA = abs($a->diffInDays($reference));
+                $diffB = abs($b->diffInDays($reference));
+
+                return $diffA <=> $diffB;
+            },
+        );
+
+        return $candidates[0];
+    }
 }

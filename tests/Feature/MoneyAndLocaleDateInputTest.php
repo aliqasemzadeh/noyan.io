@@ -53,6 +53,22 @@ class MoneyAndLocaleDateInputTest extends TestCase
         $this->assertSame('2024-04-03', LocaleDate::toStorageDate('2024-04-03'));
     }
 
+    public function test_locale_date_near_today_parses_short_jalali_sms_formats(): void
+    {
+        App::setLocale('fa');
+
+        $reference = Jalalian::fromFormat('Y/m/d', '1405/08/02')->toCarbon()->startOfDay();
+        $expected = $reference->toDateString();
+
+        $this->assertSame($expected, LocaleDate::toStorageDateNearToday('02/08', $reference));
+        $this->assertSame($expected, LocaleDate::toStorageDateNearToday('02/08/05', $reference));
+        $this->assertSame($expected, LocaleDate::toStorageDateNearToday('۰۲/۰۸', $reference));
+        $this->assertSame($expected, LocaleDate::toStorageDateNearToday('1405/08/02', $reference));
+
+        $this->assertNull(LocaleDate::toStorageDate('02/08'));
+        $this->assertNull(LocaleDate::toStorageDate('02/08/05'));
+    }
+
     public function test_transaction_create_accepts_masked_amount_and_jalali_date(): void
     {
         [$user, $account, $leaf] = $this->prepareContext();
