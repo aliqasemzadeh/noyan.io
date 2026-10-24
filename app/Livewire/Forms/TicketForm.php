@@ -9,8 +9,8 @@ use App\Models\User;
 use App\Support\TicketAttachmentStore;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
-use Livewire\Form;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
+use Livewire\Form;
 
 class TicketForm extends Form
 {
@@ -67,6 +67,14 @@ class TicketForm extends Form
 
     public function store(User $user, ?string $ip = null): Ticket
     {
+        if ($this->business_id === null || $this->business_id === 0) {
+            $this->business_id = null;
+        }
+
+        if ($this->ticket_category_id === 0) {
+            $this->ticket_category_id = null;
+        }
+
         $validated = $this->validate();
 
         return DB::transaction(function () use ($validated, $user, $ip): Ticket {
