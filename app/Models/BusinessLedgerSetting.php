@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\Accounting\AutoPostMode;
 use App\Enums\Accounting\JournalEntryStatus;
 use App\Enums\Accounting\VoucherNumberingMode;
+use App\Models\Accounting\GlAccount;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -16,6 +17,17 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'voucher_number_pad',
     'default_voucher_status',
     'auto_post_mode',
+    'default_accounts_receivable_id',
+    'default_accounts_payable_id',
+    'default_sales_id',
+    'default_sales_discount_id',
+    'default_vat_payable_id',
+    'default_vat_receivable_id',
+    'default_inventory_id',
+    'default_cogs_id',
+    'default_cash_and_bank_id',
+    'default_fx_gain_id',
+    'default_fx_loss_id',
 ])]
 class BusinessLedgerSetting extends Model
 {
@@ -37,6 +49,61 @@ class BusinessLedgerSetting extends Model
         return $this->belongsTo(Business::class);
     }
 
+    public function defaultAccountsReceivable(): BelongsTo
+    {
+        return $this->belongsTo(GlAccount::class, 'default_accounts_receivable_id');
+    }
+
+    public function defaultAccountsPayable(): BelongsTo
+    {
+        return $this->belongsTo(GlAccount::class, 'default_accounts_payable_id');
+    }
+
+    public function defaultSales(): BelongsTo
+    {
+        return $this->belongsTo(GlAccount::class, 'default_sales_id');
+    }
+
+    public function defaultSalesDiscount(): BelongsTo
+    {
+        return $this->belongsTo(GlAccount::class, 'default_sales_discount_id');
+    }
+
+    public function defaultVatPayable(): BelongsTo
+    {
+        return $this->belongsTo(GlAccount::class, 'default_vat_payable_id');
+    }
+
+    public function defaultVatReceivable(): BelongsTo
+    {
+        return $this->belongsTo(GlAccount::class, 'default_vat_receivable_id');
+    }
+
+    public function defaultInventory(): BelongsTo
+    {
+        return $this->belongsTo(GlAccount::class, 'default_inventory_id');
+    }
+
+    public function defaultCogs(): BelongsTo
+    {
+        return $this->belongsTo(GlAccount::class, 'default_cogs_id');
+    }
+
+    public function defaultCashAndBank(): BelongsTo
+    {
+        return $this->belongsTo(GlAccount::class, 'default_cash_and_bank_id');
+    }
+
+    public function defaultFxGain(): BelongsTo
+    {
+        return $this->belongsTo(GlAccount::class, 'default_fx_gain_id');
+    }
+
+    public function defaultFxLoss(): BelongsTo
+    {
+        return $this->belongsTo(GlAccount::class, 'default_fx_loss_id');
+    }
+
     /**
      * @return array<string, mixed>
      */
@@ -48,6 +115,26 @@ class BusinessLedgerSetting extends Model
             'voucher_number_pad' => 4,
             'default_voucher_status' => JournalEntryStatus::Draft->value,
             'auto_post_mode' => AutoPostMode::Off->value,
+        ];
+    }
+
+    /**
+     * @return list<string>
+     */
+    public static function defaultAccountColumns(): array
+    {
+        return [
+            'default_accounts_receivable_id',
+            'default_accounts_payable_id',
+            'default_sales_id',
+            'default_sales_discount_id',
+            'default_vat_payable_id',
+            'default_vat_receivable_id',
+            'default_inventory_id',
+            'default_cogs_id',
+            'default_cash_and_bank_id',
+            'default_fx_gain_id',
+            'default_fx_loss_id',
         ];
     }
 
@@ -71,5 +158,18 @@ class BusinessLedgerSetting extends Model
     public function numberPad(): int
     {
         return max(1, min(10, (int) $this->voucher_number_pad));
+    }
+
+    public function requireDefaultAccount(string $column): GlAccount
+    {
+        $account = $this->{$column} !== null
+            ? GlAccount::query()->find($this->{$column})
+            : null;
+
+        if ($account === null) {
+            throw new \RuntimeException("Ledger default account [{$column}] is not configured.");
+        }
+
+        return $account;
     }
 }
