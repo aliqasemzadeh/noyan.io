@@ -222,6 +222,17 @@ class extends Component
         $this->resetErrorBag();
     }
 
+    protected function isMobileBanned(string $mobile): bool
+    {
+        try {
+            $banned = app(SecuritySettings::class)->banned_mobiles;
+        } catch (Throwable) {
+            return false;
+        }
+
+        return in_array($mobile, $banned, true);
+    }
+
     #[Computed]
     public function maskedMobile(): string
     {

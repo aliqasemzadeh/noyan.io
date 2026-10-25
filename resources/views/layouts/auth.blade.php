@@ -4,7 +4,18 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-        <title>{{ $title ?? __('general.app_name') }}</title>
+        <title>{{ $title ?? config('app.name') }}</title>
+
+        @php
+            try {
+                $siteFavicon = app(\App\Settings\GeneralSettings::class)->site_favicon;
+            } catch (Throwable) {
+                $siteFavicon = null;
+            }
+        @endphp
+        @if (filled($siteFavicon))
+            <link rel="icon" href="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($siteFavicon) }}">
+        @endif
 
         @vite(['resources/css/app.css', 'resources/js/app.js'])
 
