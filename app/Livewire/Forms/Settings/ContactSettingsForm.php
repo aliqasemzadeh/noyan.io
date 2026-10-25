@@ -43,7 +43,7 @@ class ContactSettingsForm extends Form
     {
         return [
             'mobile' => ['nullable', 'string', new IranianMobile(format: 'zero')],
-            'phone' => ['nullable', 'string', new IranianPhone],
+            'phone' => ['nullable', 'string', new IranianPhone(withAreaCode: true, areaCodeSeparator: '-')],
             'address' => ['nullable', 'string', 'max:500'],
             'postal_code' => ['nullable', 'string', new IranianPostalCode],
             'fax' => ['nullable', 'string', 'max:20'],

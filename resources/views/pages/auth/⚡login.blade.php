@@ -14,7 +14,6 @@ use Livewire\Attributes\Url;
 use Livewire\Component;
 use Sadegh19b\LaravelPersianValidation\Rules\IranianMobile;
 use Spatie\OneTimePasswords\Enums\ConsumeOneTimePasswordResult;
-use Throwable;
 
 new
 #[Layout('layouts::auth')]
@@ -226,7 +225,7 @@ class extends Component
     {
         try {
             $banned = app(SecuritySettings::class)->banned_mobiles;
-        } catch (Throwable) {
+        } catch (\Throwable) {
             return false;
         }
 

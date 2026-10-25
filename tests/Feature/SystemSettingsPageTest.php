@@ -77,7 +77,7 @@ class SystemSettingsPageTest extends TestCase
         Livewire::actingAs($user)
             ->test('system-management.setting.contact')
             ->set('form.mobile', '09121234567')
-            ->set('form.phone', '02112345678')
+            ->set('form.phone', '021-12345678')
             ->set('form.address', 'Tehran')
             ->set('form.support_email', 'support@example.com')
             ->set('form.phone_numbers', ['02187654321'])
