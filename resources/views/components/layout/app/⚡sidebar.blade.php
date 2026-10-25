@@ -30,21 +30,24 @@ new class extends Component
 ?>
 
 <div class="flex flex-col gap-2">
-    <div class="px-2">
-        <flux:modal.trigger name="sidebar.menu-search" shortcut="cmd.k">
-            <flux:sidebar.search
-                :placeholder="__('general.search_menu')"
-                :kbd="$this->searchShortcutLabel()"
-            />
-        </flux:modal.trigger>
-    </div>
+    <flux:modal.trigger
+        name="sidebar.menu-search"
+        shortcut="cmd.k"
+        class="w-full in-data-flux-sidebar-collapsed-desktop:flex in-data-flux-sidebar-collapsed-desktop:justify-center"
+    >
+        <flux:sidebar.search
+            :placeholder="__('general.search_menu')"
+            :kbd="$this->searchShortcutLabel()"
+            class="in-data-flux-sidebar-collapsed-desktop:w-10 in-data-flux-sidebar-collapsed-desktop:justify-center in-data-flux-sidebar-collapsed-desktop:px-0"
+        />
+    </flux:modal.trigger>
 
     <flux:modal
         name="sidebar.menu-search"
         variant="bare"
-        class="w-full max-w-[20rem] my-[16vh] max-h-screen overflow-y-hidden"
+        class="w-full max-w-[30rem] my-[12vh] max-h-screen overflow-y-hidden"
     >
-        <flux:command class="border-none shadow-lg inline-flex flex-col max-h-[50vh] text-sm">
+        <flux:command class="border-none shadow-lg inline-flex flex-col max-h-[76vh]">
             <flux:command.input :placeholder="__('general.search_menu')" closable />
 
             <flux:command.items>
