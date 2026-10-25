@@ -171,16 +171,14 @@ new class extends Component
                     {{ __('general.seed_standard_coa') }}
                 </flux:button>
 
-                <flux:modal.trigger name="gl-account.create">
-                    <flux:button
-                        variant="primary"
-                        color="teal"
-                        icon="plus"
-                        @click="$dispatch('panels.accounting.gl-account.create.assign-data', { parentId: null })"
-                    >
-                        {{ __('general.create_gl_account') }}
-                    </flux:button>
-                </flux:modal.trigger>
+                <flux:button
+                    variant="primary"
+                    color="teal"
+                    icon="plus"
+                    wire:click="$dispatch('panels.accounting.gl-account.create.assign-data', { parentId: null })"
+                >
+                    {{ __('general.create_gl_account') }}
+                </flux:button>
             </div>
         </div>
     </div>
@@ -249,44 +247,38 @@ new class extends Component
                             <div class="flex justify-end gap-1">
                                 @if ($account->canHaveChildren())
                                     <flux:tooltip content="{{ __('general.add_child_account') }}">
-                                        <flux:modal.trigger name="gl-account.create">
-                                            <flux:button
-                                                size="xs"
-                                                variant="primary"
-                                                color="teal"
-                                                icon="plus"
-                                                icon:variant="outline"
-                                                @click="$dispatch('panels.accounting.gl-account.create.assign-data', { parentId: {{ $account->id }} })"
-                                            />
-                                        </flux:modal.trigger>
+                                        <flux:button
+                                            size="xs"
+                                            variant="primary"
+                                            color="teal"
+                                            icon="plus"
+                                            icon:variant="outline"
+                                            wire:click="$dispatch('panels.accounting.gl-account.create.assign-data', { parentId: {{ $account->id }} })"
+                                        />
                                     </flux:tooltip>
                                 @endif
 
                                 <flux:tooltip content="{{ __('general.edit') }}">
-                                    <flux:modal.trigger name="gl-account.edit">
-                                        <flux:button
-                                            size="xs"
-                                            variant="primary"
-                                            color="amber"
-                                            icon="pencil"
-                                            icon:variant="outline"
-                                            @click="$dispatch('panels.accounting.gl-account.edit.assign-data', { glAccountId: {{ $account->id }} })"
-                                        />
-                                    </flux:modal.trigger>
+                                    <flux:button
+                                        size="xs"
+                                        variant="primary"
+                                        color="amber"
+                                        icon="pencil"
+                                        icon:variant="outline"
+                                        wire:click="$dispatch('panels.accounting.gl-account.edit.assign-data', { glAccountId: {{ $account->id }} })"
+                                    />
                                 </flux:tooltip>
 
                                 @unless ($account->is_system)
                                     <flux:tooltip content="{{ __('general.delete') }}">
-                                        <flux:modal.trigger name="gl-account.delete">
-                                            <flux:button
-                                                size="xs"
-                                                variant="primary"
-                                                color="red"
-                                                icon="trash"
-                                                icon:variant="outline"
-                                                @click="$dispatch('panels.accounting.gl-account.delete.assign-data', { glAccountId: {{ $account->id }} })"
-                                            />
-                                        </flux:modal.trigger>
+                                        <flux:button
+                                            size="xs"
+                                            variant="primary"
+                                            color="red"
+                                            icon="trash"
+                                            icon:variant="outline"
+                                            wire:click="$dispatch('panels.accounting.gl-account.delete.assign-data', { glAccountId: {{ $account->id }} })"
+                                        />
                                     </flux:tooltip>
                                 @endunless
                             </div>

@@ -56,6 +56,7 @@ enum BusinessRole: string
                     'account',
                     'transaction',
                     'journal_entry',
+                    'gl_account',
                     'loan',
                     'cheque',
                     'fiscal_year',

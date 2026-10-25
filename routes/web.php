@@ -168,6 +168,7 @@ Route::middleware('auth')->group(function () {
         Route::livewire('/cost-centers', 'pages::panel.accounting.cost-center.index')->name('cost-centers.index');
         Route::livewire('/projects', 'pages::panel.accounting.project.index')->name('projects.index');
         Route::livewire('/ledger-settings', 'pages::panel.accounting.ledger-setting.index')->name('ledger-settings.index');
+        Route::livewire('/chart-of-accounts', 'pages::panel.accounting.gl-account.index')->name('gl-accounts.index');
     });
 
     Route::prefix('warehouse')->name('warehouse.')->middleware(['business.selected', 'business.panel:warehouse'])->group(function () {
