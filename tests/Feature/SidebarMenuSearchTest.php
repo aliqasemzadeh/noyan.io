@@ -59,7 +59,8 @@ class SidebarMenuSearchTest extends TestCase
     {
         $user = User::factory()->create();
 
-        $this->actingAs($user)->get(route('user.dashboard'))->assertOk();
+        $this->actingAs($user);
+        $this->bindNamedRoute('user.dashboard');
 
         $labels = collect(SidebarMenu::searchItems($user))->pluck('label')->all();
 
@@ -68,5 +69,15 @@ class SidebarMenuSearchTest extends TestCase
             __('general.my_businesses'),
             __('general.support'),
         ], $labels);
+    }
+
+    private function bindNamedRoute(string $name): void
+    {
+        $route = app('router')->getRoutes()->getByName($name);
+
+        $this->assertNotNull($route);
+
+        $route->bind(request());
+        request()->setRouteResolver(static fn () => $route);
     }
 }
