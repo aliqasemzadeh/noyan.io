@@ -6,14 +6,18 @@ use App\Enums\Accounting\InvoiceNotificationType;
 use App\Jobs\Notifications\SendInvoiceNotificationJob;
 use App\Models\Accounting\Invoice;
 use App\Models\User;
+use App\Services\Accounting\AutoPostingEngine;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 use RuntimeException;
+use Throwable;
 
 class FinalizeInvoiceAction
 {
     public function __construct(
         protected ApplyInvoiceEffectsAction $applyEffects,
+        protected AutoPostingEngine $autoPostingEngine,
     ) {}
 
     public function handle(Invoice $invoice, User $user): Invoice
@@ -62,6 +66,17 @@ class FinalizeInvoiceAction
                 ...$buyerSnapshots,
                 'finalized_at' => now(),
             ])->save();
+
+            try {
+                $this->autoPostingEngine->postInvoice($invoice->fresh(['items', 'party']) ?? $invoice, $user);
+            } catch (Throwable $exception) {
+                Log::error('Invoice auto-post failed.', [
+                    'invoice_id' => $invoice->id,
+                    'message' => $exception->getMessage(),
+                ]);
+
+                throw $exception;
+            }
 
             SendInvoiceNotificationJob::dispatch(
                 $invoice->id,

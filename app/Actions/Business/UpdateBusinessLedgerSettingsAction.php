@@ -2,7 +2,6 @@
 
 namespace App\Actions\Business;
 
-use App\Actions\Accounting\SyncBusinessLedgerDefaultAccountsAction;
 use App\Enums\Accounting\AutoPostMode;
 use App\Enums\Accounting\JournalEntryStatus;
 use App\Enums\Accounting\VoucherNumberingMode;
