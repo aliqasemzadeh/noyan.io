@@ -2,14 +2,15 @@
 
 namespace App\Livewire\Forms\Catalog;
 
+use App\Actions\Inventory\AdjustStockAction;
 use App\Enums\Catalog\PriceType;
 use App\Enums\Catalog\ProductType;
 use App\Enums\Catalog\ProductUnit;
 use App\Enums\Catalog\StockMovementType;
 use App\Enums\CategoryType;
+use App\Models\Business;
 use App\Models\Catalog\Product;
 use App\Models\Catalog\ProductPriceHistory;
-use App\Models\Catalog\ProductStockMovement;
 use App\Support\Money;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -190,25 +191,31 @@ class ProductForm extends Form
         $validated = $this->prepareValidated($this->validate(), $businessId);
 
         return DB::transaction(function () use ($validated, $businessId): Product {
+            $openingQuantity = (string) ($validated['stock_quantity'] ?? '0');
+
             $product = Product::create([
                 ...$validated,
                 'average_cost' => $validated['purchase_price'],
                 'last_purchase_price' => $validated['purchase_price'],
+                'stock_quantity' => '0',
                 'reserved_quantity' => '0',
             ]);
 
-            if ($product->track_inventory && bccomp((string) $product->stock_quantity, '0', 18) === 1) {
-                ProductStockMovement::create([
-                    'business_id' => $businessId,
-                    'product_id' => $product->id,
-                    'movement_type' => StockMovementType::Opening,
-                    'quantity' => $product->stock_quantity,
-                    'unit_cost' => $product->purchase_price,
-                    'balance_after' => $product->stock_quantity,
-                    'note' => __('general.opening_stock_note'),
-                    'occurred_at' => now(),
-                    'created_by' => Auth::id(),
-                ]);
+            if ($product->track_inventory && bccomp($openingQuantity, '0', 18) === 1) {
+                /** @var Business $business */
+                $business = Business::query()->findOrFail($businessId);
+
+                app(AdjustStockAction::class)->handle(
+                    business: $business,
+                    product: $product,
+                    quantityDelta: $openingQuantity,
+                    movementType: StockMovementType::Opening,
+                    unitCost: (string) $product->purchase_price,
+                    note: __('general.opening_stock_note'),
+                    userId: Auth::id(),
+                );
+
+                $product->refresh();
             }
 
             $this->resetFormState();

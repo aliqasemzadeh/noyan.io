@@ -2,12 +2,13 @@
 
 namespace App\Actions\Invoices;
 
+use App\Actions\Inventory\AdjustStockAction;
 use App\Enums\Accounting\InvoiceNotificationType;
 use App\Enums\Accounting\InvoiceType;
 use App\Enums\Catalog\StockMovementType;
 use App\Jobs\Notifications\SendInvoiceNotificationJob;
 use App\Models\Accounting\Invoice;
-use App\Models\Catalog\ProductStockMovement;
+use App\Models\Business;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -15,6 +16,10 @@ use RuntimeException;
 
 class FinalizeInvoiceAction
 {
+    public function __construct(
+        protected AdjustStockAction $adjustStock,
+    ) {}
+
     public function handle(Invoice $invoice, User $user): Invoice
     {
         return DB::transaction(function () use ($invoice, $user): Invoice {
@@ -22,7 +27,7 @@ class FinalizeInvoiceAction
             $invoice = Invoice::query()
                 ->whereKey($invoice->id)
                 ->lockForUpdate()
-                ->with(['items.product', 'party'])
+                ->with(['items.product', 'party', 'business'])
                 ->firstOrFail();
 
             if ((int) $invoice->business_id !== (int) $user->current_business_id) {
@@ -41,6 +46,9 @@ class FinalizeInvoiceAction
                 ]);
             }
 
+            /** @var Business $business */
+            $business = $invoice->business;
+
             foreach ($invoice->items as $item) {
                 $product = $item->product;
 
@@ -55,29 +63,20 @@ class FinalizeInvoiceAction
                     InvoiceType::Return => $quantity,
                 };
 
-                $newStock = bcadd((string) $product->stock_quantity, $delta, 18);
-
-                $product->forceFill([
-                    'stock_quantity' => $newStock,
-                ])->save();
-
-                ProductStockMovement::query()->create([
-                    'business_id' => $invoice->business_id,
-                    'product_id' => $product->id,
-                    'movement_type' => match ($invoice->type) {
+                $this->adjustStock->handle(
+                    business: $business,
+                    product: $product,
+                    quantityDelta: $delta,
+                    movementType: match ($invoice->type) {
                         InvoiceType::Sale => StockMovementType::Sale,
                         InvoiceType::Purchase => StockMovementType::Purchase,
                         InvoiceType::Return => StockMovementType::ReturnIn,
                     },
-                    'quantity' => $delta,
-                    'unit_cost' => $item->unit_price,
-                    'balance_after' => $newStock,
-                    'reference_type' => $invoice->getMorphClass(),
-                    'reference_id' => $invoice->id,
-                    'note' => $invoice->invoice_number,
-                    'occurred_at' => now(),
-                    'created_by' => $user->id,
-                ]);
+                    unitCost: (string) $item->unit_price,
+                    reference: $invoice,
+                    note: $invoice->invoice_number,
+                    userId: $user->id,
+                );
             }
 
             if ($invoice->party_id !== null && $invoice->party !== null) {

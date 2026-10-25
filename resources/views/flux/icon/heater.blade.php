@@ -1,0 +1,52 @@
+@blaze(fold: true)
+
+{{-- Credit: Lucide (https://lucide.dev) --}}
+
+@props([
+    'variant' => 'outline',
+])
+
+@php
+if ($variant === 'solid') {
+    throw new \Exception('The "solid" variant is not supported in Lucide.');
+}
+
+$classes = Flux::classes('shrink-0')
+    ->add(match($variant) {
+        'outline' => '[:where(&)]:size-6',
+        'solid' => '[:where(&)]:size-6',
+        'mini' => '[:where(&)]:size-5',
+        'micro' => '[:where(&)]:size-4',
+    });
+
+$strokeWidth = match ($variant) {
+    'outline' => 2,
+    'mini' => 2.25,
+    'micro' => 2.5,
+};
+@endphp
+
+<svg
+    {{ $attributes->class($classes) }}
+    data-flux-icon
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="{{ $strokeWidth }}"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    aria-hidden="true"
+    data-slot="icon"
+>
+  <path d="M11 8c2-3-2-3 0-6" />
+  <path d="M15.5 8c2-3-2-3 0-6" />
+  <path d="M6 10h.01" />
+  <path d="M6 14h.01" />
+  <path d="M10 16v-4" />
+  <path d="M14 16v-4" />
+  <path d="M18 16v-4" />
+  <path d="M20 6a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h3" />
+  <path d="M5 20v2" />
+  <path d="M19 20v2" />
+</svg>

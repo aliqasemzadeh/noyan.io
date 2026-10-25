@@ -2,6 +2,7 @@
 
 namespace App\Actions\Business;
 
+use App\Actions\Inventory\InitializeBusinessWarehousesAction;
 use App\Enums\AccountSubType;
 use App\Enums\AccountType;
 use App\Enums\Business\BusinessCategory;
@@ -110,6 +111,8 @@ class CreateBusinessAction
             }
 
             $this->seedDefaultAccounts($business, $baseCurrency);
+
+            app(InitializeBusinessWarehousesAction::class)->handle($business);
 
             BusinessInvoiceSetting::forBusiness($business);
 

@@ -1,0 +1,51 @@
+@blaze(fold: true)
+
+{{-- Credit: Lucide (https://lucide.dev) --}}
+
+@props([
+    'variant' => 'outline',
+])
+
+@php
+if ($variant === 'solid') {
+    throw new \Exception('The "solid" variant is not supported in Lucide.');
+}
+
+$classes = Flux::classes('shrink-0')
+    ->add(match($variant) {
+        'outline' => '[:where(&)]:size-6',
+        'solid' => '[:where(&)]:size-6',
+        'mini' => '[:where(&)]:size-5',
+        'micro' => '[:where(&)]:size-4',
+    });
+
+$strokeWidth = match ($variant) {
+    'outline' => 2,
+    'mini' => 2.25,
+    'micro' => 2.5,
+};
+@endphp
+
+<svg
+    {{ $attributes->class($classes) }}
+    data-flux-icon
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="{{ $strokeWidth }}"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    aria-hidden="true"
+    data-slot="icon"
+>
+  <path d="M 5 22 H 11.072" />
+  <path d="M15 5 C 23 4 23.328 12.676 20 14.536" />
+  <path d="M15.802 10.308 C 14.776 9.465 14 8.496 14 7" />
+  <path d="M2 2h.01" />
+  <path d="M2 7h.01" />
+  <path d="M5 4.5h.01" />
+  <path d="M8.127 22 A 8 8 0 0 1 4 15 3 3 0 0 1 4.879 12.879C 6.879 10.879 10 10 10 7" />
+  <circle cx="18" cy="18" r="4" />
+  <rect x="9" y="2" width="6" height="5" rx="1" />
+</svg>
