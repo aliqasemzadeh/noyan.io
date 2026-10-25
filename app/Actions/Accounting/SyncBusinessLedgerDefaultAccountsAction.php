@@ -5,6 +5,7 @@ namespace App\Actions\Accounting;
 use App\Models\Accounting\GlAccount;
 use App\Models\Business;
 use App\Models\BusinessLedgerSetting;
+use App\Services\Accounting\BusinessLedgerSettingsService;
 
 class SyncBusinessLedgerDefaultAccountsAction
 {
@@ -25,6 +26,14 @@ class SyncBusinessLedgerDefaultAccountsAction
         'default_fx_loss_id' => 'fx_loss',
     ];
 
+    public function __construct(
+        private BusinessLedgerSettingsService $settingsService,
+    ) {}
+
+    /**
+     * Map empty (or all, when overwrite=true) ledger default account FKs from COA system keys.
+     * Does not create GL accounts — only fills settings rows.
+     */
     public function handle(Business $business, bool $overwrite = false): BusinessLedgerSetting
     {
         $settings = BusinessLedgerSetting::forBusiness($business);
@@ -44,6 +53,7 @@ class SyncBusinessLedgerDefaultAccountsAction
 
         if ($payload !== []) {
             $settings->fill($payload)->save();
+            $this->settingsService->forget($business->id);
         }
 
         return $settings->fresh() ?? $settings;

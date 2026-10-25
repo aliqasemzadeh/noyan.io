@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\CategoryType;
+use App\Models\Accounting\GlAccount;
 use App\Models\Accounting\Transaction;
 use App\Models\Catalog\Product;
 use App\Models\Concerns\LogsBusinessActivity;
@@ -67,6 +68,11 @@ class Category extends Model
     public function business(): BelongsTo
     {
         return $this->belongsTo(Business::class);
+    }
+
+    public function glAccount(): BelongsTo
+    {
+        return $this->belongsTo(GlAccount::class, 'gl_account_id');
     }
 
     public function parent(): BelongsTo

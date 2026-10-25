@@ -13,13 +13,20 @@ use App\Models\Accounting\Party;
 use App\Models\Accounting\Transaction;
 use App\Models\Category;
 use App\Models\User;
+use App\Services\Accounting\AutoPostingEngine;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 use RuntimeException;
+use Throwable;
 
 class UpdateTransactionAction
 {
     use AppliesTransactionEffects;
+
+    public function __construct(
+        protected AutoPostingEngine $autoPostingEngine,
+    ) {}
 
     /**
      * @param  array{
@@ -352,7 +359,20 @@ class UpdateTransactionAction
                 $this->applyLoanPayment($loan, $amount);
             }
 
-            return $locked->fresh(['account', 'destinationAccount', 'party', 'invoice', 'category', 'loan', 'cheque']);
+            $fresh = $locked->fresh(['account', 'destinationAccount', 'party', 'invoice', 'category', 'loan', 'cheque']);
+
+            try {
+                $this->autoPostingEngine->syncTransaction($fresh ?? $locked, $user);
+            } catch (Throwable $exception) {
+                Log::error('Treasury auto-post sync failed.', [
+                    'transaction_id' => $locked->id,
+                    'message' => $exception->getMessage(),
+                ]);
+
+                throw $exception;
+            }
+
+            return $fresh ?? $locked;
         });
     }
 }

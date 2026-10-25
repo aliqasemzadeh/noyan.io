@@ -1322,7 +1322,9 @@ return [
     'default_fx_gain' => 'سود تسعیر ارز',
     'default_fx_loss' => 'زیان تسعیر ارز',
     'auto_post_invoice_description' => 'ثبت خودکار فاکتور :number',
-    'auto_post_needs_fiscal_year' => 'سال مالی باز برای تاریخ فاکتور جهت ثبت خودکار وجود ندارد.',
+    'auto_post_transaction_description' => 'ثبت خودکار خزانه :number',
+    'auto_post_needs_fiscal_year' => 'سال مالی باز برای تاریخ سند جهت ثبت خودکار وجود ندارد.',
+    'auto_post_category_needs_gl_account' => 'این دسته‌بندی به حساب دفترکل متصل نیست. ابتدا در دسته‌ها لینک کنید یا ثبت خودکار را خاموش کنید.',
     'voucher_manual_number_required' => 'در حالت شماره‌گذاری دستی، شماره سند الزامی است.',
     'voucher_manual_number_invalid' => 'شماره سند دستی معتبر نیست.',
 
@@ -1417,8 +1419,8 @@ return [
     'command_run' => 'اجرا',
     'quick_update' => 'به‌روزرسانی سریع',
     'full_update' => 'به‌روزرسانی کامل',
-    'quick_update_confirm' => 'به‌روزرسانی سریع انجام شود؟ (git pull، migrate، همگام‌سازی مجوزها و پاک‌سازی کش)',
-    'full_update_confirm' => 'به‌روزرسانی کامل انجام شود؟ (شامل composer، npm build و همگام‌سازی مجوزها)',
+    'quick_update_confirm' => 'به‌روزرسانی سریع انجام شود؟ (git pull، migrate، permissions، seed حسابداری، optimize:clear، npm build، queue:restart)',
+    'full_update_confirm' => 'به‌روزرسانی کامل انجام شود؟ (همین مراحل + composer install)',
 
     'system_update_started' => 'شروع :mode',
     'system_update_finished' => 'به‌روزرسانی با موفقیت انجام شد.',

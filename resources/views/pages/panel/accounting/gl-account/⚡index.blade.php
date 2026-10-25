@@ -54,7 +54,7 @@ new class extends Component
         abort_if($businessId === null, 403);
 
         $business = Business::query()->findOrFail($businessId);
-        $accounts = $action->handle($business, force: true);
+        $accounts = $action->handle($business);
         $syncDefaults->handle($business, overwrite: true);
 
         unset($this->treeRows);

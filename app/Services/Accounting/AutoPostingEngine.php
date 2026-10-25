@@ -7,11 +7,15 @@ use App\Actions\Ledger\PostJournalEntryAction;
 use App\Enums\Accounting\AutoPostMode;
 use App\Enums\Accounting\InvoiceType;
 use App\Enums\Accounting\JournalEntryStatus;
+use App\Enums\Accounting\TransactionType;
+use App\Models\Accounting\Account;
 use App\Models\Accounting\FiscalYear;
 use App\Models\Accounting\Invoice;
 use App\Models\Accounting\JournalEntry;
+use App\Models\Accounting\Transaction;
 use App\Models\BusinessLedgerSetting;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 use RuntimeException;
@@ -32,12 +36,7 @@ class AutoPostingEngine
             return null;
         }
 
-        $existing = JournalEntry::query()
-            ->where('business_id', $invoice->business_id)
-            ->where('referenceable_type', $invoice->getMorphClass())
-            ->where('referenceable_id', $invoice->id)
-            ->where('voucher_number', 'not like', '%__del_%')
-            ->first();
+        $existing = $this->findLinkedEntry($invoice);
 
         if ($existing !== null) {
             return $existing;
@@ -55,7 +54,6 @@ class AutoPostingEngine
         }
 
         $entryDate = $invoice->issue_date?->toDateString() ?? now()->toDateString();
-        $fiscalYear = $this->resolveFiscalYear((int) $invoice->business_id, $entryDate);
 
         $lines = match ($invoice->type) {
             InvoiceType::Sale => $this->saleLines($invoice, $settings),
@@ -63,28 +61,297 @@ class AutoPostingEngine
             InvoiceType::Return => $this->returnLines($invoice, $settings),
         };
 
+        return $this->createAndOptionallyPost(
+            $user,
+            (int) $invoice->business_id,
+            $entryDate,
+            __('general.auto_post_invoice_description', ['number' => $invoice->invoice_number]),
+            $invoice,
+            $lines,
+            $settings,
+            ['invoice_id' => $invoice->id],
+        );
+    }
+
+    public function postTransaction(Transaction $transaction, User $user): ?JournalEntry
+    {
+        $settings = $this->ledgerSettings->get((int) $transaction->business_id);
+
+        if ($settings->auto_post_mode === AutoPostMode::Off) {
+            return null;
+        }
+
+        $existing = $this->findLinkedEntry($transaction);
+
+        if ($existing !== null) {
+            return $existing;
+        }
+
+        $transaction->loadMissing(['account', 'destinationAccount', 'party', 'category', 'invoice']);
+
+        $this->ensureCashAccountDetail($transaction->account);
+        $this->ensureCashAccountDetail($transaction->destinationAccount);
+
+        $entryDate = $transaction->transaction_date?->toDateString() ?? now()->toDateString();
+
+        $lines = match ($transaction->type) {
+            TransactionType::Income => $this->incomeTransactionLines($transaction, $settings),
+            TransactionType::Expense => $this->expenseTransactionLines($transaction, $settings),
+            TransactionType::Transfer => $this->transferTransactionLines($transaction, $settings),
+        };
+
+        $label = $transaction->reference_number
+            ?: '#'.$transaction->id;
+
+        return $this->createAndOptionallyPost(
+            $user,
+            (int) $transaction->business_id,
+            $entryDate,
+            __('general.auto_post_transaction_description', ['number' => $label]),
+            $transaction,
+            $lines,
+            $settings,
+            ['transaction_id' => $transaction->id],
+        );
+    }
+
+    /**
+     * Replace any linked voucher then create a fresh auto-post for the transaction.
+     */
+    public function syncTransaction(Transaction $transaction, User $user): ?JournalEntry
+    {
+        $settings = $this->ledgerSettings->get((int) $transaction->business_id);
+
+        if ($settings->auto_post_mode === AutoPostMode::Off) {
+            $this->voidLinkedEntries($transaction);
+
+            return null;
+        }
+
+        $this->voidLinkedEntries($transaction);
+
+        return $this->postTransaction($transaction, $user);
+    }
+
+    public function voidTransaction(Transaction $transaction): void
+    {
+        $this->voidLinkedEntries($transaction);
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    protected function incomeTransactionLines(Transaction $transaction, BusinessLedgerSetting $settings): array
+    {
+        $cashId = $this->requireCashAccountId($settings);
+        $amount = $this->transactionAmount($transaction);
+        $description = $this->transactionDescription($transaction);
+
+        if ($transaction->invoice_id !== null) {
+            $ar = $settings->default_accounts_receivable_id;
+
+            if ($ar === null) {
+                throw new RuntimeException('Accounts receivable default GL account is not mapped.');
+            }
+
+            return [
+                $this->cashLine($cashId, $transaction->account_id, $amount, '0', $description),
+                [
+                    'gl_account_id' => $ar,
+                    'party_id' => $transaction->party_id,
+                    'debit' => '0',
+                    'credit' => $amount,
+                    'description' => $description,
+                ],
+            ];
+        }
+
+        $contraId = $this->requireCategoryGlAccountId($transaction);
+
+        return [
+            $this->cashLine($cashId, $transaction->account_id, $amount, '0', $description),
+            [
+                'gl_account_id' => $contraId,
+                'category_id' => $transaction->category_id,
+                'party_id' => $transaction->party_id,
+                'debit' => '0',
+                'credit' => $amount,
+                'description' => $description,
+            ],
+        ];
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    protected function expenseTransactionLines(Transaction $transaction, BusinessLedgerSetting $settings): array
+    {
+        $cashId = $this->requireCashAccountId($settings);
+        $amount = $this->transactionAmount($transaction);
+        $description = $this->transactionDescription($transaction);
+
+        if ($transaction->invoice_id !== null) {
+            $ap = $settings->default_accounts_payable_id;
+
+            if ($ap === null) {
+                throw new RuntimeException('Accounts payable default GL account is not mapped.');
+            }
+
+            return [
+                [
+                    'gl_account_id' => $ap,
+                    'party_id' => $transaction->party_id,
+                    'debit' => $amount,
+                    'credit' => '0',
+                    'description' => $description,
+                ],
+                $this->cashLine($cashId, $transaction->account_id, '0', $amount, $description),
+            ];
+        }
+
+        $contraId = $this->requireCategoryGlAccountId($transaction);
+
+        return [
+            [
+                'gl_account_id' => $contraId,
+                'category_id' => $transaction->category_id,
+                'party_id' => $transaction->party_id,
+                'debit' => $amount,
+                'credit' => '0',
+                'description' => $description,
+            ],
+            $this->cashLine($cashId, $transaction->account_id, '0', $amount, $description),
+        ];
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    protected function transferTransactionLines(Transaction $transaction, BusinessLedgerSetting $settings): array
+    {
+        $cashId = $this->requireCashAccountId($settings);
+        $amount = $this->transactionAmount($transaction);
+        $description = $this->transactionDescription($transaction);
+
+        if ($transaction->destination_account_id === null) {
+            throw new RuntimeException('Transfer destination account is required for auto-post.');
+        }
+
+        return [
+            $this->cashLine($cashId, $transaction->destination_account_id, $amount, '0', $description),
+            $this->cashLine($cashId, $transaction->account_id, '0', $amount, $description),
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected function cashLine(
+        int $cashGlAccountId,
+        ?int $accountId,
+        string $debit,
+        string $credit,
+        string $description,
+    ): array {
+        return [
+            'gl_account_id' => $cashGlAccountId,
+            'account_id' => $accountId,
+            'debit' => $debit,
+            'credit' => $credit,
+            'description' => $description,
+        ];
+    }
+
+    protected function requireCashAccountId(BusinessLedgerSetting $settings): int
+    {
+        if ($settings->default_cash_and_bank_id === null) {
+            throw new RuntimeException('Cash and bank default GL account is not mapped.');
+        }
+
+        return (int) $settings->default_cash_and_bank_id;
+    }
+
+    protected function requireCategoryGlAccountId(Transaction $transaction): int
+    {
+        $glAccountId = $transaction->category?->gl_account_id;
+
+        if ($glAccountId === null) {
+            throw ValidationException::withMessages([
+                'category_id' => [__('general.auto_post_category_needs_gl_account')],
+            ]);
+        }
+
+        return (int) $glAccountId;
+    }
+
+    protected function transactionAmount(Transaction $transaction): string
+    {
+        $amount = (string) ($transaction->base_amount ?: $transaction->amount);
+
+        if (bccomp($amount, '0', 4) !== 1) {
+            throw new RuntimeException('Transaction amount must be positive for auto-post.');
+        }
+
+        return $amount;
+    }
+
+    protected function transactionDescription(Transaction $transaction): string
+    {
+        return (string) ($transaction->note
+            ?: $transaction->reference_number
+            ?: ('TX-'.$transaction->id));
+    }
+
+    protected function ensureCashAccountDetail(?Account $account): void
+    {
+        if ($account === null) {
+            return;
+        }
+
+        $account->loadMissing('glDetail');
+
+        if ($account->glDetail === null) {
+            $account->syncFloatingDetail();
+            $account->load('glDetail');
+        }
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $lines
+     * @param  array<string, mixed>  $logContext
+     */
+    protected function createAndOptionallyPost(
+        User $user,
+        int $businessId,
+        string $entryDate,
+        string $description,
+        Model $reference,
+        array $lines,
+        BusinessLedgerSetting $settings,
+        array $logContext = [],
+    ): ?JournalEntry {
         if (count($lines) < 2) {
-            Log::warning('Auto-post skipped: unbalanced or incomplete invoice mapping.', [
-                'invoice_id' => $invoice->id,
-                'business_id' => $invoice->business_id,
+            Log::warning('Auto-post skipped: incomplete journal lines.', [
+                ...$logContext,
+                'business_id' => $businessId,
             ]);
 
             return null;
         }
 
+        $fiscalYear = $this->resolveFiscalYear($businessId, $entryDate);
+
         $previousBusinessId = $user->current_business_id;
-        $user->forceFill(['current_business_id' => $invoice->business_id])->saveQuietly();
+        $user->forceFill(['current_business_id' => $businessId])->saveQuietly();
 
         try {
             $entry = $this->createJournalEntry->handle($user, [
                 'fiscal_year_id' => $fiscalYear->id,
                 'entry_date' => $entryDate,
-                'description' => __('general.auto_post_invoice_description', [
-                    'number' => $invoice->invoice_number,
-                ]),
+                'description' => $description,
                 'status' => JournalEntryStatus::Draft,
-                'referenceable_type' => $invoice->getMorphClass(),
-                'referenceable_id' => $invoice->id,
+                'referenceable_type' => $reference->getMorphClass(),
+                'referenceable_id' => $reference->getKey(),
             ], $lines);
 
             if ($settings->auto_post_mode === AutoPostMode::Realtime) {
@@ -94,6 +361,33 @@ class AutoPostingEngine
             return $entry;
         } finally {
             $user->forceFill(['current_business_id' => $previousBusinessId])->saveQuietly();
+        }
+    }
+
+    protected function findLinkedEntry(Model $model): ?JournalEntry
+    {
+        return JournalEntry::query()
+            ->where('business_id', $model->getAttribute('business_id'))
+            ->where('referenceable_type', $model->getMorphClass())
+            ->where('referenceable_id', $model->getKey())
+            ->where('voucher_number', 'not like', '%__del_%')
+            ->first();
+    }
+
+    protected function voidLinkedEntries(Model $model): void
+    {
+        $entries = JournalEntry::query()
+            ->where('business_id', $model->getAttribute('business_id'))
+            ->where('referenceable_type', $model->getMorphClass())
+            ->where('referenceable_id', $model->getKey())
+            ->where('voucher_number', 'not like', '%__del_%')
+            ->get();
+
+        foreach ($entries as $entry) {
+            // System vouchers may be posted; posting does not mutate cashbook balances,
+            // so soft-deleting the linked voucher is the correct void path for auto-post sync.
+            $entry->lines()->each(fn ($line) => $line->delete());
+            $entry->delete();
         }
     }
 
@@ -210,7 +504,6 @@ class AutoPostingEngine
      */
     protected function returnLines(Invoice $invoice, BusinessLedgerSetting $settings): array
     {
-        // Reverse of a sale: credit AR, debit sales / VAT.
         $lines = $this->saleLines($invoice, $settings);
 
         return array_map(function (array $line): array {
@@ -268,7 +561,6 @@ class AutoPostingEngine
             return $lines;
         }
 
-        // If tax/discount mapping missing, collapse to AR/Sales only.
         return [
             [
                 'gl_account_id' => $receivableId,
@@ -298,7 +590,7 @@ class AutoPostingEngine
 
         if ($fiscalYear === null) {
             throw ValidationException::withMessages([
-                'invoice' => [__('general.auto_post_needs_fiscal_year')],
+                'transaction_date' => [__('general.auto_post_needs_fiscal_year')],
             ]);
         }
 

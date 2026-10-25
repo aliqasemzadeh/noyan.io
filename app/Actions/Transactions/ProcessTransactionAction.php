@@ -13,13 +13,20 @@ use App\Models\Accounting\Party;
 use App\Models\Accounting\Transaction;
 use App\Models\Category;
 use App\Models\User;
+use App\Services\Accounting\AutoPostingEngine;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 use RuntimeException;
+use Throwable;
 
 class ProcessTransactionAction
 {
     use AppliesTransactionEffects;
+
+    public function __construct(
+        protected AutoPostingEngine $autoPostingEngine,
+    ) {}
 
     /**
      * @param  array{
@@ -291,7 +298,20 @@ class ProcessTransactionAction
                 $this->applyLoanPayment($loan, $amount);
             }
 
-            return $transaction->fresh(['account', 'destinationAccount', 'party', 'invoice', 'category', 'loan', 'cheque']);
+            $fresh = $transaction->fresh(['account', 'destinationAccount', 'party', 'invoice', 'category', 'loan', 'cheque']);
+
+            try {
+                $this->autoPostingEngine->postTransaction($fresh ?? $transaction, $user);
+            } catch (Throwable $exception) {
+                Log::error('Treasury auto-post failed.', [
+                    'transaction_id' => $transaction->id,
+                    'message' => $exception->getMessage(),
+                ]);
+
+                throw $exception;
+            }
+
+            return $fresh ?? $transaction;
         });
     }
 }

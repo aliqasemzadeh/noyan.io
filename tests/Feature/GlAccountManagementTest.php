@@ -59,7 +59,7 @@ class GlAccountManagementTest extends TestCase
         );
     }
 
-    public function test_seed_command_is_idempotent_without_force(): void
+    public function test_seed_is_idempotent_and_does_not_duplicate_accounts(): void
     {
         [$user, $business] = $this->actingBusinessUser();
 
@@ -72,7 +72,31 @@ class GlAccountManagementTest extends TestCase
         $this->assertSame($count, count($second));
         $this->assertSame($count, GlAccount::query()->where('business_id', $business->id)->count());
         $this->assertNotEmpty($first);
+        $this->assertSame(
+            GlAccount::findBySystemKey($business, 'sales')?->id,
+            GlAccount::query()->where('business_id', $business->id)->where('system_key', 'sales')->value('id'),
+        );
         $this->assertSame($user->id, $business->owner_id);
+    }
+
+    public function test_seed_restores_soft_deleted_system_account_without_duplicate(): void
+    {
+        [, $business] = $this->actingBusinessUser();
+
+        app(SeedBusinessChartOfAccountsAction::class)->handle($business);
+
+        $sales = GlAccount::findBySystemKey($business, 'sales');
+        $this->assertNotNull($sales);
+        $salesId = $sales->id;
+        $sales->delete();
+
+        $this->assertSoftDeleted('gl_accounts', ['id' => $salesId]);
+
+        app(SeedBusinessChartOfAccountsAction::class)->handle($business);
+
+        $this->assertSame(1, GlAccount::query()->where('business_id', $business->id)->where('system_key', 'sales')->count());
+        $this->assertNotSoftDeleted('gl_accounts', ['id' => $salesId]);
+        $this->assertSame($salesId, GlAccount::findBySystemKey($business, 'sales')?->id);
     }
 
     public function test_user_can_create_custom_group_account(): void

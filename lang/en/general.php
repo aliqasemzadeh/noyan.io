@@ -1322,7 +1322,9 @@ return [
     'default_fx_gain' => 'Foreign exchange gain',
     'default_fx_loss' => 'Foreign exchange loss',
     'auto_post_invoice_description' => 'Auto-post invoice :number',
-    'auto_post_needs_fiscal_year' => 'No open fiscal year covers the invoice date for auto-posting.',
+    'auto_post_transaction_description' => 'Auto-post treasury :number',
+    'auto_post_needs_fiscal_year' => 'No open fiscal year covers the document date for auto-posting.',
+    'auto_post_category_needs_gl_account' => 'This category is not linked to a general-ledger account. Link it in categories or turn auto-post off.',
     'voucher_manual_number_required' => 'A voucher number is required when numbering mode is manual.',
     'voucher_manual_number_invalid' => 'The manual voucher number is invalid.',
 
@@ -1417,8 +1419,8 @@ return [
     'command_run' => 'Run',
     'quick_update' => 'Quick update',
     'full_update' => 'Full update',
-    'quick_update_confirm' => 'Run a quick update? (git pull, migrate, permissions sync, and cache clears)',
-    'full_update_confirm' => 'Run a full update? (includes composer, npm build, and permissions sync)',
+    'quick_update_confirm' => 'Run a quick update? (git pull, migrate, permissions, accounting seed, optimize:clear, npm build, queue:restart)',
+    'full_update_confirm' => 'Run a full update? (same steps plus composer install)',
 
     'system_update_started' => 'Starting :mode',
     'system_update_finished' => 'Update finished successfully.',

@@ -12,14 +12,17 @@ class AccountingSeedCoaCommand extends Command
     protected $signature = 'accounting:seed-coa
                             {business? : Business ID}
                             {--all : Seed chart of accounts for every business}
-                            {--force : Upsert system accounts even if a chart already exists}';
+                            {--force : Also overwrite existing default-account mappings (COA upsert is always idempotent)}
+                            {--overwrite-defaults : Alias of --force for default account mappings}';
 
-    protected $description = 'Seed the standard chart of accounts for one or all businesses';
+    protected $description = 'Upsert the standard chart of accounts (no duplicates) and fill empty ledger default mappings';
 
     public function handle(
         SeedBusinessChartOfAccountsAction $action,
         SyncBusinessLedgerDefaultAccountsAction $syncDefaults,
     ): int {
+        $overwriteDefaults = (bool) $this->option('force') || (bool) $this->option('overwrite-defaults');
+
         if ($this->option('all')) {
             $businesses = Business::query()->orderBy('id')->get();
 
@@ -30,9 +33,9 @@ class AccountingSeedCoaCommand extends Command
             }
 
             foreach ($businesses as $business) {
-                $accounts = $action->handle($business, (bool) $this->option('force'));
-                $syncDefaults->handle($business, overwrite: (bool) $this->option('force'));
-                $this->info("Business #{$business->id} ({$business->name}): ".count($accounts).' accounts.');
+                $accounts = $action->handle($business);
+                $syncDefaults->handle($business, overwrite: $overwriteDefaults);
+                $this->info("Business #{$business->id} ({$business->name}): ".count($accounts).' system accounts upserted.');
             }
 
             return self::SUCCESS;
@@ -54,9 +57,9 @@ class AccountingSeedCoaCommand extends Command
             return self::FAILURE;
         }
 
-        $accounts = $action->handle($business, (bool) $this->option('force'));
-        $syncDefaults->handle($business, overwrite: (bool) $this->option('force'));
-        $this->info('Seeded '.count($accounts)." GL accounts for business #{$business->id}.");
+        $accounts = $action->handle($business);
+        $syncDefaults->handle($business, overwrite: $overwriteDefaults);
+        $this->info('Upserted '.count($accounts)." system GL accounts for business #{$business->id}.");
 
         return self::SUCCESS;
     }

@@ -13,23 +13,17 @@ use Illuminate\Support\Facades\DB;
 class SeedBusinessChartOfAccountsAction
 {
     /**
+     * Upsert the standard chart. Safe to run repeatedly — uses business_id + full_code
+     * and never creates duplicate rows. Soft-deleted system rows are restored.
+     *
      * @return list<GlAccount>
      */
     public function handle(Business $business, bool $force = false): array
     {
-        return DB::transaction(function () use ($business, $force): array {
-            $existing = GlAccount::query()
-                ->where('business_id', $business->id)
-                ->exists();
+        // $force retained for call-site BC; seeding is always an idempotent upsert.
+        unset($force);
 
-            if ($existing && ! $force) {
-                return GlAccount::query()
-                    ->where('business_id', $business->id)
-                    ->orderBy('full_code')
-                    ->get()
-                    ->all();
-            }
-
+        return DB::transaction(function () use ($business): array {
             $created = [];
 
             foreach ($this->definitions() as $index => $group) {
@@ -64,29 +58,43 @@ class SeedBusinessChartOfAccountsAction
     ): array {
         $fullCode = $parent === null ? $node['code'] : $parent->full_code.$node['code'];
         $isSubsidiary = $level === AccountLevel::Subsidiary;
+        $systemKey = $node['system_key'] ?? null;
 
-        $account = GlAccount::query()->updateOrCreate(
-            [
-                'business_id' => $business->id,
-                'full_code' => $fullCode,
-            ],
-            [
-                'parent_id' => $parent?->id,
-                'level' => $level,
-                'code' => $node['code'],
-                'name' => $node['name'],
-                'nature' => $node['nature'],
-                'statement_type' => $node['statement_type'],
-                'is_postable' => $isSubsidiary,
-                'is_system' => true,
-                'system_key' => $node['system_key'] ?? null,
-                'requires_detail_level_4_type' => $node['requires_detail_level_4_type'] ?? null,
-                'requires_detail_level_5_type' => $node['requires_detail_level_5_type'] ?? null,
-                'requires_detail_level_6_type' => $node['requires_detail_level_6_type'] ?? null,
-                'sort_order' => $sortOrder,
-                'is_active' => true,
-            ],
-        );
+        if (filled($systemKey)) {
+            GlAccount::withTrashed()
+                ->where('business_id', $business->id)
+                ->where('system_key', $systemKey)
+                ->where('full_code', '!=', $fullCode)
+                ->update(['system_key' => null]);
+        }
+
+        $account = GlAccount::withTrashed()->firstOrNew([
+            'business_id' => $business->id,
+            'full_code' => $fullCode,
+        ]);
+
+        $account->fill([
+            'parent_id' => $parent?->id,
+            'level' => $level,
+            'code' => $node['code'],
+            'name' => $node['name'],
+            'nature' => $node['nature'],
+            'statement_type' => $node['statement_type'],
+            'is_postable' => $isSubsidiary,
+            'is_system' => true,
+            'system_key' => $systemKey,
+            'requires_detail_level_4_type' => $node['requires_detail_level_4_type'] ?? null,
+            'requires_detail_level_5_type' => $node['requires_detail_level_5_type'] ?? null,
+            'requires_detail_level_6_type' => $node['requires_detail_level_6_type'] ?? null,
+            'sort_order' => $sortOrder,
+            'is_active' => true,
+        ]);
+
+        if ($account->trashed()) {
+            $account->restore();
+        } else {
+            $account->save();
+        }
 
         $created = [$account];
         $childLevel = $level->childLevel();

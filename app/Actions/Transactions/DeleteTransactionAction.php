@@ -9,6 +9,7 @@ use App\Models\Accounting\Loan;
 use App\Models\Accounting\Party;
 use App\Models\Accounting\Transaction;
 use App\Models\User;
+use App\Services\Accounting\AutoPostingEngine;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use RuntimeException;
@@ -16,6 +17,10 @@ use RuntimeException;
 class DeleteTransactionAction
 {
     use AppliesTransactionEffects;
+
+    public function __construct(
+        protected AutoPostingEngine $autoPostingEngine,
+    ) {}
 
     public function handle(User $user, Transaction $transaction): void
     {
@@ -97,6 +102,8 @@ class DeleteTransactionAction
             if ($loan !== null) {
                 $this->reverseLoanPayment($loan, $amount);
             }
+
+            $this->autoPostingEngine->voidTransaction($locked);
 
             $locked->delete();
         });

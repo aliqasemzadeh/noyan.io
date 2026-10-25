@@ -96,7 +96,7 @@ class SystemFunctionsPageTest extends TestCase
         });
     }
 
-    public function test_quick_update_skips_composer_but_runs_npm(): void
+    public function test_quick_update_skips_composer_but_runs_accounting_bootstrap_and_npm(): void
     {
         Process::fake([
             '*' => Process::result(output: 'ok'),
@@ -118,6 +118,20 @@ class SystemFunctionsPageTest extends TestCase
             return str_contains($command, 'composer');
         });
 
+        foreach ([
+            'migrate',
+            'permissions:sync',
+            'accounting:seed-coa',
+            'accounting:sync-gl-details',
+            'accounting:migrate-categories-to-gl',
+            'optimize:clear',
+            'queue:restart',
+        ] as $artisan) {
+            Process::assertRan(function ($process) use ($artisan): bool {
+                return collect($process->command)->contains($artisan);
+            });
+        }
+
         Process::assertRan(function ($process): bool {
             $command = collect($process->command)->implode(' ');
 
@@ -125,7 +139,7 @@ class SystemFunctionsPageTest extends TestCase
         });
     }
 
-    public function test_full_update_runs_composer_and_npm(): void
+    public function test_full_update_runs_composer_accounting_bootstrap_and_npm(): void
     {
         Process::fake([
             '*' => Process::result(output: 'ok'),
@@ -142,6 +156,10 @@ class SystemFunctionsPageTest extends TestCase
             $command = collect($process->command)->implode(' ');
 
             return str_contains($command, 'composer');
+        });
+
+        Process::assertRan(function ($process): bool {
+            return collect($process->command)->contains('accounting:seed-coa');
         });
 
         Process::assertRan(function ($process): bool {
