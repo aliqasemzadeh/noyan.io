@@ -2,6 +2,7 @@
 
 namespace App\Actions\Business;
 
+use App\Actions\Accounting\SeedBusinessChartOfAccountsAction;
 use App\Actions\Inventory\InitializeBusinessWarehousesAction;
 use App\Enums\AccountSubType;
 use App\Enums\AccountType;
@@ -117,6 +118,8 @@ class CreateBusinessAction
 
             BusinessInvoiceSetting::forBusiness($business);
             BusinessLedgerSetting::forBusiness($business);
+
+            app(SeedBusinessChartOfAccountsAction::class)->handle($business);
 
             return $business->fresh();
         });
