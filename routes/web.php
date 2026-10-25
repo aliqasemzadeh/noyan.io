@@ -155,6 +155,7 @@ Route::middleware('auth')->group(function () {
         Route::livewire('/cheques', 'pages::panel.accounting.cheque.index')->name('cheques.index');
         Route::livewire('/currencies', 'pages::panel.accounting.currency.index')->name('currencies.index');
         Route::livewire('/sale-kinds', 'pages::panel.accounting.sale-kind.index')->name('sale-kinds.index');
+        Route::livewire('/settlement-types', 'pages::panel.accounting.settlement-type.index')->name('settlement-types.index');
 
         Route::livewire('/journal-entries', 'pages::panel.accounting.journal-entry.index')->name('journal-entries.index');
         Route::livewire('/journal-entries/create', 'pages::panel.accounting.journal-entry.form')->name('journal-entries.create');

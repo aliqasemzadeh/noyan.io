@@ -85,6 +85,7 @@ class SaveInvoiceAction
                 'party_name' => $partyName,
                 'type' => $type,
                 'sale_kind_id' => $data['sale_kind_id'] ?? null,
+                'settlement_type_id' => $data['settlement_type_id'] ?? null,
                 'issue_date' => $data['issue_date'],
                 'due_date' => $data['due_date'] ?? null,
                 'items_total' => $itemsTotal,

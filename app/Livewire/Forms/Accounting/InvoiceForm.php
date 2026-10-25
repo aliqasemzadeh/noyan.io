@@ -28,6 +28,8 @@ class InvoiceForm extends Form
 
     public ?int $sale_kind_id = null;
 
+    public ?int $settlement_type_id = null;
+
     public ?int $party_id = null;
 
     public string $party_name = '';
@@ -60,6 +62,7 @@ class InvoiceForm extends Form
         $this->invoice = $invoice;
         $this->type = $invoice->type->value;
         $this->sale_kind_id = $invoice->sale_kind_id;
+        $this->settlement_type_id = $invoice->settlement_type_id;
         $this->party_id = $invoice->party_id;
         $this->party_name = (string) ($invoice->party_name ?? '');
         $this->issue_date = LocaleDate::formatInput($invoice->issue_date);
@@ -99,6 +102,7 @@ class InvoiceForm extends Form
         $this->global_tax = '0';
         $this->note = '';
         $this->sale_kind_id = Auth::user()?->currentBusiness?->defaultSaleKind()?->id;
+        $this->settlement_type_id = Auth::user()?->currentBusiness?->defaultSettlementType()?->id;
         $this->party_id = null;
         $this->party_name = '';
         $this->account_ids = [];
@@ -190,6 +194,12 @@ class InvoiceForm extends Form
                 Rule::exists('business_sale_kinds', 'sale_kind_id')
                     ->where(fn ($query) => $query->where('business_id', $businessId)),
             ],
+            'settlement_type_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('business_settlement_types', 'settlement_type_id')
+                    ->where(fn ($query) => $query->where('business_id', $businessId)),
+            ],
             'party_id' => [
                 'required',
                 'integer',
@@ -246,6 +256,7 @@ class InvoiceForm extends Form
             'party_id' => __('general.party'),
             'party_name' => __('general.party_name'),
             'sale_kind_id' => __('general.sale_kind'),
+            'settlement_type_id' => __('general.settlement_type'),
             'issue_date' => __('general.issue_date'),
             'due_date' => __('general.due_date'),
             'global_discount' => __('general.global_discount'),
@@ -271,6 +282,7 @@ class InvoiceForm extends Form
         return [
             'type' => $this->type,
             'sale_kind_id' => $this->sale_kind_id,
+            'settlement_type_id' => $this->settlement_type_id,
             'party_id' => $this->party_id,
             'party_name' => $this->party_name !== '' ? $this->party_name : null,
             'issue_date' => LocaleDate::toStorageDate($this->issue_date) ?? $this->issue_date,

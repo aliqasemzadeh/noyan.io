@@ -87,6 +87,8 @@ class ConvertQuoteToInvoiceAction
 
             $invoice = $this->saveInvoiceAction->handle($user, [
                 'type' => InvoiceType::Sale,
+                'sale_kind_id' => $quote->sale_kind_id,
+                'settlement_type_id' => $quote->settlement_type_id,
                 'party_id' => $quote->party_id,
                 'party_name' => $quote->party_name,
                 'issue_date' => now()->toDateString(),

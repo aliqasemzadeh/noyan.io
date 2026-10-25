@@ -545,13 +545,14 @@ new class extends Component
                     @js(__('general.cash_and_bank_accounts')),
                     @js(__('general.categories')),
                     @js(__('general.business_currencies')),
-                    @js(__('general.sale_kinds'))
+                    @js(__('general.sale_kinds')),
+                    @js(__('general.settlement_types'))
                 )"
                 x-cloak
             >
                 <flux:sidebar.group
                     expandable
-                    :expanded="request()->routeIs('accounting.accounts.*') || request()->routeIs('accounting.currencies.*') || request()->routeIs('accounting.categories.*') || request()->routeIs('accounting.sale-kinds.*')"
+                    :expanded="request()->routeIs('accounting.accounts.*') || request()->routeIs('accounting.currencies.*') || request()->routeIs('accounting.categories.*') || request()->routeIs('accounting.sale-kinds.*') || request()->routeIs('accounting.settlement-types.*')"
                     icon="wallet"
                     heading="{{ __('general.treasury') }}"
                     class="grid"
@@ -597,6 +598,17 @@ new class extends Component
                             data-nav-label="{{ __('general.sale_kinds') }}"
                         >
                             {{ __('general.sale_kinds') }}
+                        </flux:sidebar.item>
+                    </div>
+
+                    <div x-show="match(@js(__('general.settlement_types')))" x-cloak>
+                        <flux:sidebar.item
+                            :href="route('accounting.settlement-types.index')"
+                            wire:navigate
+                            :current="request()->routeIs('accounting.settlement-types.*')"
+                            data-nav-label="{{ __('general.settlement_types') }}"
+                        >
+                            {{ __('general.settlement_types') }}
                         </flux:sidebar.item>
                     </div>
                 </flux:sidebar.group>

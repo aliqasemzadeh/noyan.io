@@ -25,6 +25,8 @@ class QuoteForm extends Form
 
     public ?int $sale_kind_id = null;
 
+    public ?int $settlement_type_id = null;
+
     public ?int $party_id = null;
 
     public string $party_name = '';
@@ -46,6 +48,7 @@ class QuoteForm extends Form
     {
         $this->quote = $quote;
         $this->sale_kind_id = $quote->sale_kind_id;
+        $this->settlement_type_id = $quote->settlement_type_id;
         $this->party_id = $quote->party_id;
         $this->party_name = (string) ($quote->party_name ?? '');
         $this->issue_date = LocaleDate::formatInput($quote->issue_date);
@@ -83,6 +86,7 @@ class QuoteForm extends Form
         $this->global_tax = '0';
         $this->note = '';
         $this->sale_kind_id = Auth::user()?->currentBusiness?->defaultSaleKind()?->id;
+        $this->settlement_type_id = Auth::user()?->currentBusiness?->defaultSettlementType()?->id;
         $this->party_id = null;
         $this->party_name = '';
         $this->items = [];
@@ -168,6 +172,12 @@ class QuoteForm extends Form
                 Rule::exists('business_sale_kinds', 'sale_kind_id')
                     ->where(fn ($query) => $query->where('business_id', $businessId)),
             ],
+            'settlement_type_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('business_settlement_types', 'settlement_type_id')
+                    ->where(fn ($query) => $query->where('business_id', $businessId)),
+            ],
             'party_id' => [
                 'required',
                 'integer',
@@ -215,6 +225,7 @@ class QuoteForm extends Form
             'party_id' => __('general.party'),
             'party_name' => __('general.party_name'),
             'sale_kind_id' => __('general.sale_kind'),
+            'settlement_type_id' => __('general.settlement_type'),
             'issue_date' => __('general.issue_date'),
             'valid_until' => __('general.valid_until'),
             'global_discount' => __('general.global_discount'),
@@ -237,6 +248,7 @@ class QuoteForm extends Form
     {
         return [
             'sale_kind_id' => $this->sale_kind_id,
+            'settlement_type_id' => $this->settlement_type_id,
             'party_id' => $this->party_id,
             'party_name' => $this->party_name !== '' ? $this->party_name : null,
             'issue_date' => LocaleDate::toStorageDate($this->issue_date) ?? $this->issue_date,
