@@ -9,11 +9,13 @@ use App\Enums\CategoryType;
 use App\Models\Accounting\Account;
 use App\Models\Accounting\BusinessCurrency;
 use App\Models\Accounting\BusinessSaleKind;
+use App\Models\Accounting\BusinessSettlementType;
 use App\Models\Accounting\Invoice;
 use App\Models\Accounting\Loan;
 use App\Models\Accounting\Party;
 use App\Models\Accounting\Quote;
 use App\Models\Accounting\SaleKind;
+use App\Models\Accounting\SettlementType;
 use App\Models\Catalog\Brand;
 use App\Models\Catalog\Product;
 use App\Models\Catalog\StockConversion;
@@ -179,6 +181,73 @@ class Business extends Model implements HasMedia
             ->with('saleKind')
             ->first()
             ?->saleKind;
+    }
+
+    /**
+     * @return HasMany<BusinessSettlementType, $this>
+     */
+    public function businessSettlementTypes(): HasMany
+    {
+        return $this->hasMany(BusinessSettlementType::class);
+    }
+
+    public function activateSettlementType(SettlementType $settlementType, bool $asDefault = false): BusinessSettlementType
+    {
+        return DB::transaction(function () use ($settlementType, $asDefault): BusinessSettlementType {
+            $hasDefault = $this->businessSettlementTypes()->where('is_default', true)->exists();
+            $shouldBeDefault = $asDefault || ! $hasDefault;
+
+            $businessSettlementType = BusinessSettlementType::query()->firstOrCreate(
+                [
+                    'business_id' => $this->id,
+                    'settlement_type_id' => $settlementType->id,
+                ],
+                [
+                    'is_default' => $shouldBeDefault,
+                ],
+            );
+
+            if ($shouldBeDefault && ! $businessSettlementType->is_default) {
+                $businessSettlementType->setAsDefault();
+            }
+
+            return $businessSettlementType->fresh(['settlementType']);
+        });
+    }
+
+    public function deactivateSettlementType(SettlementType $settlementType): void
+    {
+        $businessSettlementType = $this->businessSettlementTypes()
+            ->where('settlement_type_id', $settlementType->id)
+            ->first();
+
+        if ($businessSettlementType === null) {
+            return;
+        }
+
+        $wasDefault = $businessSettlementType->is_default;
+        $businessSettlementType->delete();
+
+        if ($wasDefault) {
+            $this->businessSettlementTypes()->first()?->setAsDefault();
+        }
+    }
+
+    public function defaultSettlementType(): ?SettlementType
+    {
+        $default = $this->businessSettlementTypes()
+            ->with('settlementType')
+            ->where('is_default', true)
+            ->first();
+
+        if ($default?->settlementType !== null) {
+            return $default->settlementType;
+        }
+
+        return $this->businessSettlementTypes()
+            ->with('settlementType')
+            ->first()
+            ?->settlementType;
     }
 
     /**
