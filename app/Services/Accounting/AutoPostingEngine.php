@@ -342,6 +342,7 @@ class AutoPostingEngine
         array $lines,
         BusinessLedgerSetting $settings,
         array $logContext = [],
+        bool $forceDraft = false,
     ): ?JournalEntry {
         if (count($lines) < 2) {
             Log::warning('Auto-post skipped: incomplete journal lines.', [
@@ -367,7 +368,7 @@ class AutoPostingEngine
                 'referenceable_id' => $reference->getKey(),
             ], $lines);
 
-            if ($settings->auto_post_mode === AutoPostMode::Realtime) {
+            if (! $forceDraft && $settings->auto_post_mode === AutoPostMode::Realtime) {
                 $entry = $this->postJournalEntry->handle($user, $entry);
             }
 
