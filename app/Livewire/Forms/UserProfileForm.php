@@ -53,8 +53,8 @@ class UserProfileForm extends Form
                 'max:255',
                 Rule::unique('users', 'email')->ignore($this->user?->id),
             ],
-            'gender' => ['nullable', Rule::enum(Gender::class)],
-            'birth_date' => ['nullable', 'date', 'before:today'],
+            'gender' => ['nullable', 'string', Rule::in(['', ...Gender::values()])],
+            'birth_date' => ['nullable', 'date', 'before_or_equal:today'],
             'avatar' => ['nullable', 'image', 'max:5120'],
             'remove_avatar' => ['boolean'],
         ];

@@ -29,9 +29,11 @@ new class extends Component
 
         $this->form->user = $user;
 
-        $action->handle($user, $this->form->validatedPayload());
+        $user = $action->handle($user, $this->form->validatedPayload());
 
-        $this->form->setFromUser($user->fresh());
+        auth()->setUser($user);
+
+        $this->form->setFromUser($user);
 
         Flux::toast(__('general.profile_updated'));
     }

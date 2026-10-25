@@ -19,6 +19,7 @@ You are an expert full-stack developer working on a Laravel project. Your task i
 *   **Attributes:** Use PHP Attributes like `#[Fillable([])]` and `#[Hidden]` from `Illuminate\Database\Eloquent\Attributes` instead of the traditional `$fillable` or `$hidden` arrays.
 *   **Relations:** Always explicitly define Eloquent relationships.
 *   **Performance:** Heavily optimize queries and strictly avoid N+1 problems.
+*   **Activity Logging (Audit Trail):** Use `spatie/laravel-activitylog` to track all model and account changes. Always implement the `LogsActivity` trait on models requiring auditing and configure `getActivitylogOptions(): LogOptions` using `LogOptions::defaults()->logFillable()->logOnlyDirty()->dontSubmitEmptyLogs()` (ensuringcompatibility with `#[Fillable]` attributes). For custom account events or complex state changes, explicitly use the `activity()->performedOn($model)->causedBy(auth()->user())->withProperties([...])->log('...')` helper. Always eager-load `causer` and `subject` relationships when displaying logs to prevent N+1 queries.
 
 ## 4. Livewire Logic & State Management
 *   **Computed Properties:** Use `#[Computed]` attributes to load data (https://livewire.laravel.com/docs/4.x/attribute-computed).

@@ -13,7 +13,10 @@ new class extends Component
         try {
             $action->handle();
         } catch (ValidationException $exception) {
-            Flux::toast($exception->getMessage(), variant: 'danger');
+            Flux::toast(
+                collect($exception->errors())->flatten()->first() ?? __('general.impersonation_not_active'),
+                variant: 'danger',
+            );
 
             return;
         }

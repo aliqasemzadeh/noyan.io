@@ -1,8 +1,3 @@
----
-description: 
-alwaysApply: true
----
-
 # Project Role & Context
 You are an expert full-stack developer working on a Laravel project. Your task is to generate code that strictly adheres to the following project guidelines, tech stack, and architectural rules.
 
@@ -24,6 +19,7 @@ You are an expert full-stack developer working on a Laravel project. Your task i
 *   **Attributes:** Use PHP Attributes like `#[Fillable([])]` and `#[Hidden]` from `Illuminate\Database\Eloquent\Attributes` instead of the traditional `$fillable` or `$hidden` arrays.
 *   **Relations:** Always explicitly define Eloquent relationships.
 *   **Performance:** Heavily optimize queries and strictly avoid N+1 problems.
+*   **Activity Logging (Audit Trail):** Use `spatie/laravel-activitylog` to track all model and account changes. Always implement the `LogsActivity` trait on models requiring auditing and configure `getActivitylogOptions(): LogOptions` using `LogOptions::defaults()->logFillable()->logOnlyDirty()->dontSubmitEmptyLogs()` (ensuringcompatibility with `#[Fillable]` attributes). For custom account events or complex state changes, explicitly use the `activity()->performedOn($model)->causedBy(auth()->user())->withProperties([...])->log('...')` helper. Always eager-load `causer` and `subject` relationships when displaying logs to prevent N+1 queries.
 
 ## 4. Livewire Logic & State Management
 *   **Computed Properties:** Use `#[Computed]` attributes to load data (https://livewire.laravel.com/docs/4.x/attribute-computed).
@@ -53,6 +49,7 @@ You are an expert full-stack developer working on a Laravel project. Your task i
 *   **Triggers:** Use `<flux:modal.trigger name="module.entity.action">` to open modals (especially if passing data).
 *   **Buttons:** In Create/Edit modals, no "Cancel" buttons are needed; use full-width submit buttons (`w-full`). **EXCEPTION:** For Delete Confirmation modals, you MUST use the specific layout utilizing `<flux:spacer />` and `<flux:modal.close>` with a Ghost variant cancel button and a Danger variant submit button.
 *   **Control via Livewire:** Open/close modals programmatically using `Flux::modal('module.entity.action')->show();` or `Flux::modals()->close();`.
+
 
 ### Forms & Inputs
 *   **Input Features (Clearable, Viewable, Copyable):** Use Flux UI's built-in input modifiers when appropriate:
@@ -115,7 +112,7 @@ You are an expert full-stack developer working on a Laravel project. Your task i
     <div class="space-y-6">
         <div class="flex items-center justify-between">
             <flux:heading size="xl">{{ __('general.users') }}</flux:heading>
-            
+
             <!-- Example of a single action button -->
             <flux:modal.trigger name="user.create">
                 <flux:button variant="primary" color="teal" icon="plus">
@@ -137,21 +134,21 @@ You are an expert full-stack developer working on a Laravel project. Your task i
 
                 <flux:table.rows>
                     @foreach ($this->users as $user)
-                        <flux:table.row :key="$user->id">
-                            <flux:table.cell>{{ $user->first_name }}</flux:table.cell>
-                            <flux:table.cell align="end">
-                                <div class="flex justify-end gap-2">
-                                    <flux:tooltip content="{{ __('general.edit') }}">
-                                        <flux:button size="xs" variant="primary" color="blue" icon="pencil" icon:variant="outline" wire:click="$dispatch('panels.administrator.user.edit.assign-data', { user: {{ $user->id }} })" />
-                                    </flux:tooltip>
-                                    <flux:tooltip content="{{ __('general.delete') }}">
-                                        <flux:modal.trigger name="user.delete.{{ $user->id }}">
-                                            <flux:button size="xs" variant="danger" icon="trash" icon:variant="outline" />
-                                        </flux:modal.trigger>
-                                    </flux:tooltip>
-                                </div>
-                            </flux:table.cell>
-                        </flux:table.row>
+                    <flux:table.row :key="$user->id">
+                        <flux:table.cell>{{ $user->first_name }}</flux:table.cell>
+                        <flux:table.cell align="end">
+                            <div class="flex justify-end gap-2">
+                                <flux:tooltip content="{{ __('general.edit') }}">
+                                    <flux:button size="xs" variant="primary" color="blue" icon="pencil" icon:variant="outline" wire:click="$dispatch('panels.administrator.user.edit.assign-data', { user: {{ $user->id }} })" />
+                                </flux:tooltip>
+                                <flux:tooltip content="{{ __('general.delete') }}">
+                                    <flux:modal.trigger name="user.delete.{{ $user->id }}">
+                                        <flux:button size="xs" variant="danger" icon="trash" icon:variant="outline" />
+                                    </flux:modal.trigger>
+                                </flux:tooltip>
+                            </div>
+                        </flux:table.cell>
+                    </flux:table.row>
                     @endforeach
                 </flux:table.rows>
             </flux:table>
