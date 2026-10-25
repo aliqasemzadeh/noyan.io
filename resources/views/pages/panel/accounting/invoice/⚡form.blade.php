@@ -9,6 +9,7 @@ use App\Models\Accounting\Account;
 use App\Models\Accounting\Invoice;
 use App\Models\Accounting\Party;
 use App\Models\Accounting\SaleKind;
+use App\Models\Accounting\SettlementType;
 use App\Models\Catalog\Product;
 use App\Support\Business\BusinessPanelContext;
 use Flux\Flux;
@@ -215,6 +216,23 @@ new class extends Component
     }
 
     /**
+     * @return Collection<int, SettlementType>
+     */
+    #[Computed]
+    public function settlementTypes(): Collection
+    {
+        $businessId = Auth::user()?->current_business_id;
+
+        if ($businessId === null) {
+            return collect();
+        }
+
+        return SettlementType::query()
+            ->enabledForBusiness($businessId)
+            ->get();
+    }
+
+    /**
      * @return Collection<int, Party>
      */
     #[Computed]
@@ -351,11 +369,7 @@ new class extends Component
         @endif
 
         <flux:card class="space-y-4">
-            <div @class([
-                'grid gap-4 grid-cols-1',
-                'md:grid-cols-3' => $this->saleKinds->isNotEmpty(),
-                'md:grid-cols-2' => $this->saleKinds->isEmpty(),
-            ])>
+            <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
                 @if ($this->saleKinds->isNotEmpty())
                     <flux:field>
                         <flux:label>{{ __('general.sale_kind') }}</flux:label>
@@ -372,6 +386,25 @@ new class extends Component
                             @endforeach
                         </flux:select>
                         <flux:error name="form.sale_kind_id" />
+                    </flux:field>
+                @endif
+
+                @if ($this->settlementTypes->isNotEmpty())
+                    <flux:field>
+                        <flux:label>{{ __('general.settlement_type') }}</flux:label>
+                        <flux:select
+                            wire:model="form.settlement_type_id"
+                            searchable
+                            clearable
+                            placeholder="{{ __('general.select_settlement_type') }}"
+                        >
+                            @foreach ($this->settlementTypes as $settlementType)
+                                <flux:select.option value="{{ $settlementType->id }}" wire:key="invoice-settlement-type-{{ $settlementType->id }}">
+                                    {{ $settlementType->name }}
+                                </flux:select.option>
+                            @endforeach
+                        </flux:select>
+                        <flux:error name="form.settlement_type_id" />
                     </flux:field>
                 @endif
 
