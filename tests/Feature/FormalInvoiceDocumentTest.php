@@ -58,6 +58,7 @@ class FormalInvoiceDocumentTest extends TestCase
             'sku' => 'W-100',
             'unit' => ProductUnit::Piece,
             'sale_price' => '100000',
+            'track_inventory' => false,
         ]);
 
         $invoice = app(SaveInvoiceAction::class)->handle($user, [
