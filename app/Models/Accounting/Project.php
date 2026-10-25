@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
+use App\Models\Concerns\LogsBusinessActivity;
 
 #[Fillable([
     'business_id',
@@ -24,7 +25,7 @@ use Illuminate\Support\Facades\Cache;
 class Project extends Model
 {
     /** @use HasFactory<ProjectFactory> */
-    use BelongsToBusiness, HasFactory, SoftDeletes;
+    use BelongsToBusiness, HasFactory, LogsBusinessActivity, SoftDeletes;
 
     /**
      * @return array<string, string>

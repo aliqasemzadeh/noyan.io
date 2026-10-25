@@ -377,6 +377,7 @@ return [
     'business_permission_invoice_view' => 'View invoices',
     'business_permission_invoice_create' => 'Create invoices',
     'business_permission_invoice_edit' => 'Edit invoices',
+    'business_permission_invoice_edit_finalized' => 'Edit finalized invoices',
     'business_permission_invoice_delete' => 'Delete invoices',
     'business_permission_party_view' => 'View parties',
     'business_permission_party_create' => 'Create parties',

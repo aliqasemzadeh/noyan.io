@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Models\Concerns\LogsBusinessActivity;
 
 #[Fillable([
     'business_id',
@@ -28,7 +29,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class JournalEntry extends Model
 {
     /** @use HasFactory<JournalEntryFactory> */
-    use BelongsToBusiness, HasFactory, SoftDeletes;
+    use BelongsToBusiness, HasFactory, LogsBusinessActivity, SoftDeletes;
 
     /**
      * @return array<string, string>

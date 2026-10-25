@@ -377,6 +377,7 @@ return [
     'business_permission_invoice_view' => 'مشاهده فاکتور',
     'business_permission_invoice_create' => 'ایجاد فاکتور',
     'business_permission_invoice_edit' => 'ویرایش فاکتور',
+    'business_permission_invoice_edit_finalized' => 'ویرایش فاکتور نهایی‌شده',
     'business_permission_invoice_delete' => 'حذف فاکتور',
     'business_permission_party_view' => 'مشاهده طرف‌حساب',
     'business_permission_party_create' => 'ایجاد طرف‌حساب',

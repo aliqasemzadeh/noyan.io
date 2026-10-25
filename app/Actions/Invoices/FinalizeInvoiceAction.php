@@ -2,13 +2,9 @@
 
 namespace App\Actions\Invoices;
 
-use App\Actions\Inventory\AdjustStockAction;
 use App\Enums\Accounting\InvoiceNotificationType;
-use App\Enums\Accounting\InvoiceType;
-use App\Enums\Catalog\StockMovementType;
 use App\Jobs\Notifications\SendInvoiceNotificationJob;
 use App\Models\Accounting\Invoice;
-use App\Models\Business;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -17,7 +13,7 @@ use RuntimeException;
 class FinalizeInvoiceAction
 {
     public function __construct(
-        protected AdjustStockAction $adjustStock,
+        protected ApplyInvoiceEffectsAction $applyEffects,
     ) {}
 
     public function handle(Invoice $invoice, User $user): Invoice
@@ -46,53 +42,7 @@ class FinalizeInvoiceAction
                 ]);
             }
 
-            /** @var Business $business */
-            $business = $invoice->business;
-
-            foreach ($invoice->items as $item) {
-                $product = $item->product;
-
-                if ($product === null || ! $product->track_inventory) {
-                    continue;
-                }
-
-                $quantity = (string) $item->quantity;
-                $delta = match ($invoice->type) {
-                    InvoiceType::Sale => bcmul($quantity, '-1', 18),
-                    InvoiceType::Purchase => $quantity,
-                    InvoiceType::Return => $quantity,
-                };
-
-                $this->adjustStock->handle(
-                    business: $business,
-                    product: $product,
-                    quantityDelta: $delta,
-                    movementType: match ($invoice->type) {
-                        InvoiceType::Sale => StockMovementType::Sale,
-                        InvoiceType::Purchase => StockMovementType::Purchase,
-                        InvoiceType::Return => StockMovementType::ReturnIn,
-                    },
-                    unitCost: (string) $item->unit_price,
-                    reference: $invoice,
-                    note: $invoice->invoice_number,
-                    userId: $user->id,
-                );
-            }
-
-            if ($invoice->party_id !== null && $invoice->party !== null) {
-                $party = $invoice->party;
-                $amount = (string) $invoice->total_amount;
-
-                $newBalance = match ($invoice->type) {
-                    InvoiceType::Sale => bcadd((string) $party->balance, $amount, 18),
-                    InvoiceType::Purchase => bcsub((string) $party->balance, $amount, 18),
-                    InvoiceType::Return => bcsub((string) $party->balance, $amount, 18),
-                };
-
-                $party->forceFill([
-                    'balance' => $newBalance,
-                ])->save();
-            }
+            $this->applyEffects->handle($invoice, $user);
 
             $buyerSnapshots = [];
 

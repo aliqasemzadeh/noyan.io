@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Models\Concerns\LogsBusinessActivity;
 
 #[Fillable([
     'stock_conversion_id',
@@ -18,7 +19,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class StockConversionItem extends Model
 {
     /** @use HasFactory<StockConversionItemFactory> */
-    use HasFactory;
+    use HasFactory, LogsBusinessActivity;
 
     /**
      * @return array<string, string>

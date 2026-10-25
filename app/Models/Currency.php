@@ -16,12 +16,13 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Cache;
+use App\Models\Concerns\LogsBusinessActivity;
 
 #[Fillable(['code', 'name', 'symbol', 'type', 'is_system', 'business_id', 'decimal_places', 'is_active'])]
 class Currency extends Model
 {
     /** @use HasFactory<CurrencyFactory> */
-    use HasFactory, SoftDeletes;
+    use HasFactory, LogsBusinessActivity, SoftDeletes;
 
     public const ACTIVE_CACHE_KEY = 'currencies.active';
 

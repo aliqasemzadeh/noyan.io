@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Models\Concerns\LogsBusinessActivity;
 
 #[Fillable([
     'business_id',
@@ -24,7 +25,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class Warehouse extends Model
 {
     /** @use HasFactory<WarehouseFactory> */
-    use BelongsToBusiness, HasFactory, SoftDeletes;
+    use BelongsToBusiness, HasFactory, LogsBusinessActivity, SoftDeletes;
 
     /**
      * @return array<string, string>

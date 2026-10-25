@@ -15,6 +15,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Collection;
 use Spatie\Tags\HasTags;
 use Spatie\Tags\Tag;
+use App\Models\Concerns\LogsBusinessActivity;
 
 #[Fillable([
     'business_id',
@@ -39,7 +40,7 @@ use Spatie\Tags\Tag;
 class Transaction extends Model
 {
     /** @use HasFactory<TransactionFactory> */
-    use BelongsToBusiness, HasFactory, HasTags, SoftDeletes;
+    use BelongsToBusiness, HasFactory, HasTags, LogsBusinessActivity, SoftDeletes;
 
     public static function tagTypeForBusiness(int $businessId): string
     {

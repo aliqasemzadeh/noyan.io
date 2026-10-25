@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
+use App\Models\Concerns\LogsBusinessActivity;
 
 #[Fillable([
     'business_id',
@@ -33,7 +34,7 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
 class ProductStockMovement extends Model
 {
     /** @use HasFactory<ProductStockMovementFactory> */
-    use HasFactory;
+    use HasFactory, LogsBusinessActivity;
 
     /**
      * @return array<string, string>

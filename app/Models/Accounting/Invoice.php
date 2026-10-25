@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Models\Concerns\LogsBusinessActivity;
 
 #[Fillable([
     'business_id',
@@ -48,7 +49,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class Invoice extends Model
 {
     /** @use HasFactory<InvoiceFactory> */
-    use HasFactory, SoftDeletes;
+    use HasFactory, LogsBusinessActivity, SoftDeletes;
 
     /**
      * @return array<string, string>

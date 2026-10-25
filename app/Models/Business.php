@@ -32,6 +32,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\DB;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
+use App\Models\Concerns\LogsBusinessActivity;
 
 #[Fillable([
     'owner_id',
@@ -55,7 +56,7 @@ use Spatie\MediaLibrary\InteractsWithMedia;
 class Business extends Model implements HasMedia
 {
     /** @use HasFactory<BusinessFactory> */
-    use HasFactory, InteractsWithMedia, SoftDeletes;
+    use HasFactory, InteractsWithMedia, LogsBusinessActivity, SoftDeletes;
 
     public const DEFAULT_INVOICE_PRIMARY_COLOR = '#0d9488';
 

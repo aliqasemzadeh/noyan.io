@@ -17,6 +17,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
+use App\Models\Concerns\LogsBusinessActivity;
 
 #[Fillable([
     'business_id',
@@ -36,7 +37,7 @@ use Illuminate\Support\Facades\Cache;
 class Account extends Model
 {
     /** @use HasFactory<AccountFactory> */
-    use HasFactory, SoftDeletes;
+    use HasFactory, LogsBusinessActivity, SoftDeletes;
 
     protected $table = 'accounting_accounts';
 

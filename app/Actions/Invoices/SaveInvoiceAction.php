@@ -5,6 +5,7 @@ namespace App\Actions\Invoices;
 use App\Actions\Concerns\NormalizesLineItems;
 use App\Enums\Accounting\InvoicePaymentStatus;
 use App\Enums\Accounting\InvoiceType;
+use App\Enums\Business\BusinessPermission;
 use App\Models\Accounting\Account;
 use App\Models\Accounting\Invoice;
 use App\Models\Accounting\InvoiceItem;
@@ -20,6 +21,7 @@ class SaveInvoiceAction
 
     public function __construct(
         private InvoiceNumberGenerator $invoiceNumberGenerator,
+        private ApplyInvoiceEffectsAction $applyEffects,
     ) {}
 
     /**
@@ -60,15 +62,36 @@ class SaveInvoiceAction
                 ? $data['type']
                 : InvoiceType::from((string) $data['type']);
 
+            $editingFinalized = false;
+            $previousTotal = null;
+
             if ($invoice !== null) {
                 if ((int) $invoice->business_id !== (int) $businessId) {
                     throw new RuntimeException('Invoice does not belong to the current business.');
                 }
 
+                $invoice = Invoice::query()
+                    ->whereKey($invoice->id)
+                    ->lockForUpdate()
+                    ->with(['items.product', 'party', 'business'])
+                    ->firstOrFail();
+
                 if ($invoice->isFinalized()) {
-                    throw ValidationException::withMessages([
-                        'invoice' => [__('general.invoice_already_finalized')],
-                    ]);
+                    if (! $user->canInBusiness(BusinessPermission::InvoiceEditFinalized)) {
+                        throw ValidationException::withMessages([
+                            'invoice' => [__('general.invoice_already_finalized')],
+                        ]);
+                    }
+
+                    if ($type !== $invoice->type) {
+                        throw ValidationException::withMessages([
+                            'type' => [__('general.invoice_finalized_type_locked')],
+                        ]);
+                    }
+
+                    $editingFinalized = true;
+                    $previousTotal = (string) $invoice->total_amount;
+                    $this->applyEffects->handle($invoice, $user, reverse: true);
                 }
             }
 
@@ -79,6 +102,16 @@ class SaveInvoiceAction
                 (string) ($data['global_discount'] ?? '0'),
                 (string) ($data['global_tax'] ?? '0'),
             );
+
+            if ($invoice !== null && $invoice->isFinalized()) {
+                $paidAmount = (string) $invoice->paid_amount;
+
+                if (bccomp($totalAmount, $paidAmount, 18) < 0) {
+                    throw ValidationException::withMessages([
+                        'total_amount' => [__('general.invoice_total_below_paid_amount')],
+                    ]);
+                }
+            }
 
             $attributes = [
                 'party_id' => $partyId,
@@ -116,6 +149,41 @@ class SaveInvoiceAction
 
             $this->syncItems($invoice, $items);
             $this->syncAccounts($invoice, $businessId, $data['account_ids'] ?? []);
+
+            $invoice = $invoice->fresh(['items.product', 'party', 'business']);
+
+            if ($editingFinalized) {
+                $buyerSnapshots = [];
+
+                if ($invoice->party !== null) {
+                    $party = $invoice->party;
+                    $buyerSnapshots = [
+                        'buyer_legal_name' => $party->legal_name ?: $party->displayName(),
+                        'buyer_national_id' => $party->national_id,
+                        'buyer_economic_code' => $party->economic_code,
+                        'buyer_postal_code' => $party->postal_code,
+                        'buyer_phone' => $party->mobile ?: $party->phone,
+                        'buyer_address' => $party->address,
+                    ];
+                }
+
+                if ($buyerSnapshots !== []) {
+                    $invoice->forceFill($buyerSnapshots)->save();
+                }
+
+                $this->applyEffects->handle($invoice, $user);
+
+                activity()
+                    ->performedOn($invoice)
+                    ->causedBy($user)
+                    ->event('invoice_finalized_updated')
+                    ->withProperties([
+                        'invoice_number' => $invoice->invoice_number,
+                        'previous_total' => $previousTotal,
+                        'new_total' => (string) $invoice->total_amount,
+                    ])
+                    ->log('invoice_finalized_updated');
+            }
 
             return $invoice->fresh(['items', 'party', 'accounts']);
         });

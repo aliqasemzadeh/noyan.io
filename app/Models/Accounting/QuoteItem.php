@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Models\Concerns\LogsBusinessActivity;
 
 #[Fillable([
     'quote_id',
@@ -28,7 +29,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class QuoteItem extends Model
 {
     /** @use HasFactory<QuoteItemFactory> */
-    use HasFactory, SoftDeletes;
+    use HasFactory, LogsBusinessActivity, SoftDeletes;
 
     /**
      * @return array<string, string>

@@ -12,6 +12,7 @@ enum BusinessPermission: string
     case InvoiceView = 'invoice_view';
     case InvoiceCreate = 'invoice_create';
     case InvoiceEdit = 'invoice_edit';
+    case InvoiceEditFinalized = 'invoice_edit_finalized';
     case InvoiceDelete = 'invoice_delete';
 
     case PartyView = 'party_view';
@@ -101,7 +102,7 @@ enum BusinessPermission: string
     {
         return match ($this) {
             self::QuoteView, self::QuoteCreate, self::QuoteEdit, self::QuoteDelete => 'quote',
-            self::InvoiceView, self::InvoiceCreate, self::InvoiceEdit, self::InvoiceDelete => 'invoice',
+            self::InvoiceView, self::InvoiceCreate, self::InvoiceEdit, self::InvoiceEditFinalized, self::InvoiceDelete => 'invoice',
             self::PartyView, self::PartyCreate, self::PartyEdit, self::PartyDelete => 'party',
             self::AccountView, self::AccountCreate, self::AccountEdit, self::AccountDelete => 'account',
             self::TransactionView, self::TransactionCreate, self::TransactionEdit, self::TransactionDelete => 'transaction',
