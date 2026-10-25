@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Actions\Inventory\InitializeBusinessWarehousesAction;
 use App\Enums\Business\BusinessCategory;
 use App\Enums\Business\BusinessRole;
 use App\Enums\Business\BusinessType;
@@ -58,6 +59,8 @@ class BusinessFactory extends Factory
             }
 
             $owner?->forgetBusinessesCache();
+
+            app(InitializeBusinessWarehousesAction::class)->handle($business);
         });
     }
 }

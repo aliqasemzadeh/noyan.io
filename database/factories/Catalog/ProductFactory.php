@@ -5,7 +5,9 @@ namespace Database\Factories\Catalog;
 use App\Enums\Catalog\ProductType;
 use App\Enums\Catalog\ProductUnit;
 use App\Models\Business;
+use App\Models\Catalog\InventoryStock;
 use App\Models\Catalog\Product;
+use App\Models\Catalog\Warehouse;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
 
@@ -69,5 +71,35 @@ class ProductFactory extends Factory
             'stock_quantity' => '0',
             'reserved_quantity' => '0',
         ]);
+    }
+
+    public function configure(): static
+    {
+        return $this->afterCreating(function (Product $product): void {
+            if (! $product->track_inventory) {
+                return;
+            }
+
+            $warehouse = Warehouse::query()
+                ->where('business_id', $product->business_id)
+                ->default()
+                ->first();
+
+            if ($warehouse === null) {
+                return;
+            }
+
+            InventoryStock::query()->updateOrCreate(
+                [
+                    'product_id' => $product->id,
+                    'warehouse_id' => $warehouse->id,
+                ],
+                [
+                    'business_id' => $product->business_id,
+                    'physical_quantity' => $product->stock_quantity,
+                    'reserved_quantity' => $product->reserved_quantity,
+                ],
+            );
+        });
     }
 }
