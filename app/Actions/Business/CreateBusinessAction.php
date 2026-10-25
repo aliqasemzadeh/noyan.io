@@ -3,6 +3,7 @@
 namespace App\Actions\Business;
 
 use App\Actions\Accounting\SeedBusinessChartOfAccountsAction;
+use App\Actions\Accounting\SyncBusinessLedgerDefaultAccountsAction;
 use App\Actions\Inventory\InitializeBusinessWarehousesAction;
 use App\Enums\AccountSubType;
 use App\Enums\AccountType;
@@ -120,6 +121,7 @@ class CreateBusinessAction
             BusinessLedgerSetting::forBusiness($business);
 
             app(SeedBusinessChartOfAccountsAction::class)->handle($business);
+            app(SyncBusinessLedgerDefaultAccountsAction::class)->handle($business, overwrite: true);
 
             return $business->fresh();
         });

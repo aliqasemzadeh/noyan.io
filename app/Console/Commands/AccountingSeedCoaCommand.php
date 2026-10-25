@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Actions\Accounting\SeedBusinessChartOfAccountsAction;
+use App\Actions\Accounting\SyncBusinessLedgerDefaultAccountsAction;
 use App\Models\Business;
 use Illuminate\Console\Command;
 
@@ -15,8 +16,10 @@ class AccountingSeedCoaCommand extends Command
 
     protected $description = 'Seed the standard chart of accounts for one or all businesses';
 
-    public function handle(SeedBusinessChartOfAccountsAction $action): int
-    {
+    public function handle(
+        SeedBusinessChartOfAccountsAction $action,
+        SyncBusinessLedgerDefaultAccountsAction $syncDefaults,
+    ): int {
         if ($this->option('all')) {
             $businesses = Business::query()->orderBy('id')->get();
 
@@ -28,6 +31,7 @@ class AccountingSeedCoaCommand extends Command
 
             foreach ($businesses as $business) {
                 $accounts = $action->handle($business, (bool) $this->option('force'));
+                $syncDefaults->handle($business, overwrite: (bool) $this->option('force'));
                 $this->info("Business #{$business->id} ({$business->name}): ".count($accounts).' accounts.');
             }
 
@@ -51,6 +55,7 @@ class AccountingSeedCoaCommand extends Command
         }
 
         $accounts = $action->handle($business, (bool) $this->option('force'));
+        $syncDefaults->handle($business, overwrite: (bool) $this->option('force'));
         $this->info('Seeded '.count($accounts)." GL accounts for business #{$business->id}.");
 
         return self::SUCCESS;

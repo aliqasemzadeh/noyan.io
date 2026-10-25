@@ -25,6 +25,28 @@ class BusinessLedgerSettingsForm extends Form
 
     public string $auto_post_mode = 'off';
 
+    public ?int $default_accounts_receivable_id = null;
+
+    public ?int $default_accounts_payable_id = null;
+
+    public ?int $default_sales_id = null;
+
+    public ?int $default_sales_discount_id = null;
+
+    public ?int $default_vat_payable_id = null;
+
+    public ?int $default_vat_receivable_id = null;
+
+    public ?int $default_inventory_id = null;
+
+    public ?int $default_cogs_id = null;
+
+    public ?int $default_cash_and_bank_id = null;
+
+    public ?int $default_fx_gain_id = null;
+
+    public ?int $default_fx_loss_id = null;
+
     public function setModel(Business $business): void
     {
         $this->business = $business;
@@ -38,6 +60,10 @@ class BusinessLedgerSettingsForm extends Form
             ?? JournalEntryStatus::Draft->value;
         $this->auto_post_mode = $settings->auto_post_mode?->value
             ?? AutoPostMode::Off->value;
+
+        foreach (BusinessLedgerSetting::defaultAccountColumns() as $column) {
+            $this->{$column} = $settings->{$column} !== null ? (int) $settings->{$column} : null;
+        }
     }
 
     /**
@@ -45,6 +71,19 @@ class BusinessLedgerSettingsForm extends Form
      */
     public function rules(): array
     {
+        $businessId = $this->business?->id;
+
+        $accountRule = [
+            'nullable',
+            'integer',
+            Rule::exists('gl_accounts', 'id')->where(
+                fn ($query) => $query
+                    ->where('business_id', $businessId)
+                    ->where('is_postable', true)
+                    ->whereNull('deleted_at'),
+            ),
+        ];
+
         return [
             'voucher_numbering_mode' => ['required', Rule::enum(VoucherNumberingMode::class)],
             'voucher_prefix' => ['nullable', 'string', 'max:20'],
@@ -54,6 +93,17 @@ class BusinessLedgerSettingsForm extends Form
                 JournalEntryStatus::Posted->value,
             ])],
             'auto_post_mode' => ['required', Rule::enum(AutoPostMode::class)],
+            'default_accounts_receivable_id' => $accountRule,
+            'default_accounts_payable_id' => $accountRule,
+            'default_sales_id' => $accountRule,
+            'default_sales_discount_id' => $accountRule,
+            'default_vat_payable_id' => $accountRule,
+            'default_vat_receivable_id' => $accountRule,
+            'default_inventory_id' => $accountRule,
+            'default_cogs_id' => $accountRule,
+            'default_cash_and_bank_id' => $accountRule,
+            'default_fx_gain_id' => $accountRule,
+            'default_fx_loss_id' => $accountRule,
         ];
     }
 
@@ -71,6 +121,17 @@ class BusinessLedgerSettingsForm extends Form
             'voucher_number_pad' => $this->voucher_number_pad,
             'default_voucher_status' => $this->default_voucher_status,
             'auto_post_mode' => $this->auto_post_mode,
+            'default_accounts_receivable_id' => $this->default_accounts_receivable_id,
+            'default_accounts_payable_id' => $this->default_accounts_payable_id,
+            'default_sales_id' => $this->default_sales_id,
+            'default_sales_discount_id' => $this->default_sales_discount_id,
+            'default_vat_payable_id' => $this->default_vat_payable_id,
+            'default_vat_receivable_id' => $this->default_vat_receivable_id,
+            'default_inventory_id' => $this->default_inventory_id,
+            'default_cogs_id' => $this->default_cogs_id,
+            'default_cash_and_bank_id' => $this->default_cash_and_bank_id,
+            'default_fx_gain_id' => $this->default_fx_gain_id,
+            'default_fx_loss_id' => $this->default_fx_loss_id,
         ]);
     }
 }

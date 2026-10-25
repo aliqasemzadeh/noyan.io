@@ -1,6 +1,7 @@
 <?php
 
 use App\Actions\Accounting\SeedBusinessChartOfAccountsAction;
+use App\Actions\Accounting\SyncBusinessLedgerDefaultAccountsAction;
 use App\Enums\Accounting\AccountLevel;
 use App\Models\Accounting\GlAccount;
 use App\Models\Business;
@@ -45,13 +46,16 @@ new class extends Component
         unset($this->treeRows);
     }
 
-    public function seedStandardChart(SeedBusinessChartOfAccountsAction $action): void
-    {
+    public function seedStandardChart(
+        SeedBusinessChartOfAccountsAction $action,
+        SyncBusinessLedgerDefaultAccountsAction $syncDefaults,
+    ): void {
         $businessId = Auth::user()?->current_business_id;
         abort_if($businessId === null, 403);
 
         $business = Business::query()->findOrFail($businessId);
         $accounts = $action->handle($business, force: true);
+        $syncDefaults->handle($business, overwrite: true);
 
         unset($this->treeRows);
 
