@@ -60,8 +60,6 @@ new class extends Component
     {
         $business = $this->form->store(Auth::user(), $action);
 
-        session()->flash('accounts_setup_prompt', true);
-
         Flux::toast(__('general.business_created_setup_accounts', ['name' => $business->name]));
 
         $this->redirect(route('accounting.accounts.index'), navigate: true);

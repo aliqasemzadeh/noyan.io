@@ -5,7 +5,6 @@ use App\Models\Currency;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Cache;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
 use Livewire\Component;
@@ -18,13 +17,9 @@ new class extends Component
 
     public string $search = '';
 
-    public bool $showAccountsGuide = false;
-
     public function mount(): void
     {
         Auth::user()?->ensureCurrentBusiness();
-
-        $this->showAccountsGuide = $this->resolveShouldShowAccountsGuide();
     }
 
     public function updatedSearch(): void
@@ -36,18 +31,6 @@ new class extends Component
     public function refreshTable(): void
     {
         unset($this->accounts, $this->balancesByCurrency);
-    }
-
-    public function dismissAccountsGuide(): void
-    {
-        $user = Auth::user();
-        $businessId = $user?->current_business_id;
-
-        if ($user !== null && $businessId !== null) {
-            Cache::forever($this->accountsGuideCacheKey($user->id, $businessId), true);
-        }
-
-        $this->showAccountsGuide = false;
     }
 
     #[Computed]
@@ -144,27 +127,6 @@ new class extends Component
 
         return $currency->formatAmount((string) $account->current_balance);
     }
-
-    protected function resolveShouldShowAccountsGuide(): bool
-    {
-        $user = Auth::user();
-        $businessId = $user?->current_business_id;
-
-        if ($user === null || $businessId === null) {
-            return false;
-        }
-
-        if (session()->pull('accounts_setup_prompt')) {
-            return true;
-        }
-
-        return ! Cache::has($this->accountsGuideCacheKey($user->id, $businessId));
-    }
-
-    protected function accountsGuideCacheKey(int $userId, int $businessId): string
-    {
-        return "accounts_guide_dismissed:{$userId}:{$businessId}";
-    }
 };
 ?>
 
@@ -185,35 +147,15 @@ new class extends Component
         </flux:breadcrumbs>
 
         <div class="mt-4 flex items-center justify-between gap-4">
-            <div class="flex items-center gap-2">
-                <flux:heading size="xl" level="1">
-                    {{ __('general.cash_and_bank_accounts') }}
-                </flux:heading>
+            <flux:heading size="xl" level="1">
+                {{ __('general.cash_and_bank_accounts') }}
+            </flux:heading>
 
-                <flux:dropdown hover position="bottom" align="start">
-                    <flux:button size="xs" variant="ghost" icon="circle-question-mark" />
-                    <flux:popover class="max-w-xs space-y-1 p-3">
-                        <flux:heading size="sm">{{ __('general.accounts_help_page_heading') }}</flux:heading>
-                        <flux:text size="sm">{{ __('general.accounts_help_page_body') }}</flux:text>
-                    </flux:popover>
-                </flux:dropdown>
-            </div>
-
-            <div class="flex items-center gap-1">
-                <flux:modal.trigger name="account.create">
-                    <flux:button variant="primary" color="teal" icon="plus" :disabled="auth()->user()->current_business_id === null">
-                        {{ __('general.create_account') }}
-                    </flux:button>
-                </flux:modal.trigger>
-
-                <flux:dropdown hover position="bottom" align="end">
-                    <flux:button size="xs" variant="ghost" icon="circle-question-mark" />
-                    <flux:popover class="max-w-xs space-y-1 p-3">
-                        <flux:heading size="sm">{{ __('general.accounts_help_create_heading') }}</flux:heading>
-                        <flux:text size="sm">{{ __('general.accounts_help_create_body') }}</flux:text>
-                    </flux:popover>
-                </flux:dropdown>
-            </div>
+            <flux:modal.trigger name="account.create">
+                <flux:button variant="primary" color="teal" icon="plus" :disabled="auth()->user()->current_business_id === null">
+                    {{ __('general.create_account') }}
+                </flux:button>
+            </flux:modal.trigger>
         </div>
     </div>
 
@@ -239,40 +181,6 @@ new class extends Component
         </div>
     @endif
 
-    @if ($showAccountsGuide)
-        <flux:callout icon="wallet" variant="secondary" color="teal">
-            <flux:callout.heading>{{ __('general.accounts_guide_heading') }}</flux:callout.heading>
-            <flux:callout.text>{{ __('general.accounts_guide_intro') }}</flux:callout.text>
-
-            <flux:accordion exclusive transition class="mt-4">
-                <flux:accordion.item heading="{{ __('general.accounts_guide_faq_defaults_heading') }}" expanded>
-                    {{ __('general.accounts_guide_faq_defaults_body') }}
-                </flux:accordion.item>
-                <flux:accordion.item heading="{{ __('general.accounts_guide_faq_opening_heading') }}">
-                    {{ __('general.accounts_guide_faq_opening_body') }}
-                </flux:accordion.item>
-                <flux:accordion.item heading="{{ __('general.accounts_guide_faq_create_heading') }}">
-                    {{ __('general.accounts_guide_faq_create_body') }}
-                </flux:accordion.item>
-            </flux:accordion>
-
-            <x-slot name="actions">
-                <flux:modal.trigger name="account.create">
-                    <flux:button variant="primary" color="teal" icon="plus">
-                        {{ __('general.create_account') }}
-                    </flux:button>
-                </flux:modal.trigger>
-                <flux:button variant="ghost" wire:click="dismissAccountsGuide">
-                    {{ __('general.accounts_guide_dismiss') }}
-                </flux:button>
-            </x-slot>
-
-            <x-slot name="controls">
-                <flux:button icon="x" variant="ghost" wire:click="dismissAccountsGuide" />
-            </x-slot>
-        </flux:callout>
-    @endif
-
     <flux:card>
         <div class="mb-4">
             <flux:input
@@ -286,43 +194,10 @@ new class extends Component
         <flux:table :paginate="$this->accounts">
             <flux:table.columns>
                 <flux:table.column>{{ __('general.name') }}</flux:table.column>
-                <flux:table.column>
-                    <div class="inline-flex items-center gap-1">
-                        <span>{{ __('general.account_sub_type') }}</span>
-                        <flux:dropdown hover position="bottom" align="start">
-                            <flux:button size="xs" variant="ghost" icon="circle-question-mark" class="-my-1" />
-                            <flux:popover class="max-w-xs space-y-1 p-3">
-                                <flux:heading size="sm">{{ __('general.accounts_help_sub_type_heading') }}</flux:heading>
-                                <flux:text size="sm">{{ __('general.accounts_help_sub_type_body') }}</flux:text>
-                            </flux:popover>
-                        </flux:dropdown>
-                    </div>
-                </flux:table.column>
+                <flux:table.column>{{ __('general.account_sub_type') }}</flux:table.column>
                 <flux:table.column>{{ __('general.account_number') }}</flux:table.column>
-                <flux:table.column>
-                    <div class="inline-flex items-center gap-1">
-                        <span>{{ __('general.currency') }}</span>
-                        <flux:dropdown hover position="bottom" align="start">
-                            <flux:button size="xs" variant="ghost" icon="circle-question-mark" class="-my-1" />
-                            <flux:popover class="max-w-xs space-y-1 p-3">
-                                <flux:heading size="sm">{{ __('general.accounts_help_currency_heading') }}</flux:heading>
-                                <flux:text size="sm">{{ __('general.accounts_help_currency_body') }}</flux:text>
-                            </flux:popover>
-                        </flux:dropdown>
-                    </div>
-                </flux:table.column>
-                <flux:table.column>
-                    <div class="inline-flex items-center gap-1">
-                        <span>{{ __('general.current_balance') }}</span>
-                        <flux:dropdown hover position="bottom" align="start">
-                            <flux:button size="xs" variant="ghost" icon="circle-question-mark" class="-my-1" />
-                            <flux:popover class="max-w-xs space-y-1 p-3">
-                                <flux:heading size="sm">{{ __('general.accounts_help_current_balance_heading') }}</flux:heading>
-                                <flux:text size="sm">{{ __('general.accounts_help_current_balance_body') }}</flux:text>
-                            </flux:popover>
-                        </flux:dropdown>
-                    </div>
-                </flux:table.column>
+                <flux:table.column>{{ __('general.currency') }}</flux:table.column>
+                <flux:table.column>{{ __('general.current_balance') }}</flux:table.column>
                 <flux:table.column>{{ __('general.is_active') }}</flux:table.column>
                 <flux:table.column>{{ __('general.created_at') }}</flux:table.column>
                 <flux:table.column align="end">{{ __('general.actions') }}</flux:table.column>
@@ -361,38 +236,48 @@ new class extends Component
                         </flux:table.cell>
                         <flux:table.cell>{{ $this->formatCreatedAt($account) }}</flux:table.cell>
                         <flux:table.cell align="end">
-                            <flux:dropdown>
-                                <flux:button size="xs" variant="ghost" icon="ellipsis-vertical" icon:variant="outline" />
-                                <flux:menu>
-                                    <flux:menu.item
+                            <div class="flex items-center justify-end gap-1">
+                                <flux:tooltip content="{{ __('general.view_account') }}">
+                                    <flux:button
+                                        size="xs"
+                                        variant="primary"
+                                        color="zinc"
                                         icon="eye"
+                                        icon:variant="outline"
                                         :href="route('accounting.accounts.view', $account)"
                                         wire:navigate
-                                    >
-                                        {{ __('general.view_account') }}
-                                    </flux:menu.item>
-                                    <flux:menu.item
+                                    />
+                                </flux:tooltip>
+                                <flux:tooltip content="{{ __('general.edit') }}">
+                                    <flux:button
+                                        size="xs"
+                                        variant="primary"
+                                        color="blue"
                                         icon="pencil"
+                                        icon:variant="outline"
                                         wire:click="$dispatch('panels.accounting.account.edit.assign-data', { account: {{ $account->id }} })"
-                                    >
-                                        {{ __('general.edit') }}
-                                    </flux:menu.item>
-                                    <flux:menu.item
+                                    />
+                                </flux:tooltip>
+                                <flux:tooltip content="{{ __('general.rebalance_account') }}">
+                                    <flux:button
+                                        size="xs"
+                                        variant="primary"
+                                        color="teal"
                                         icon="refresh-cw"
+                                        icon:variant="outline"
                                         wire:click="$dispatch('panels.accounting.account.rebalance.assign-data', { account: {{ $account->id }} })"
-                                    >
-                                        {{ __('general.rebalance_account') }}
-                                    </flux:menu.item>
-                                    <flux:menu.separator />
-                                    <flux:menu.item
+                                    />
+                                </flux:tooltip>
+                                <flux:tooltip content="{{ __('general.delete') }}">
+                                    <flux:button
+                                        size="xs"
                                         variant="danger"
                                         icon="trash"
+                                        icon:variant="outline"
                                         wire:click="$dispatch('panels.accounting.account.delete.assign-data', { account: {{ $account->id }} })"
-                                    >
-                                        {{ __('general.delete') }}
-                                    </flux:menu.item>
-                                </flux:menu>
-                            </flux:dropdown>
+                                    />
+                                </flux:tooltip>
+                            </div>
                         </flux:table.cell>
                     </flux:table.row>
                 @empty
