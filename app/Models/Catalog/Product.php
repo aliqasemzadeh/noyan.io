@@ -9,11 +9,14 @@ use App\Models\Business;
 use App\Models\Category;
 use Database\Factories\Catalog\ProductFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\DB;
 
 #[Fillable([
     'business_id',
@@ -102,6 +105,24 @@ class Product extends Model
     }
 
     /**
+     * @return HasMany<InventoryStock, $this>
+     */
+    public function stocks(): HasMany
+    {
+        return $this->hasMany(InventoryStock::class);
+    }
+
+    /**
+     * @return BelongsToMany<Warehouse, $this>
+     */
+    public function warehouses(): BelongsToMany
+    {
+        return $this->belongsToMany(Warehouse::class, 'inventory_stocks')
+            ->withPivot(['physical_quantity', 'reserved_quantity', 'business_id'])
+            ->withTimestamps();
+    }
+
+    /**
      * @return HasMany<InvoiceItem, $this>
      */
     public function invoiceItems(): HasMany
@@ -112,5 +133,48 @@ class Product extends Model
     public function availableQuantity(): string
     {
         return bcsub((string) $this->stock_quantity, (string) $this->reserved_quantity, 18);
+    }
+
+    /**
+     * @param  Builder<$this>  $query
+     * @return Builder<$this>
+     */
+    public function scopeWithTotalStock(Builder $query): Builder
+    {
+        return $query->addSelect([
+            'total_physical_stock' => InventoryStock::query()
+                ->selectRaw('COALESCE(SUM(physical_quantity), 0)')
+                ->whereColumn('inventory_stocks.product_id', 'products.id'),
+        ]);
+    }
+
+    /**
+     * @param  Builder<$this>  $query
+     * @return Builder<$this>
+     */
+    public function scopeWithAvailableSellableStock(Builder $query): Builder
+    {
+        return $query->addSelect([
+            'available_sellable_stock' => InventoryStock::query()
+                ->selectRaw('COALESCE(SUM(inventory_stocks.physical_quantity - inventory_stocks.reserved_quantity), 0)')
+                ->join('warehouses', 'warehouses.id', '=', 'inventory_stocks.warehouse_id')
+                ->whereColumn('inventory_stocks.product_id', 'products.id')
+                ->where('warehouses.is_sellable', true)
+                ->whereNull('warehouses.deleted_at'),
+        ]);
+    }
+
+    public function syncCachedStockTotals(): void
+    {
+        $totals = InventoryStock::query()
+            ->where('product_id', $this->id)
+            ->selectRaw('COALESCE(SUM(physical_quantity), 0) as physical_total')
+            ->selectRaw('COALESCE(SUM(reserved_quantity), 0) as reserved_total')
+            ->first();
+
+        $this->forceFill([
+            'stock_quantity' => $totals?->physical_total ?? '0',
+            'reserved_quantity' => $totals?->reserved_total ?? '0',
+        ])->save();
     }
 }
