@@ -28,29 +28,31 @@ new class extends Component
 };
 ?>
 
-@if (Impersonation::isImpersonating())
-    <div class="mb-4">
-        <flux:callout icon="triangle-alert" variant="warning" inline>
-            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                    <flux:heading size="sm">{{ __('general.impersonation_active_title') }}</flux:heading>
-                    <flux:text>
-                        {{ __('general.impersonation_active_message', [
-                            'user' => auth()->user()?->fullName() ?? auth()->user()?->mobile,
-                        ]) }}
-                    </flux:text>
-                </div>
+<div>
+    @if (Impersonation::isImpersonating())
+        <div class="mb-4">
+            <flux:callout icon="triangle-alert" variant="warning" inline>
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                        <flux:heading size="sm">{{ __('general.impersonation_active_title') }}</flux:heading>
+                        <flux:text>
+                            {{ __('general.impersonation_active_message', [
+                                'user' => auth()->user()?->fullName() ?? auth()->user()?->mobile,
+                            ]) }}
+                        </flux:text>
+                    </div>
 
-                <flux:button
-                    variant="primary"
-                    color="orange"
-                    icon="log-out"
-                    wire:click="leave"
-                    class="w-full sm:w-auto"
-                >
-                    {{ __('general.impersonation_leave') }}
-                </flux:button>
-            </div>
-        </flux:callout>
-    </div>
-@endif
+                    <flux:button
+                        variant="primary"
+                        color="orange"
+                        icon="log-out"
+                        wire:click="leave"
+                        class="w-full sm:w-auto"
+                    >
+                        {{ __('general.impersonation_leave') }}
+                    </flux:button>
+                </div>
+            </flux:callout>
+        </div>
+    @endif
+</div>
