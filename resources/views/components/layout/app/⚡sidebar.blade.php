@@ -38,7 +38,7 @@ new class extends Component
         <flux:sidebar.search
             :placeholder="__('general.search_menu')"
             :kbd="$this->searchShortcutLabel()"
-            class="in-data-flux-sidebar-collapsed-desktop:w-10 in-data-flux-sidebar-collapsed-desktop:justify-center in-data-flux-sidebar-collapsed-desktop:px-0"
+            class="h-8! text-sm! in-data-flux-sidebar-on-mobile:h-10! in-data-flux-sidebar-collapsed-desktop:w-10 in-data-flux-sidebar-collapsed-desktop:justify-center in-data-flux-sidebar-collapsed-desktop:px-0"
         />
     </flux:modal.trigger>
 

@@ -85,7 +85,7 @@ new class extends Component
 @endphp
 
 <div @class([
-    'min-w-0 flex-1' => $variant === 'mobile-brand',
+    'min-w-0 flex-1 flex items-center justify-end' => $variant === 'mobile-brand',
     'w-full' => $variant === 'sidebar',
 ])>
     <div

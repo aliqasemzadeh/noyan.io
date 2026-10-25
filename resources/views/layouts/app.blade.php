@@ -10,7 +10,7 @@
 
         @fluxAppearance
     </head>
-    <body class="min-h-dvh bg-zinc-50 dark:bg-zinc-900 antialiased">
+    <body class="min-h-dvh overflow-x-hidden bg-zinc-50 dark:bg-zinc-900 antialiased">
         @php
             $currentBusiness = auth()->user()?->currentBusiness;
             $brandName = $currentBusiness?->name ?? __('general.app_name');
@@ -26,7 +26,11 @@
                 : __('general.accounting_ai_title');
         @endphp
 
-        <flux:sidebar sticky collapsible class="bg-zinc-50 dark:bg-zinc-900">
+        <flux:sidebar
+            sticky
+            collapsible
+            class="bg-zinc-50 dark:bg-zinc-900 max-lg:border-e max-lg:border-zinc-200 dark:max-lg:border-zinc-700 data-flux-sidebar-on-mobile:data-flux-sidebar-collapsed-mobile:max-lg:hidden!"
+        >
             <flux:sidebar.header>
                 <flux:sidebar.brand
                     :href="route('dashboard')"
@@ -45,18 +49,18 @@
 
             <livewire:layout.app.panels :key="'layout-app-panels'" />
 
-            <div class="px-4 pb-3 in-data-flux-sidebar-collapsed-desktop:hidden">
-                <flux:radio.group x-data variant="segmented" x-model="$flux.appearance" class="w-full">
-                    <flux:radio value="light" icon="sun" />
-                    <flux:radio value="dark" icon="moon" />
-                    <flux:radio value="system" icon="computer-desktop" />
+            <div class="w-full in-data-flux-sidebar-collapsed-desktop:hidden">
+                <flux:radio.group x-data variant="segmented" size="sm" x-model="$flux.appearance" class="w-full">
+                    <flux:radio value="light" icon="sun" icon:variant="outline" class="px-2! [&_svg]:size-4!" />
+                    <flux:radio value="dark" icon="moon" icon:variant="outline" class="px-2! [&_svg]:size-4!" />
+                    <flux:radio value="system" icon="computer-desktop" icon:variant="outline" class="px-2! [&_svg]:size-4!" />
                 </flux:radio.group>
             </div>
 
             <livewire:layout.app-shell variant="sidebar" :key="'layout-app-shell-sidebar'" />
         </flux:sidebar>
 
-        <flux:header class="lg:hidden flex items-center gap-2 border-b border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-800">
+        <flux:header class="lg:hidden flex items-center justify-between gap-2 border-b border-zinc-200 bg-white px-4! dark:border-zinc-700 dark:bg-zinc-800">
             <flux:sidebar.toggle class="lg:hidden shrink-0" icon="bars-2" inset="left" />
 
             <livewire:layout.app-shell variant="mobile-brand" :key="'layout-app-shell-mobile-brand'" />
