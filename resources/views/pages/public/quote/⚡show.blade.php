@@ -16,7 +16,14 @@ new #[Layout('layouts::invoice')] class extends Component
     {
         abort_unless($quote->isFinalized(), 404);
 
-        $this->quote = $quote->loadMissing(['items', 'party', 'saleKind', 'business.media', 'business.invoiceSettings']);
+        $this->quote = $quote->loadMissing([
+            'items',
+            'party',
+            'saleKind',
+            'settlementType',
+            'business.media',
+            'business.invoiceSettings',
+        ]);
     }
 
     public function business(): Business
@@ -62,24 +69,13 @@ new #[Layout('layouts::invoice')] class extends Component
 <x-slot name="invoiceOrientation">{{ $orientation->value }}</x-slot>
 
 <div class="{{ $containerClass }}">
-    <div class="no-print mb-4 flex justify-end">
-        <flux:button
-            type="button"
-            variant="primary"
-            color="teal"
-            icon="printer"
-            x-on:click="window.print()"
-        >
-            {{ __('general.print_quote') }}
-        </flux:button>
-    </div>
-
     <x-accounting.printable-document
         :business="$business"
         :document-label="__('general.quote')"
         :number="$quote->quote_number"
         :party-name="$quote->displayPartyName()"
         :sale-kind-name="$quote->saleKind?->name"
+        :settlement-type-name="$quote->settlementType?->name"
         :buyer-legal-name="$quote->party?->legal_name"
         :buyer-national-id="$quote->party?->national_id"
         :buyer-economic-code="$quote->party?->economic_code"
@@ -96,8 +92,21 @@ new #[Layout('layouts::invoice')] class extends Component
         :global-tax="$quote->global_tax"
         :total-amount="$quote->total_amount"
         :note="$quote->note"
+        print-storage-key="quote-print-columns"
         :format-amount="fn (string $amount): string => $this->formatAmount($amount)"
     >
+        <x-slot:toolbar>
+            <flux:button
+                type="button"
+                variant="primary"
+                color="teal"
+                icon="printer"
+                x-on:click="window.print()"
+            >
+                {{ __('general.print_quote') }}
+            </flux:button>
+        </x-slot:toolbar>
+
         <x-slot:banner>
             @if ($quote->isExpired())
                 <flux:callout icon="clock-alert" variant="danger" inline>

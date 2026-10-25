@@ -20,6 +20,7 @@ new #[Layout('layouts::invoice')] class extends Component
             'items',
             'party',
             'saleKind',
+            'settlementType',
             'accounts',
             'business.media',
             'business.invoiceSettings',
@@ -76,24 +77,13 @@ new #[Layout('layouts::invoice')] class extends Component
 <x-slot name="invoiceOrientation">{{ $orientation->value }}</x-slot>
 
 <div class="{{ $containerClass }}">
-    <div class="no-print mb-4 flex justify-end">
-        <flux:button
-            type="button"
-            variant="primary"
-            color="teal"
-            icon="printer"
-            x-on:click="window.print()"
-        >
-            {{ __('general.print_invoice') }}
-        </flux:button>
-    </div>
-
     <x-accounting.printable-document
         :business="$business"
         :document-label="__('general.invoice')"
         :number="$invoice->invoice_number"
         :party-name="$invoice->displayPartyName()"
         :sale-kind-name="$invoice->saleKind?->name"
+        :settlement-type-name="$invoice->settlementType?->name"
         :buyer-legal-name="$invoice->buyer_legal_name ?? $invoice->party?->legal_name"
         :buyer-national-id="$invoice->buyer_national_id ?? $invoice->party?->national_id"
         :buyer-economic-code="$invoice->buyer_economic_code ?? $invoice->party?->economic_code"
@@ -108,8 +98,21 @@ new #[Layout('layouts::invoice')] class extends Component
         :total-amount="$invoice->total_amount"
         :note="$invoice->note"
         :accounts="$invoice->accounts"
+        print-storage-key="invoice-print-columns"
         :format-amount="fn (string $amount): string => $this->formatAmount($amount)"
     >
+        <x-slot:toolbar>
+            <flux:button
+                type="button"
+                variant="primary"
+                color="teal"
+                icon="printer"
+                x-on:click="window.print()"
+            >
+                {{ __('general.print_invoice') }}
+            </flux:button>
+        </x-slot:toolbar>
+
         @if ($footer = $this->documentFooter())
             <x-slot:footer>
                 {{ $footer }}

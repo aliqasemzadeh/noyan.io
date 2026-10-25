@@ -13,6 +13,7 @@
     'formatAmount',
     'accounts' => [],
     'saleKindName' => null,
+    'settlementTypeName' => null,
     'buyerLegalName' => null,
     'buyerNationalId' => null,
     'buyerEconomicCode' => null,
@@ -20,6 +21,7 @@
     'buyerPhone' => null,
     'buyerAddress' => null,
     'heading' => null,
+    'printStorageKey' => 'printable-document-columns',
 ])
 
 @php
@@ -47,29 +49,110 @@
     $issueDateValue = is_array($issueDateRow) ? ($issueDateRow['value'] ?? '—') : '—';
     $columnTotals = DocumentLineAmounts::columnTotals($items);
     $accountsList = collect($accounts);
+    $toggleableColumns = [
+        'sku' => __('general.print_column_sku'),
+        'unit' => __('general.print_column_unit'),
+        'line_total' => __('general.print_column_line_total'),
+        'discount' => __('general.print_column_discount'),
+        'after_discount' => __('general.print_column_after_discount'),
+        'tax' => __('general.print_column_tax'),
+    ];
 @endphp
 
 <div
+    x-data="{
+        storageKey: @js($printStorageKey),
+        columns: {
+            sku: true,
+            unit: true,
+            line_total: true,
+            discount: true,
+            after_discount: true,
+            tax: true,
+        },
+        advancedOpen: false,
+        init() {
+            try {
+                const saved = JSON.parse(sessionStorage.getItem(this.storageKey) || 'null');
+                if (saved && typeof saved === 'object') {
+                    this.columns = { ...this.columns, ...saved };
+                }
+            } catch (e) {}
+            this.$watch('columns', (value) => {
+                sessionStorage.setItem(this.storageKey, JSON.stringify(value));
+            }, { deep: true });
+        },
+        visibleCount() {
+            let count = 5; // row, description, quantity, unit_price, final_total
+            if (this.columns.sku) count++;
+            if (this.columns.unit) count++;
+            if (this.columns.line_total) count++;
+            if (this.columns.discount) count++;
+            if (this.columns.after_discount) count++;
+            if (this.columns.tax) count++;
+            return count;
+        },
+        labelColspan() {
+            let count = 3; // row, description, quantity (+ optional sku/unit) then unit_price before money cols
+            if (this.columns.sku) count++;
+            if (this.columns.unit) count++;
+            count++; // unit_price
+            return count;
+        },
+    }"
     {{ $attributes->merge([
         'class' => 'invoice-sheet overflow-hidden border-2 bg-white text-black dark:bg-white',
         'style' => "border-color: {$borderColor}; print-color-adjust: exact; -webkit-print-color-adjust: exact;",
     ]) }}
 >
-    <div class="invoice-doc space-y-1.5 p-2.5 text-[10px] leading-tight sm:p-3 sm:text-[11px]">
+    <div class="no-print mb-3 flex flex-wrap items-start justify-end gap-2">
+        <div class="relative">
+            <flux:button
+                type="button"
+                variant="filled"
+                color="zinc"
+                icon="sliders-horizontal"
+                x-on:click="advancedOpen = ! advancedOpen"
+            >
+                {{ __('general.advanced_print') }}
+            </flux:button>
+
+            <div
+                x-show="advancedOpen"
+                x-cloak
+                x-on:click.outside="advancedOpen = false"
+                class="absolute end-0 z-20 mt-2 w-64 rounded-lg border border-zinc-200 bg-white p-3 shadow-lg dark:border-zinc-700 dark:bg-zinc-900"
+            >
+                <p class="mb-2 text-xs text-zinc-600 dark:text-zinc-300">{{ __('general.advanced_print_hint') }}</p>
+                <div class="space-y-2">
+                    @foreach ($toggleableColumns as $key => $label)
+                        <label class="flex items-center gap-2 text-sm text-zinc-800 dark:text-zinc-100">
+                            <input type="checkbox" class="rounded border-zinc-300" x-model="columns.{{ $key }}">
+                            <span>{{ $label }}</span>
+                        </label>
+                    @endforeach
+                </div>
+            </div>
+        </div>
+
+        {{ $toolbar ?? '' }}
+    </div>
+
+    <div class="invoice-doc space-y-1 p-2 text-[10px] leading-tight sm:p-2.5 sm:text-[11px]">
         {{ $banner ?? '' }}
 
-        {{-- Header: logo | title | date & number --}}
-        <div class="grid grid-cols-[5.5rem_1fr_8.5rem] items-stretch gap-1.5 border" style="border-color: {{ $borderColor }};">
-            <div class="flex items-center justify-center border-e p-1.5" style="border-color: {{ $borderColor }};">
+        {{-- Header: logo | title | number + date horizontal --}}
+        <div class="grid grid-cols-[4rem_1fr_auto] items-stretch gap-1 border" style="border-color: {{ $borderColor }};">
+            <div class="flex items-center justify-center border-e p-1" style="border-color: {{ $borderColor }};">
                 @if ($logoUrl)
                     <img
                         src="{{ $logoUrl }}"
                         alt="{{ $business->name }}"
-                        class="max-h-14 max-w-full object-contain"
+                        class="max-h-8 max-w-full object-contain"
                     />
                 @else
                     <div
-                        class="flex size-12 items-center justify-center text-lg font-bold text-white"
+                        class="flex size-8 items-center justify-center text-sm font-bold text-white"
                         style="background-color: {{ $primary }};"
                     >
                         {{ $initial }}
@@ -77,19 +160,17 @@
                 @endif
             </div>
 
-            <div class="flex flex-col items-center justify-center gap-0.5 px-2 py-1.5 text-center">
+            <div class="flex flex-col items-center justify-center px-2 py-1 text-center">
                 <p class="text-sm font-bold text-black sm:text-base">{{ $documentHeading }}</p>
-                <p class="text-[10px] text-zinc-700">{{ $documentLabel }}</p>
             </div>
 
-            <div class="space-y-1 border-s p-1.5" style="border-color: {{ $borderColor }};">
-                <div class="flex items-center justify-between gap-1 border px-1.5 py-1" style="border-color: {{ $borderColor }};">
+            <div class="flex items-center gap-1 border-s px-1.5 py-1" style="border-color: {{ $borderColor }};">
+                <div class="flex items-center gap-1 border px-1.5 py-0.5" style="border-color: {{ $borderColor }};">
                     <span class="font-semibold text-black">{{ __('general.number') }}</span>
                     <span class="font-bold text-black" dir="ltr">{{ $number }}</span>
                 </div>
                 @foreach ($dates as $date)
-                    <div class="flex items-center justify-between gap-1 border px-1.5 py-1" style="border-color: {{ $borderColor }};">
-                        <span class="font-semibold text-black">{{ $date['label'] }}</span>
+                    <div class="flex items-center gap-1 border px-1.5 py-0.5" style="border-color: {{ $borderColor }};">
                         <span class="font-medium text-black">{{ $date['value'] }}</span>
                     </div>
                 @endforeach
@@ -98,7 +179,7 @@
 
         {{-- Seller --}}
         <div class="border" style="border-color: {{ $borderColor }};">
-            <div class="border-b px-2 py-1 text-center text-[11px] font-bold text-black" style="background-color: {{ $headerTint }}; border-color: {{ $borderColor }};">
+            <div class="border-b px-2 py-0.5 text-center text-[11px] font-bold text-black" style="background-color: {{ $headerTint }}; border-color: {{ $borderColor }};">
                 {{ __('general.document_seller_details') }}
             </div>
             <div class="grid grid-cols-1 divide-y sm:grid-cols-2 sm:divide-x sm:divide-y-0" style="border-color: {{ $borderColor }};">
@@ -130,7 +211,7 @@
 
         {{-- Buyer --}}
         <div class="border" style="border-color: {{ $borderColor }};">
-            <div class="border-b px-2 py-1 text-center text-[11px] font-bold text-black" style="background-color: {{ $headerTint }}; border-color: {{ $borderColor }};">
+            <div class="border-b px-2 py-0.5 text-center text-[11px] font-bold text-black" style="background-color: {{ $headerTint }}; border-color: {{ $borderColor }};">
                 {{ __('general.document_buyer_details') }}
             </div>
             <div class="grid grid-cols-1 divide-y sm:grid-cols-2 sm:divide-x sm:divide-y-0" style="border-color: {{ $borderColor }};">
@@ -159,7 +240,7 @@
 
         {{-- Items table --}}
         <div class="border" style="border-color: {{ $borderColor }};">
-            <div class="border-b px-2 py-1 text-center text-[11px] font-bold text-black" style="background-color: {{ $headerTint }}; border-color: {{ $borderColor }};">
+            <div class="border-b px-2 py-0.5 text-center text-[11px] font-bold text-black" style="background-color: {{ $headerTint }}; border-color: {{ $borderColor }};">
                 {{ __('general.document_items_details') }}
             </div>
             <div class="overflow-x-auto">
@@ -167,15 +248,15 @@
                     <thead>
                         <tr style="background-color: {{ $headerTint }};">
                             <th class="border px-0.5 py-1 font-bold" style="border-color: {{ $borderColor }};">{{ __('general.row') }}</th>
-                            <th class="border px-0.5 py-1 font-bold" style="border-color: {{ $borderColor }};">{{ __('general.sku') }}</th>
+                            <th class="border px-0.5 py-1 font-bold" style="border-color: {{ $borderColor }};" x-show="columns.sku">{{ __('general.sku') }}</th>
                             <th class="border px-0.5 py-1 font-bold" style="border-color: {{ $borderColor }};">{{ __('general.item_description') }}</th>
                             <th class="border px-0.5 py-1 font-bold" style="border-color: {{ $borderColor }};">{{ __('general.quantity') }}</th>
-                            <th class="border px-0.5 py-1 font-bold" style="border-color: {{ $borderColor }};">{{ __('general.unit') }}</th>
+                            <th class="border px-0.5 py-1 font-bold" style="border-color: {{ $borderColor }};" x-show="columns.unit">{{ __('general.unit') }}</th>
                             <th class="border px-0.5 py-1 font-bold" style="border-color: {{ $borderColor }};">{{ __('general.unit_price_rial') }}</th>
-                            <th class="border px-0.5 py-1 font-bold" style="border-color: {{ $borderColor }};">{{ __('general.line_total_rial') }}</th>
-                            <th class="border px-0.5 py-1 font-bold" style="border-color: {{ $borderColor }};">{{ __('general.discount_amount') }}</th>
-                            <th class="border px-0.5 py-1 font-bold" style="border-color: {{ $borderColor }};">{{ __('general.after_discount_rial') }}</th>
-                            <th class="border px-0.5 py-1 font-bold" style="border-color: {{ $borderColor }};">{{ __('general.tax_duties_rial') }}</th>
+                            <th class="border px-0.5 py-1 font-bold" style="border-color: {{ $borderColor }};" x-show="columns.line_total">{{ __('general.line_total_rial') }}</th>
+                            <th class="border px-0.5 py-1 font-bold" style="border-color: {{ $borderColor }};" x-show="columns.discount">{{ __('general.discount_amount') }}</th>
+                            <th class="border px-0.5 py-1 font-bold" style="border-color: {{ $borderColor }};" x-show="columns.after_discount">{{ __('general.after_discount_rial') }}</th>
+                            <th class="border px-0.5 py-1 font-bold" style="border-color: {{ $borderColor }};" x-show="columns.tax">{{ __('general.tax_duties_rial') }}</th>
                             <th class="border px-0.5 py-1 font-bold" style="border-color: {{ $borderColor }};">{{ __('general.final_line_total_rial') }}</th>
                         </tr>
                     </thead>
@@ -190,32 +271,36 @@
                             @endphp
                             <tr style="{{ $rowStyle }}">
                                 <td class="border px-0.5 py-1 text-black" style="border-color: {{ $borderColor }};">{{ $index + 1 }}</td>
-                                <td class="border px-0.5 py-1 text-black" style="border-color: {{ $borderColor }};" dir="ltr">{{ $item->sku ?: '—' }}</td>
+                                <td class="border px-0.5 py-1 text-black" style="border-color: {{ $borderColor }};" dir="ltr" x-show="columns.sku">{{ $item->sku ?: '—' }}</td>
                                 <td class="border px-0.5 py-1 text-start text-black" style="border-color: {{ $borderColor }};">
                                     <div class="prose prose-sm max-w-none text-[9px] text-black sm:text-[10px] [&_p]:my-0">
                                         {!! $item->titleHtml() !!}
                                     </div>
                                 </td>
                                 <td class="border px-0.5 py-1 text-black" style="border-color: {{ $borderColor }};" dir="ltr">{{ $formatAmount($amounts['quantity']) }}</td>
-                                <td class="border px-0.5 py-1 text-black" style="border-color: {{ $borderColor }};">{{ $unitLabel }}</td>
+                                <td class="border px-0.5 py-1 text-black" style="border-color: {{ $borderColor }};" x-show="columns.unit">{{ $unitLabel }}</td>
                                 <td class="border px-0.5 py-1 text-black" style="border-color: {{ $borderColor }};" dir="ltr">{{ $formatAmount($amounts['unit_price']) }}</td>
-                                <td class="border px-0.5 py-1 text-black" style="border-color: {{ $borderColor }};" dir="ltr">{{ $formatAmount($amounts['line_total']) }}</td>
-                                <td class="border px-0.5 py-1 text-black" style="border-color: {{ $borderColor }};" dir="ltr">{{ $formatAmount($amounts['discount_amount']) }}</td>
-                                <td class="border px-0.5 py-1 text-black" style="border-color: {{ $borderColor }};" dir="ltr">{{ $formatAmount($amounts['after_discount']) }}</td>
-                                <td class="border px-0.5 py-1 text-black" style="border-color: {{ $borderColor }};" dir="ltr">{{ $formatAmount($amounts['tax_amount']) }}</td>
+                                <td class="border px-0.5 py-1 text-black" style="border-color: {{ $borderColor }};" dir="ltr" x-show="columns.line_total">{{ $formatAmount($amounts['line_total']) }}</td>
+                                <td class="border px-0.5 py-1 text-black" style="border-color: {{ $borderColor }};" dir="ltr" x-show="columns.discount">{{ $formatAmount($amounts['discount_amount']) }}</td>
+                                <td class="border px-0.5 py-1 text-black" style="border-color: {{ $borderColor }};" dir="ltr" x-show="columns.after_discount">{{ $formatAmount($amounts['after_discount']) }}</td>
+                                <td class="border px-0.5 py-1 text-black" style="border-color: {{ $borderColor }};" dir="ltr" x-show="columns.tax">{{ $formatAmount($amounts['tax_amount']) }}</td>
                                 <td class="border px-0.5 py-1 font-semibold text-black" style="border-color: {{ $borderColor }};" dir="ltr">{{ $formatAmount($amounts['final_total']) }}</td>
                             </tr>
                         @endforeach
 
                         <tr style="background-color: {{ $headerTint }};">
-                            <td colspan="6" class="border px-1 py-1 text-start font-bold text-black" style="border-color: {{ $borderColor }};">
+                            <td
+                                class="border px-1 py-1 text-start font-bold text-black"
+                                style="border-color: {{ $borderColor }};"
+                                :colspan="labelColspan()"
+                            >
                                 {{ __('general.column_totals') }}:
                                 {{ PersianAmountInWords::convert((string) $totalAmount) }}
                             </td>
-                            <td class="border px-0.5 py-1 font-bold text-black" style="border-color: {{ $borderColor }};" dir="ltr">{{ $formatAmount($columnTotals['line_total']) }}</td>
-                            <td class="border px-0.5 py-1 font-bold text-black" style="border-color: {{ $borderColor }};" dir="ltr">{{ $formatAmount($columnTotals['discount_amount']) }}</td>
-                            <td class="border px-0.5 py-1 font-bold text-black" style="border-color: {{ $borderColor }};" dir="ltr">{{ $formatAmount($columnTotals['after_discount']) }}</td>
-                            <td class="border px-0.5 py-1 font-bold text-black" style="border-color: {{ $borderColor }};" dir="ltr">{{ $formatAmount($columnTotals['tax_amount']) }}</td>
+                            <td class="border px-0.5 py-1 font-bold text-black" style="border-color: {{ $borderColor }};" dir="ltr" x-show="columns.line_total">{{ $formatAmount($columnTotals['line_total']) }}</td>
+                            <td class="border px-0.5 py-1 font-bold text-black" style="border-color: {{ $borderColor }};" dir="ltr" x-show="columns.discount">{{ $formatAmount($columnTotals['discount_amount']) }}</td>
+                            <td class="border px-0.5 py-1 font-bold text-black" style="border-color: {{ $borderColor }};" dir="ltr" x-show="columns.after_discount">{{ $formatAmount($columnTotals['after_discount']) }}</td>
+                            <td class="border px-0.5 py-1 font-bold text-black" style="border-color: {{ $borderColor }};" dir="ltr" x-show="columns.tax">{{ $formatAmount($columnTotals['tax_amount']) }}</td>
                             <td class="border px-0.5 py-1 font-bold text-black" style="border-color: {{ $borderColor }};" dir="ltr">{{ $formatAmount($columnTotals['final_total']) }}</td>
                         </tr>
                     </tbody>
@@ -223,13 +308,17 @@
             </div>
         </div>
 
-        {{-- Sale kind + note | accounts --}}
+        {{-- Sale kind + settlement + note | accounts --}}
         <div class="grid grid-cols-1 border sm:grid-cols-2" style="border-color: {{ $borderColor }};">
             <div class="border-b p-1.5 sm:border-b-0 sm:border-e" style="border-color: {{ $borderColor }};">
                 <p class="mb-1 font-bold text-black">{{ __('general.sale_terms_and_notes') }}</p>
                 <p class="text-black">
                     <span class="font-semibold">{{ __('general.sale_kind') }}:</span>
                     {{ filled($saleKindName) ? $saleKindName : '—' }}
+                </p>
+                <p class="mt-1 text-black">
+                    <span class="font-semibold">{{ __('general.settlement_type') }}:</span>
+                    {{ filled($settlementTypeName) ? $settlementTypeName : '—' }}
                 </p>
                 <p class="mt-1 text-black">
                     <span class="font-semibold">{{ __('general.descriptions') }}:</span>
@@ -262,13 +351,13 @@
 
         {{-- Signatures --}}
         <div class="grid grid-cols-2 gap-1.5">
-            <div class="flex min-h-20 flex-col justify-between border p-2 text-black" style="border-color: {{ $borderColor }};">
+            <div class="flex min-h-16 flex-col justify-between border p-1.5 text-black" style="border-color: {{ $borderColor }};">
                 <p class="text-center font-bold">{{ __('general.seller_stamp_signature') }}</p>
-                <p class="text-center text-[10px]">{{ __('general.issue_date') }}: {{ $issueDateValue }}</p>
+                <p class="text-center text-[10px]">{{ $issueDateValue }}</p>
             </div>
-            <div class="flex min-h-20 flex-col justify-between border p-2 text-black" style="border-color: {{ $borderColor }};">
+            <div class="flex min-h-16 flex-col justify-between border p-1.5 text-black" style="border-color: {{ $borderColor }};">
                 <p class="text-center font-bold">{{ __('general.buyer_stamp_signature') }}</p>
-                <p class="text-center text-[10px]">{{ __('general.delivery_receipt_date') }}: —</p>
+                <p class="text-center text-[10px]">{{ $issueDateValue }}</p>
             </div>
         </div>
 

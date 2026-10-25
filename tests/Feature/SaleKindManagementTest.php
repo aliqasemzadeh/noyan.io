@@ -24,7 +24,7 @@ class SaleKindManagementTest extends TestCase
             'business_id' => null,
         ]);
 
-        $this->assertSame(6, SaleKind::query()->system()->count());
+        $this->assertSame(2, SaleKind::query()->system()->count());
     }
 
     public function test_user_can_activate_system_sale_kind_for_business(): void

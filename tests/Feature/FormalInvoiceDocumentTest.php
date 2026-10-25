@@ -91,7 +91,9 @@ class FormalInvoiceDocumentTest extends TestCase
             ->assertDontSee(__('general.document_business_details'))
             ->assertSee(__('general.seller_stamp_signature'))
             ->assertSee(__('general.buyer_stamp_signature'))
-            ->assertSee(__('general.delivery_receipt_date'))
+            ->assertDontSee(__('general.issue_date').':')
+            ->assertDontSee(__('general.delivery_receipt_date'))
+            ->assertSee(__('general.advanced_print'))
             ->assertSee($saleKind->name)
             ->assertSee('02112345678');
 
