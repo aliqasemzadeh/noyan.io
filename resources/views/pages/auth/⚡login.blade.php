@@ -4,6 +4,7 @@ use App\Actions\Business\AcceptBusinessInvitationAction;
 use App\Jobs\Notification\User\SendUserOtpJob;
 use App\Models\BusinessInvitation;
 use App\Models\User;
+use App\Support\Money;
 use Flux\Flux;
 use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\Computed;
@@ -48,21 +49,27 @@ class extends Component
 
     public function sendCode(): void
     {
+        $this->mobile = Money::normalize($this->mobile);
+
         $this->validate([
             'mobile' => ['required', 'string', new IranianMobile(format: 'zero')],
         ], attributes: [
             'mobile' => __('general.mobile'),
         ]);
 
-        $user = User::query()->firstOrCreate([
-            'mobile' => $this->mobile,
-        ]);
-
-        if ($this->hasActiveOneTimePassword($user)) {
+        if ($this->resendAvailableAt !== null && now()->getTimestamp() < $this->resendAvailableAt) {
             $this->addError('mobile', __('general.otp_resend_wait'));
             Flux::toast(__('general.otp_resend_wait'), variant: 'warning');
 
             return;
+        }
+
+        $user = User::query()->withTrashed()->firstOrCreate([
+            'mobile' => $this->mobile,
+        ]);
+
+        if ($user->trashed()) {
+            $user->restore();
         }
 
         $oneTimePassword = $user->createOneTimePassword(
@@ -86,6 +93,9 @@ class extends Component
 
     public function verify(): mixed
     {
+        $this->mobile = Money::normalize($this->mobile);
+        $this->code = Money::normalize($this->code);
+
         $this->validate([
             'mobile' => ['required', 'string', new IranianMobile(format: 'zero')],
             'code' => ['required', 'string', 'digits:6'],
@@ -106,10 +116,14 @@ class extends Component
         $result = $user->attemptLoginUsingOneTimePassword($this->code, remember: true);
 
         if (! $result->isOk()) {
-            $message = $result === ConsumeOneTimePasswordResult::IncorrectOneTimePassword
-                || $result === ConsumeOneTimePasswordResult::NoOneTimePasswordsFound
-                ? __('general.otp_invalid')
-                : $result->validationMessage();
+            $message = match ($result) {
+                ConsumeOneTimePasswordResult::IncorrectOneTimePassword,
+                ConsumeOneTimePasswordResult::NoOneTimePasswordsFound,
+                ConsumeOneTimePasswordResult::DifferentOrigin => __('general.otp_invalid'),
+                ConsumeOneTimePasswordResult::OneTimePasswordExpired => __('general.otp_expired'),
+                ConsumeOneTimePasswordResult::RateLimitExceeded => __('general.otp_rate_limited'),
+                default => $result->validationMessage(),
+            };
 
             $this->addError('code', $message);
             Flux::toast($message, variant: 'danger');
@@ -201,13 +215,6 @@ class extends Component
 
         return substr($this->mobile, 0, 4).'***'.substr($this->mobile, -4);
     }
-
-    protected function hasActiveOneTimePassword(User $user): bool
-    {
-        return $user->oneTimePasswords()
-            ->where('expires_at', '>', now())
-            ->exists();
-    }
 };
 ?>
 
@@ -263,6 +270,10 @@ class extends Component
                     this.timer = null
                 }
             },
+            async applyCodeAndVerify(code) {
+                await $wire.set('code', code)
+                await $wire.verify()
+            },
             listenForWebOtp() {
                 if ('OTPCredential' in window && navigator.credentials) {
                     this.abortController = new AbortController()
@@ -271,8 +282,7 @@ class extends Component
                         signal: this.abortController.signal
                     }).then(content => {
                         if (content && content.code) {
-                            $wire.set('code', content.code)
-                            $wire.verify()
+                            this.applyCodeAndVerify(content.code)
                         }
                     }).catch(() => {})
                 }
@@ -289,7 +299,7 @@ class extends Component
                         <button
                             type="button"
                             class="font-mono font-bold text-teal-600 underline hover:text-teal-700 dark:text-teal-400"
-                            x-on:click="$wire.set('code', '{{ $debugOtpCode }}'); $wire.verify()"
+                            x-on:click="applyCodeAndVerify('{{ $debugOtpCode }}')"
                         >
                             {{ $debugOtpCode }}
                         </button>
@@ -315,7 +325,7 @@ class extends Component
             </div>
 
             <flux:otp
-                wire:model="code"
+                wire:model.live="code"
                 length="6"
                 dir="ltr"
                 label="{{ __('general.otp_code') }}"

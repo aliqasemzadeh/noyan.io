@@ -4,7 +4,7 @@ use Spatie\OneTimePasswords\Actions\ConsumeOneTimePasswordAction;
 use Spatie\OneTimePasswords\Actions\CreateOneTimePasswordAction;
 use Spatie\OneTimePasswords\Models\OneTimePassword;
 use Spatie\OneTimePasswords\Notifications\OneTimePasswordNotification;
-use Spatie\OneTimePasswords\Support\OriginInspector\DefaultOriginEnforcer;
+use Spatie\OneTimePasswords\Support\OriginInspector\DoNotEnforceOrigin;
 use Spatie\OneTimePasswords\Support\PasswordGenerators\NumericOneTimePasswordGenerator;
 
 return [
@@ -23,16 +23,16 @@ return [
      * When this option is active, we'll try to ensure that the one-time password can only
      * be consumed on the platform where it was requested on
      */
-    'enforce_same_origin' => true,
+    'enforce_same_origin' => false,
 
     /*
      * This class is responsible to enforce that the one-time password can only be consumed on
      * the platform it was requested on.
      *
-     * If you do not wish to enforce this, set this value to
-     * Spatie\OneTimePasswords\Support\OriginInspector\DoNotEnforceOrigin
+     * Disabled: mobile networks / proxies often change IP between send and verify,
+     * which incorrectly rejects valid codes as DifferentOrigin.
      */
-    'origin_enforcer' => DefaultOriginEnforcer::class,
+    'origin_enforcer' => DoNotEnforceOrigin::class,
 
     /*
      * This class generates a random password

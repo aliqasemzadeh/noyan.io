@@ -31,6 +31,8 @@ return [
     'otp_hint' => 'Enter the 6-digit code sent to your mobile number.',
     'otp_sent' => 'Verification code sent.',
     'otp_invalid' => 'The verification code is invalid.',
+    'otp_expired' => 'The verification code has expired. Please request a new one.',
+    'otp_rate_limited' => 'Too many attempts. Please try again shortly.',
     'otp_resend' => 'Resend code',
     'otp_resend_wait' => 'You cannot request another code until the wait time ends.',
     'otp_resend_in' => 'Resend available in :seconds seconds',

@@ -61,7 +61,7 @@ class MobileOtpLoginTest extends TestCase
         });
     }
 
-    public function test_resend_is_blocked_while_otp_is_active(): void
+    public function test_resend_is_blocked_during_cooldown(): void
     {
         Queue::fake();
 
@@ -77,6 +77,56 @@ class MobileOtpLoginTest extends TestCase
 
         Queue::assertPushed(SendUserOtpJob::class, 1);
         $this->assertDatabaseCount('one_time_passwords', 1);
+    }
+
+    public function test_resend_creates_new_otp_after_cooldown(): void
+    {
+        Queue::fake();
+
+        $component = Livewire::test('pages::auth.login')
+            ->set('mobile', '09123456789')
+            ->call('sendCode')
+            ->assertSet('step', 'otp');
+
+        $firstCode = User::query()->where('mobile', '09123456789')->firstOrFail()
+            ->oneTimePasswords()->firstOrFail()->password;
+
+        $this->travel((int) config('otp.resend_cooldown_seconds') + 1)->seconds();
+
+        $component->call('resendCode')
+            ->assertHasNoErrors();
+
+        Queue::assertPushed(SendUserOtpJob::class, 2);
+        $this->assertDatabaseCount('one_time_passwords', 1);
+
+        $secondCode = User::query()->where('mobile', '09123456789')->firstOrFail()
+            ->oneTimePasswords()->firstOrFail()->password;
+
+        $this->assertNotSame($firstCode, $secondCode);
+    }
+
+    public function test_persian_digits_in_otp_are_accepted(): void
+    {
+        Queue::fake();
+
+        $component = Livewire::test('pages::auth.login')
+            ->set('mobile', '09123456789')
+            ->call('sendCode');
+
+        $user = User::query()->where('mobile', '09123456789')->firstOrFail();
+        $code = $user->oneTimePasswords()->firstOrFail()->password;
+        $persian = strtr($code, [
+            '0' => '۰', '1' => '۱', '2' => '۲', '3' => '۳', '4' => '۴',
+            '5' => '۵', '6' => '۶', '7' => '۷', '8' => '۸', '9' => '۹',
+        ]);
+
+        $component
+            ->set('code', $persian)
+            ->call('verify')
+            ->assertHasNoErrors()
+            ->assertRedirect(route('dashboard'));
+
+        $this->assertAuthenticatedAs($user);
     }
 
     public function test_valid_otp_logs_user_in_and_redirects_to_dashboard(): void
