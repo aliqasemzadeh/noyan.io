@@ -124,6 +124,7 @@ class SystemFunctionsPageTest extends TestCase
             'accounting:seed-coa',
             'accounting:sync-gl-details',
             'accounting:migrate-categories-to-gl',
+            'accounting:backfill-gl',
             'optimize:clear',
             'queue:restart',
         ] as $artisan) {

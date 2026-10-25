@@ -118,7 +118,7 @@ class CategoryGlAccountMap
             ->ofType($categoryType)
             ->where('code', $code)
             ->whereDoesntHave('children')
-            ->orderByRaw('business_id is null')
+            ->orderByRaw('CASE WHEN business_id IS NULL THEN 1 ELSE 0 END')
             ->orderBy('id')
             ->first();
     }

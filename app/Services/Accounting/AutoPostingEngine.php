@@ -13,7 +13,6 @@ use App\Models\Accounting\FiscalYear;
 use App\Models\Accounting\Invoice;
 use App\Models\Accounting\JournalEntry;
 use App\Models\Accounting\Transaction;
-use App\Models\Business;
 use App\Models\BusinessLedgerSetting;
 use App\Models\User;
 use App\Support\Accounting\CategoryGlAccountMap;
@@ -98,6 +97,7 @@ class AutoPostingEngine
 
         $transaction->loadMissing(['account', 'destinationAccount', 'party', 'category', 'invoice']);
 
+        $this->ensureDefaultCategory($transaction);
         $this->ensureCashAccountDetail($transaction->account);
         $this->ensureCashAccountDetail($transaction->destinationAccount);
 
@@ -313,6 +313,29 @@ class AutoPostingEngine
         return (string) ($transaction->note
             ?: $transaction->reference_number
             ?: ('TX-'.$transaction->id));
+    }
+
+    protected function ensureDefaultCategory(Transaction $transaction): void
+    {
+        if ($transaction->category_id !== null || $transaction->invoice_id !== null) {
+            return;
+        }
+
+        if (! in_array($transaction->type, [TransactionType::Income, TransactionType::Expense], true)) {
+            return;
+        }
+
+        $leaf = CategoryGlAccountMap::defaultLeafCategory(
+            (int) $transaction->business_id,
+            $transaction->type,
+        );
+
+        if ($leaf === null) {
+            return;
+        }
+
+        $transaction->forceFill(['category_id' => $leaf->id])->saveQuietly();
+        $transaction->setRelation('category', $leaf);
     }
 
     protected function ensureCashAccountDetail(?Account $account): void

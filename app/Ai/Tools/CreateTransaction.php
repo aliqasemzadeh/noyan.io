@@ -10,6 +10,7 @@ use App\Models\Accounting\Account;
 use App\Models\Accounting\BusinessCurrency;
 use App\Models\Accounting\Transaction;
 use App\Models\User;
+use App\Support\Accounting\CategoryGlAccountMap;
 use App\Support\Accounting\ShetabTransferFee;
 use App\Support\LocaleDate;
 use Carbon\Carbon;
@@ -514,13 +515,20 @@ class CreateTransaction implements Tool
             'reference_number' => $referenceNumber !== '' ? $referenceNumber : null,
         ];
 
+        $mainCategoryId = CategoryGlAccountMap::defaultLeafCategory((int) $businessId, $type)?->id;
+        $feeCategoryId = CategoryGlAccountMap::defaultLeafCategory(
+            (int) $businessId,
+            TransactionType::Expense,
+        )?->id;
+
         try {
             if ($feeAmount !== null) {
-                $transaction = DB::transaction(function () use ($user, $type, $amount, $feeAmount, $note, $payloadBase) {
+                $transaction = DB::transaction(function () use ($user, $type, $amount, $feeAmount, $note, $payloadBase, $mainCategoryId, $feeCategoryId) {
                     $main = app(ProcessTransactionAction::class)->handle($user, [
                         ...$payloadBase,
                         'type' => $type,
                         'amount' => $amount,
+                        'category_id' => $mainCategoryId,
                         'note' => $note !== '' ? $note : null,
                     ]);
 
@@ -528,6 +536,7 @@ class CreateTransaction implements Tool
                         ...$payloadBase,
                         'type' => TransactionType::Expense,
                         'amount' => $feeAmount,
+                        'category_id' => $feeCategoryId,
                         'note' => __('general.ai_transaction_fee_note'),
                     ]);
 
@@ -555,6 +564,7 @@ class CreateTransaction implements Tool
                 ...$payloadBase,
                 'type' => $type,
                 'amount' => $amount,
+                'category_id' => $mainCategoryId,
                 'note' => $note !== '' ? $note : null,
             ]);
         } catch (ValidationException $exception) {

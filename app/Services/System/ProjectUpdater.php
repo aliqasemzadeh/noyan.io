@@ -98,6 +98,7 @@ class ProjectUpdater
             ['accounting:seed-coa', '--all'],
             ['accounting:sync-gl-details', '--all'],
             ['accounting:migrate-categories-to-gl', '--all'],
+            ['accounting:backfill-gl', '--all', '--skip-seed'],
         ];
     }
 
