@@ -43,7 +43,7 @@ class ContactSettingsForm extends Form
     {
         return [
             'mobile' => ['nullable', 'string', new IranianMobile(format: 'zero')],
-            'phone' => ['nullable', 'string', new IranianPhone(withAreaCode: true, areaCodeSeparator: '-')],
+            'phone' => ['nullable', 'string', new IranianPhone(withAreaCode: true)],
             'address' => ['nullable', 'string', 'max:500'],
             'postal_code' => ['nullable', 'string', new IranianPostalCode],
             'fax' => ['nullable', 'string', 'max:20'],
@@ -71,6 +71,14 @@ class ContactSettingsForm extends Form
 
     public function store(): void
     {
+        if (is_string($this->phone) && $this->phone !== '') {
+            $this->phone = str_replace(['-', ' '], '', $this->phone);
+        }
+
+        if (is_string($this->fax) && $this->fax !== '') {
+            $this->fax = trim($this->fax);
+        }
+
         $this->validate();
 
         $settings = app(ContactSettings::class);
