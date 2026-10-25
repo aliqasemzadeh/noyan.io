@@ -46,6 +46,12 @@ class UpdateJournalEntryAction
                 ]);
             }
 
+            if ($locked->isSystemGenerated()) {
+                throw ValidationException::withMessages([
+                    'entry' => [__('general.journal_system_generated_locked')],
+                ]);
+            }
+
             $entryDate = (string) $entryData['entry_date'];
             $description = trim((string) ($entryData['description'] ?? ''));
 

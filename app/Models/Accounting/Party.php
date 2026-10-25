@@ -2,8 +2,10 @@
 
 namespace App\Models\Accounting;
 
+use App\Enums\Accounting\DetailType;
 use App\Enums\PartyType;
 use App\Models\Business;
+use App\Models\Concerns\HasFloatingDetail;
 use App\Models\Concerns\LogsBusinessActivity;
 use App\Models\User;
 use Database\Factories\PartyFactory;
@@ -38,7 +40,7 @@ use Illuminate\Support\Facades\Cache;
 class Party extends Model
 {
     /** @use HasFactory<PartyFactory> */
-    use HasFactory, LogsBusinessActivity, SoftDeletes;
+    use HasFactory, HasFloatingDetail, LogsBusinessActivity, SoftDeletes;
 
     /**
      * @return array<string, string>
@@ -74,6 +76,11 @@ class Party extends Model
     public function business(): BelongsTo
     {
         return $this->belongsTo(Business::class);
+    }
+
+    protected function floatingDetailType(): DetailType
+    {
+        return DetailType::Party;
     }
 
     public function user(): BelongsTo

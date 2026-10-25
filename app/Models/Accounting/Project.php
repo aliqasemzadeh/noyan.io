@@ -2,9 +2,11 @@
 
 namespace App\Models\Accounting;
 
+use App\Enums\Accounting\DetailType;
 use App\Models\Catalog\ProductStockMovement;
 use App\Models\Catalog\StockConversion;
 use App\Models\Concerns\BelongsToBusiness;
+use App\Models\Concerns\HasFloatingDetail;
 use App\Models\Concerns\LogsBusinessActivity;
 use Database\Factories\Accounting\ProjectFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -25,7 +27,7 @@ use Illuminate\Support\Facades\Cache;
 class Project extends Model
 {
     /** @use HasFactory<ProjectFactory> */
-    use BelongsToBusiness, HasFactory, LogsBusinessActivity, SoftDeletes;
+    use BelongsToBusiness, HasFactory, HasFloatingDetail, LogsBusinessActivity, SoftDeletes;
 
     /**
      * @return array<string, string>
@@ -40,6 +42,11 @@ class Project extends Model
     protected static function newFactory(): ProjectFactory
     {
         return ProjectFactory::new();
+    }
+
+    protected function floatingDetailType(): DetailType
+    {
+        return DetailType::Project;
     }
 
     /**

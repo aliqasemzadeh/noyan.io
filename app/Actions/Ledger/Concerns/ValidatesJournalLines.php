@@ -2,10 +2,14 @@
 
 namespace App\Actions\Ledger\Concerns;
 
+use App\Enums\Accounting\AccountLevel;
+use App\Enums\Accounting\DetailType;
 use App\Enums\CategoryType;
 use App\Models\Accounting\Account;
 use App\Models\Accounting\CostCenter;
 use App\Models\Accounting\FiscalYear;
+use App\Models\Accounting\GlAccount;
+use App\Models\Accounting\GlDetail;
 use App\Models\Accounting\Party;
 use App\Models\Accounting\Project;
 use App\Models\Category;
@@ -17,11 +21,15 @@ trait ValidatesJournalLines
     /**
      * @param  list<array<string, mixed>>  $linesData
      * @return list<array{
-     *     category_id: int,
+     *     category_id: int|null,
+     *     gl_account_id: int|null,
      *     party_id: int|null,
      *     account_id: int|null,
      *     cost_center_id: int|null,
      *     project_id: int|null,
+     *     detail_level_4_id: int|null,
+     *     detail_level_5_id: int|null,
+     *     detail_level_6_id: int|null,
      *     debit: string,
      *     credit: string,
      *     description: string|null
@@ -36,7 +44,11 @@ trait ValidatesJournalLines
                 ? (int) $line['category_id']
                 : null;
 
-            if ($categoryId === null) {
+            $glAccountId = isset($line['gl_account_id']) && filled($line['gl_account_id'])
+                ? (int) $line['gl_account_id']
+                : null;
+
+            if ($categoryId === null && $glAccountId === null) {
                 continue;
             }
 
@@ -58,7 +70,21 @@ trait ValidatesJournalLines
                 ]);
             }
 
-            $this->assertCategoryBelongsToBusiness($businessId, $categoryId, $index);
+            $glAccount = null;
+
+            if ($glAccountId !== null) {
+                $glAccount = $this->assertGlAccountPostable($businessId, $glAccountId, $index);
+            } elseif ($categoryId !== null) {
+                $this->assertCategoryBelongsToBusiness($businessId, $categoryId, $index);
+                $category = Category::query()->find($categoryId);
+                if ($category?->gl_account_id) {
+                    $glAccount = GlAccount::query()
+                        ->where('business_id', $businessId)
+                        ->whereKey($category->gl_account_id)
+                        ->first();
+                    $glAccountId = $glAccount?->id;
+                }
+            }
 
             $partyId = $this->nullableBelongsToBusiness(
                 Party::class,
@@ -92,16 +118,71 @@ trait ValidatesJournalLines
                 __('general.journal_project_invalid'),
             );
 
+            $detail4 = $this->resolveDetailId(
+                $businessId,
+                $line['detail_level_4_id'] ?? null,
+                $partyId,
+                $accountId,
+                $costCenterId,
+                $projectId,
+                $glAccount?->requires_detail_level_4_type,
+                $index,
+                4,
+            );
+
+            $detail5 = $this->resolveDetailId(
+                $businessId,
+                $line['detail_level_5_id'] ?? null,
+                $partyId,
+                $accountId,
+                $costCenterId,
+                $projectId,
+                $glAccount?->requires_detail_level_5_type,
+                $index,
+                5,
+            );
+
+            $detail6 = $this->resolveDetailId(
+                $businessId,
+                $line['detail_level_6_id'] ?? null,
+                $partyId,
+                $accountId,
+                $costCenterId,
+                $projectId,
+                $glAccount?->requires_detail_level_6_type,
+                $index,
+                6,
+            );
+
+            [$partyId, $accountId, $costCenterId, $projectId] = $this->dualFillLegacyFksFromDetails(
+                $businessId,
+                $partyId,
+                $accountId,
+                $costCenterId,
+                $projectId,
+                $detail4,
+                $detail5,
+                $detail6,
+            );
+
+            if ($glAccount !== null) {
+                $this->assertRequiredDetails($glAccount, $detail4, $detail5, $detail6, $index);
+            }
+
             $description = filled($line['description'] ?? null)
                 ? trim((string) $line['description'])
                 : null;
 
             $normalized[] = [
                 'category_id' => $categoryId,
+                'gl_account_id' => $glAccountId,
                 'party_id' => $partyId,
                 'account_id' => $accountId,
                 'cost_center_id' => $costCenterId,
                 'project_id' => $projectId,
+                'detail_level_4_id' => $detail4,
+                'detail_level_5_id' => $detail5,
+                'detail_level_6_id' => $detail6,
                 'debit' => $debitPositive ? $debit : '0',
                 'credit' => $creditPositive ? $credit : '0',
                 'description' => $description,
@@ -167,6 +248,28 @@ trait ValidatesJournalLines
         return $fiscalYear;
     }
 
+    protected function assertGlAccountPostable(int $businessId, int $glAccountId, int $index): GlAccount
+    {
+        $account = GlAccount::query()
+            ->where('business_id', $businessId)
+            ->whereKey($glAccountId)
+            ->first();
+
+        if ($account === null || ! $account->is_active) {
+            throw ValidationException::withMessages([
+                "lines.{$index}.gl_account_id" => [__('general.journal_gl_account_invalid')],
+            ]);
+        }
+
+        if ($account->level !== AccountLevel::Subsidiary || ! $account->is_postable) {
+            throw ValidationException::withMessages([
+                "lines.{$index}.gl_account_id" => [__('general.journal_gl_account_must_be_postable')],
+            ]);
+        }
+
+        return $account;
+    }
+
     protected function assertCategoryBelongsToBusiness(int $businessId, int $categoryId, int $index): void
     {
         $category = Category::query()
@@ -189,6 +292,189 @@ trait ValidatesJournalLines
         if (! $category->isLeaf()) {
             throw ValidationException::withMessages([
                 "lines.{$index}.category_id" => [__('general.journal_category_must_be_leaf')],
+            ]);
+        }
+    }
+
+    protected function resolveDetailId(
+        int $businessId,
+        mixed $explicitDetailId,
+        ?int $partyId,
+        ?int $accountId,
+        ?int $costCenterId,
+        ?int $projectId,
+        ?DetailType $requiredType,
+        int $index,
+        int $level,
+    ): ?int {
+        if ($explicitDetailId !== null && $explicitDetailId !== '' && $explicitDetailId !== false) {
+            $detailId = (int) $explicitDetailId;
+            $detail = GlDetail::query()
+                ->where('business_id', $businessId)
+                ->whereKey($detailId)
+                ->first();
+
+            if ($detail === null) {
+                throw ValidationException::withMessages([
+                    "lines.{$index}.detail_level_{$level}_id" => [__('general.journal_detail_invalid')],
+                ]);
+            }
+
+            if ($requiredType !== null && $detail->type !== $requiredType) {
+                throw ValidationException::withMessages([
+                    "lines.{$index}.detail_level_{$level}_id" => [__('general.journal_detail_type_mismatch')],
+                ]);
+            }
+
+            return $detailId;
+        }
+
+        if ($requiredType === null) {
+            return $this->detailIdFromLegacyFk($businessId, $partyId, $accountId, $costCenterId, $projectId, null);
+        }
+
+        $fromLegacy = $this->detailIdFromLegacyFk(
+            $businessId,
+            $partyId,
+            $accountId,
+            $costCenterId,
+            $projectId,
+            $requiredType,
+        );
+
+        return $fromLegacy;
+    }
+
+    protected function detailIdFromLegacyFk(
+        int $businessId,
+        ?int $partyId,
+        ?int $accountId,
+        ?int $costCenterId,
+        ?int $projectId,
+        ?DetailType $type,
+    ): ?int {
+        $candidates = [
+            DetailType::Party->value => $partyId,
+            DetailType::Account->value => $accountId,
+            DetailType::CostCenter->value => $costCenterId,
+            DetailType::Project->value => $projectId,
+        ];
+
+        if ($type !== null) {
+            $id = $candidates[$type->value] ?? null;
+
+            if ($id === null) {
+                return null;
+            }
+
+            return GlDetail::query()
+                ->where('business_id', $businessId)
+                ->where('type', $type->value)
+                ->where('detailable_id', $id)
+                ->where('detailable_type', $this->morphClassForDetailType($type))
+                ->value('id');
+        }
+
+        foreach ($candidates as $typeValue => $id) {
+            if ($id === null) {
+                continue;
+            }
+
+            $detailType = DetailType::from($typeValue);
+            $detailId = GlDetail::query()
+                ->where('business_id', $businessId)
+                ->where('type', $typeValue)
+                ->where('detailable_id', $id)
+                ->where('detailable_type', $this->morphClassForDetailType($detailType))
+                ->value('id');
+
+            if ($detailId !== null) {
+                return (int) $detailId;
+            }
+        }
+
+        return null;
+    }
+
+    protected function morphClassForDetailType(DetailType $type): string
+    {
+        return match ($type) {
+            DetailType::Party => (new Party)->getMorphClass(),
+            DetailType::Account => (new Account)->getMorphClass(),
+            DetailType::CostCenter => (new CostCenter)->getMorphClass(),
+            DetailType::Project => (new Project)->getMorphClass(),
+        };
+    }
+
+    /**
+     * @return array{0: int|null, 1: int|null, 2: int|null, 3: int|null}
+     */
+    protected function dualFillLegacyFksFromDetails(
+        int $businessId,
+        ?int $partyId,
+        ?int $accountId,
+        ?int $costCenterId,
+        ?int $projectId,
+        ?int $detail4,
+        ?int $detail5,
+        ?int $detail6,
+    ): array {
+        foreach ([$detail4, $detail5, $detail6] as $detailId) {
+            if ($detailId === null) {
+                continue;
+            }
+
+            $detail = GlDetail::query()
+                ->where('business_id', $businessId)
+                ->whereKey($detailId)
+                ->first();
+
+            if ($detail === null) {
+                continue;
+            }
+
+            match ($detail->type) {
+                DetailType::Party => $partyId ??= (int) $detail->detailable_id,
+                DetailType::Account => $accountId ??= (int) $detail->detailable_id,
+                DetailType::CostCenter => $costCenterId ??= (int) $detail->detailable_id,
+                DetailType::Project => $projectId ??= (int) $detail->detailable_id,
+            };
+        }
+
+        return [$partyId, $accountId, $costCenterId, $projectId];
+    }
+
+    protected function assertRequiredDetails(
+        GlAccount $glAccount,
+        ?int $detail4,
+        ?int $detail5,
+        ?int $detail6,
+        int $index,
+    ): void {
+        if ($glAccount->requires_detail_level_4_type !== null && $detail4 === null) {
+            throw ValidationException::withMessages([
+                "lines.{$index}.detail_level_4_id" => [__('general.journal_detail_level_required', [
+                    'level' => 4,
+                    'type' => $glAccount->requires_detail_level_4_type->label(),
+                ])],
+            ]);
+        }
+
+        if ($glAccount->requires_detail_level_5_type !== null && $detail5 === null) {
+            throw ValidationException::withMessages([
+                "lines.{$index}.detail_level_5_id" => [__('general.journal_detail_level_required', [
+                    'level' => 5,
+                    'type' => $glAccount->requires_detail_level_5_type->label(),
+                ])],
+            ]);
+        }
+
+        if ($glAccount->requires_detail_level_6_type !== null && $detail6 === null) {
+            throw ValidationException::withMessages([
+                "lines.{$index}.detail_level_6_id" => [__('general.journal_detail_level_required', [
+                    'level' => 6,
+                    'type' => $glAccount->requires_detail_level_6_type->label(),
+                ])],
             ]);
         }
     }

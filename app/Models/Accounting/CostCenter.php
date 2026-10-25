@@ -2,9 +2,11 @@
 
 namespace App\Models\Accounting;
 
+use App\Enums\Accounting\DetailType;
 use App\Models\Catalog\ProductStockMovement;
 use App\Models\Catalog\StockConversion;
 use App\Models\Concerns\BelongsToBusiness;
+use App\Models\Concerns\HasFloatingDetail;
 use Database\Factories\Accounting\CostCenterFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
@@ -24,7 +26,7 @@ use Illuminate\Support\Facades\Cache;
 class CostCenter extends Model
 {
     /** @use HasFactory<CostCenterFactory> */
-    use BelongsToBusiness, HasFactory, SoftDeletes;
+    use BelongsToBusiness, HasFactory, HasFloatingDetail, SoftDeletes;
 
     /**
      * @return array<string, string>
@@ -39,6 +41,11 @@ class CostCenter extends Model
     protected static function newFactory(): CostCenterFactory
     {
         return CostCenterFactory::new();
+    }
+
+    protected function floatingDetailType(): DetailType
+    {
+        return DetailType::CostCenter;
     }
 
     /**

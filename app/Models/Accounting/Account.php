@@ -2,10 +2,12 @@
 
 namespace App\Models\Accounting;
 
+use App\Enums\Accounting\DetailType;
 use App\Enums\Accounting\TransactionType;
 use App\Enums\AccountSubType;
 use App\Enums\AccountType;
 use App\Models\Business;
+use App\Models\Concerns\HasFloatingDetail;
 use App\Models\Concerns\LogsBusinessActivity;
 use App\Models\Currency;
 use App\Support\AccountValidationRules;
@@ -37,7 +39,7 @@ use Illuminate\Support\Facades\Cache;
 class Account extends Model
 {
     /** @use HasFactory<AccountFactory> */
-    use HasFactory, LogsBusinessActivity, SoftDeletes;
+    use HasFactory, HasFloatingDetail, LogsBusinessActivity, SoftDeletes;
 
     protected $table = 'accounting_accounts';
 
@@ -74,6 +76,11 @@ class Account extends Model
     public function business(): BelongsTo
     {
         return $this->belongsTo(Business::class);
+    }
+
+    protected function floatingDetailType(): DetailType
+    {
+        return DetailType::Account;
     }
 
     public function currency(): BelongsTo

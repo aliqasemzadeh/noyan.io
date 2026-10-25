@@ -99,4 +99,9 @@ class JournalEntry extends Model
     {
         return $this->status === JournalEntryStatus::Posted;
     }
+
+    public function isSystemGenerated(): bool
+    {
+        return $this->referenceable_type !== null && $this->referenceable_id !== null;
+    }
 }
