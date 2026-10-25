@@ -35,24 +35,27 @@ class SystemVersionUpdateTest extends TestCase
 
         $this->assertSame(0, $updater->run(UpdateMode::Quick, fn () => null));
         $this->assertSame('0.1.0-beta.1', AppVersion::installed());
+        $this->assertSame([], app(VersionUpdateRegistry::class)->pending());
 
-        Process::fake([
-            '*' => Process::result(output: 'ok'),
-        ]);
+        $versionCommands = [];
+
+        Process::fake(function (object $process) use (&$versionCommands) {
+            $command = collect($process->command);
+
+            foreach (['accounting:seed-coa', 'accounting:backfill-gl', 'migrate'] as $name) {
+                if ($command->contains($name)) {
+                    $versionCommands[] = $name;
+                }
+            }
+
+            return Process::result(output: 'ok');
+        });
 
         $this->assertSame(0, $updater->run(UpdateMode::Quick, fn () => null));
 
-        Process::assertDidntRun(function ($process): bool {
-            return collect($process->command)->contains('accounting:seed-coa');
-        });
-
-        Process::assertDidntRun(function ($process): bool {
-            return collect($process->command)->contains('accounting:backfill-gl');
-        });
-
-        Process::assertRan(function ($process): bool {
-            return collect($process->command)->contains('migrate');
-        });
+        $this->assertNotContains('accounting:seed-coa', $versionCommands);
+        $this->assertNotContains('accounting:backfill-gl', $versionCommands);
+        $this->assertContains('migrate', $versionCommands);
     }
 
     public function test_welcome_page_shows_app_version(): void
