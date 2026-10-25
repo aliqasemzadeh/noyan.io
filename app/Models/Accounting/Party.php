@@ -4,6 +4,7 @@ namespace App\Models\Accounting;
 
 use App\Enums\PartyType;
 use App\Models\Business;
+use App\Models\Concerns\LogsBusinessActivity;
 use App\Models\User;
 use Database\Factories\PartyFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -14,7 +15,6 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
-use App\Models\Concerns\LogsBusinessActivity;
 
 #[Fillable([
     'business_id',

@@ -5,6 +5,7 @@ namespace App\Models\Accounting;
 use App\Enums\Accounting\TransactionType;
 use App\Models\Category;
 use App\Models\Concerns\BelongsToBusiness;
+use App\Models\Concerns\LogsBusinessActivity;
 use App\Models\User;
 use Database\Factories\Accounting\TransactionFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -15,7 +16,6 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Collection;
 use Spatie\Tags\HasTags;
 use Spatie\Tags\Tag;
-use App\Models\Concerns\LogsBusinessActivity;
 
 #[Fillable([
     'business_id',

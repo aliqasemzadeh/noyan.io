@@ -5,6 +5,7 @@ namespace App\Models\Accounting;
 use App\Enums\Accounting\InvoicePaymentStatus;
 use App\Enums\Accounting\InvoiceType;
 use App\Models\Business;
+use App\Models\Concerns\LogsBusinessActivity;
 use App\Models\User;
 use Database\Factories\Accounting\InvoiceFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -14,7 +15,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use App\Models\Concerns\LogsBusinessActivity;
 
 #[Fillable([
     'business_id',

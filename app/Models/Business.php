@@ -20,6 +20,7 @@ use App\Models\Catalog\Brand;
 use App\Models\Catalog\Product;
 use App\Models\Catalog\StockConversion;
 use App\Models\Catalog\Warehouse;
+use App\Models\Concerns\LogsBusinessActivity;
 use Database\Factories\BusinessFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -32,7 +33,6 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\DB;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
-use App\Models\Concerns\LogsBusinessActivity;
 
 #[Fillable([
     'owner_id',

@@ -2,13 +2,13 @@
 
 namespace App\Models\Accounting;
 
+use App\Models\Concerns\LogsBusinessActivity;
 use Database\Factories\PartyContactFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use App\Models\Concerns\LogsBusinessActivity;
 
 #[Fillable([
     'party_id',

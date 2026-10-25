@@ -3,6 +3,7 @@
 namespace App\Models\Catalog;
 
 use App\Models\Business;
+use App\Models\Concerns\LogsBusinessActivity;
 use Database\Factories\Catalog\BrandFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -10,7 +11,6 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use App\Models\Concerns\LogsBusinessActivity;
 
 #[Fillable([
     'business_id',

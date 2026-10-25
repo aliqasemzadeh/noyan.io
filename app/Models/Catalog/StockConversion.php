@@ -6,6 +6,7 @@ use App\Enums\Catalog\StockConversionStatus;
 use App\Models\Accounting\CostCenter;
 use App\Models\Accounting\Project;
 use App\Models\Concerns\BelongsToBusiness;
+use App\Models\Concerns\LogsBusinessActivity;
 use App\Models\User;
 use Database\Factories\Catalog\StockConversionFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -15,7 +16,6 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use App\Models\Concerns\LogsBusinessActivity;
 
 #[Fillable([
     'business_id',

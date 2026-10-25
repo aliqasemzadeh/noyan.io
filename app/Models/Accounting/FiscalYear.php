@@ -3,6 +3,7 @@
 namespace App\Models\Accounting;
 
 use App\Models\Concerns\BelongsToBusiness;
+use App\Models\Concerns\LogsBusinessActivity;
 use Database\Factories\Accounting\FiscalYearFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
@@ -10,7 +11,6 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use App\Models\Concerns\LogsBusinessActivity;
 
 #[Fillable([
     'business_id',

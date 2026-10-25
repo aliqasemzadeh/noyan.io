@@ -4,6 +4,7 @@ namespace App\Models\Accounting;
 
 use App\Enums\Accounting\JournalEntryStatus;
 use App\Models\Concerns\BelongsToBusiness;
+use App\Models\Concerns\LogsBusinessActivity;
 use App\Models\User;
 use Database\Factories\Accounting\JournalEntryFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -13,7 +14,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use App\Models\Concerns\LogsBusinessActivity;
 
 #[Fillable([
     'business_id',

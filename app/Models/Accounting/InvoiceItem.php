@@ -3,6 +3,7 @@
 namespace App\Models\Accounting;
 
 use App\Models\Catalog\Product;
+use App\Models\Concerns\LogsBusinessActivity;
 use App\Support\RichText;
 use Database\Factories\Accounting\InvoiceItemFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -10,7 +11,6 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use App\Models\Concerns\LogsBusinessActivity;
 
 #[Fillable([
     'invoice_id',

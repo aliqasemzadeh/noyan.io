@@ -7,6 +7,7 @@ use App\Enums\Catalog\ProductUnit;
 use App\Models\Accounting\InvoiceItem;
 use App\Models\Business;
 use App\Models\Category;
+use App\Models\Concerns\LogsBusinessActivity;
 use Database\Factories\Catalog\ProductFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
@@ -16,7 +17,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use App\Models\Concerns\LogsBusinessActivity;
 
 #[Fillable([
     'business_id',

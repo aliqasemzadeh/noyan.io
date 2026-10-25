@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\CurrencyType;
 use App\Models\Accounting\Account;
 use App\Models\Accounting\BusinessCurrency;
+use App\Models\Concerns\LogsBusinessActivity;
 use App\Support\Money;
 use Database\Factories\CurrencyFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -16,7 +17,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Cache;
-use App\Models\Concerns\LogsBusinessActivity;
 
 #[Fillable(['code', 'name', 'symbol', 'type', 'is_system', 'business_id', 'decimal_places', 'is_active'])]
 class Currency extends Model

@@ -41,7 +41,7 @@ trait LogsBusinessActivity
             return $businessId !== null ? (int) $businessId : null;
         }
 
-        return match (true) {
+        $businessId = match (true) {
             $this instanceof InvoiceItem => $this->invoice()->value('business_id'),
             $this instanceof QuoteItem => $this->quote()->value('business_id'),
             $this instanceof JournalLine => $this->journalEntry()->value('business_id'),
@@ -49,5 +49,7 @@ trait LogsBusinessActivity
             $this instanceof StockConversionItem => $this->conversion()->value('business_id'),
             default => null,
         };
+
+        return $businessId !== null ? (int) $businessId : null;
     }
 }

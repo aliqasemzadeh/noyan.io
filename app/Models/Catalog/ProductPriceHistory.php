@@ -4,13 +4,13 @@ namespace App\Models\Catalog;
 
 use App\Enums\Catalog\PriceType;
 use App\Models\Business;
+use App\Models\Concerns\LogsBusinessActivity;
 use App\Models\User;
 use Database\Factories\Catalog\ProductPriceHistoryFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use App\Models\Concerns\LogsBusinessActivity;
 
 #[Fillable([
     'business_id',

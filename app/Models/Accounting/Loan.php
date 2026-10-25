@@ -5,6 +5,7 @@ namespace App\Models\Accounting;
 use App\Enums\Accounting\LoanStatus;
 use App\Enums\Accounting\LoanType;
 use App\Models\Concerns\BelongsToBusiness;
+use App\Models\Concerns\LogsBusinessActivity;
 use Database\Factories\Accounting\LoanFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -12,7 +13,6 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use App\Models\Concerns\LogsBusinessActivity;
 
 #[Fillable([
     'business_id',

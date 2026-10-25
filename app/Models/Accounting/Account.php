@@ -6,6 +6,7 @@ use App\Enums\Accounting\TransactionType;
 use App\Enums\AccountSubType;
 use App\Enums\AccountType;
 use App\Models\Business;
+use App\Models\Concerns\LogsBusinessActivity;
 use App\Models\Currency;
 use App\Support\AccountValidationRules;
 use Database\Factories\AccountFactory;
@@ -17,7 +18,6 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
-use App\Models\Concerns\LogsBusinessActivity;
 
 #[Fillable([
     'business_id',

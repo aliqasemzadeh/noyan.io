@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\CategoryType;
 use App\Models\Accounting\Transaction;
 use App\Models\Catalog\Product;
+use App\Models\Concerns\LogsBusinessActivity;
 use Database\Factories\CategoryFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
@@ -16,7 +17,6 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Collection as SupportCollection;
 use Illuminate\Support\Facades\Cache;
-use App\Models\Concerns\LogsBusinessActivity;
 
 #[Fillable([
     'business_id',

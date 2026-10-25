@@ -6,6 +6,7 @@ use App\Enums\Catalog\StockMovementType;
 use App\Models\Accounting\CostCenter;
 use App\Models\Accounting\Project;
 use App\Models\Business;
+use App\Models\Concerns\LogsBusinessActivity;
 use App\Models\User;
 use Database\Factories\Catalog\ProductStockMovementFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -13,7 +14,6 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
-use App\Models\Concerns\LogsBusinessActivity;
 
 #[Fillable([
     'business_id',
