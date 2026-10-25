@@ -68,6 +68,16 @@ class BusinessUserFactory extends Factory
         ]);
     }
 
+    public function warehouseKeeper(): static
+    {
+        return $this->state(fn (): array => [
+            'roles' => [BusinessRole::WarehouseKeeper->value],
+            'permissions' => [
+                BusinessRole::WarehouseKeeper->value => BusinessRole::WarehouseKeeper->defaultPermissions(),
+            ],
+        ]);
+    }
+
     /**
      * @param  list<string>  $permissions
      */

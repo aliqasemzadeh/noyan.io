@@ -24,10 +24,14 @@ class EnsureBusinessPanelAccessMiddleware
 
         if (! $user->canAccessPanel($businessPanel)) {
             foreach ([
-                BusinessPanel::Accounting,
-                BusinessPanel::Warehouse,
                 BusinessPanel::Sale,
+                BusinessPanel::Warehouse,
+                BusinessPanel::Accounting,
             ] as $fallback) {
+                if ($fallback === $businessPanel) {
+                    continue;
+                }
+
                 if ($user->canAccessPanel($fallback)) {
                     return redirect()->route($fallback->dashboardRoute());
                 }

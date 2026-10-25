@@ -60,6 +60,12 @@ class CatalogProductManagementTest extends TestCase
             'product_id' => $product->id,
             'movement_type' => StockMovementType::Opening->value,
             'quantity' => 10,
+            'warehouse_id' => $business->defaultWarehouse()?->id,
+        ]);
+        $this->assertDatabaseHas('inventory_stocks', [
+            'product_id' => $product->id,
+            'warehouse_id' => $business->defaultWarehouse()?->id,
+            'physical_quantity' => 10,
         ]);
     }
 

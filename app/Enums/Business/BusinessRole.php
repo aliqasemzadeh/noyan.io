@@ -82,9 +82,7 @@ enum BusinessRole: string
             self::WarehouseKeeper => array_values(array_filter(
                 BusinessPermission::all(),
                 fn (BusinessPermission $permission): bool => $permission->isWarehouseRelated()
-                    || $permission === BusinessPermission::ProductView
-                    || $permission === BusinessPermission::ProjectView
-                    || $permission === BusinessPermission::CostCenterView,
+                    || $permission === BusinessPermission::ProductView,
             )),
             self::Viewer => array_values(array_filter(
                 BusinessPermission::all(),

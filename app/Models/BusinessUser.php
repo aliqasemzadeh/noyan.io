@@ -188,9 +188,16 @@ class BusinessUser extends Model
         foreach ($this->permissionNames() as $permission) {
             $enum = BusinessPermission::tryFrom($permission);
 
-            if ($enum?->isSaleRelated()) {
-                return true;
+            if ($enum === null || ! $enum->isSaleRelated()) {
+                continue;
             }
+
+            // Product catalog alone does not imply sale-panel access (e.g. warehouse keeper).
+            if ($enum->group() === 'product') {
+                continue;
+            }
+
+            return true;
         }
 
         return false;
@@ -214,7 +221,11 @@ class BusinessUser extends Model
         foreach ($this->permissionNames() as $permission) {
             $enum = BusinessPermission::tryFrom($permission);
 
-            if ($enum !== null && $enum->isAccountingRelated()) {
+            if ($enum === null || $enum->isWarehouseRelated()) {
+                continue;
+            }
+
+            if (! $enum->isSaleRelated()) {
                 return true;
             }
         }
