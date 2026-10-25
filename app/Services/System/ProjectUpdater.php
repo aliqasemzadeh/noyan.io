@@ -3,12 +3,14 @@
 namespace App\Services\System;
 
 use App\Enums\System\UpdateMode;
+use App\Support\System\AppVersion;
 use Closure;
 
 class ProjectUpdater
 {
     public function __construct(
         public SystemCommandRunner $runner,
+        public VersionUpdateRegistry $versionUpdates,
     ) {}
 
     /**
@@ -16,7 +18,14 @@ class ProjectUpdater
      */
     public function run(UpdateMode $mode, Closure $onOutput): int
     {
+        $target = AppVersion::current();
+        $installed = AppVersion::installed();
+
         $onOutput('=== '.__('general.system_update_started', ['mode' => __('general.'.$mode->value.'_update')]).' ==='.PHP_EOL);
+        $onOutput(__('general.system_update_version_line', [
+            'installed' => $installed,
+            'target' => $target,
+        ]).PHP_EOL);
 
         if ($this->runner->runProcess(['git', 'pull'], $onOutput, 'git pull') !== 0) {
             return $this->fail($onOutput);
@@ -34,6 +43,7 @@ class ProjectUpdater
             }
         }
 
+        // Always keep schema + permissions current.
         if ($this->artisan($onOutput, ['migrate', '--force']) !== 0) {
             return $this->fail($onOutput);
         }
@@ -42,8 +52,7 @@ class ProjectUpdater
             return $this->fail($onOutput);
         }
 
-        // Idempotent accounting bootstrap — safe on every Quick/Full update.
-        if ($this->runAccountingBootstrap($onOutput) !== 0) {
+        if ($this->runPendingVersionUpdates($onOutput) !== 0) {
             return $this->fail($onOutput);
         }
 
@@ -66,40 +75,54 @@ class ProjectUpdater
         }
 
         $onOutput(PHP_EOL.'=== '.__('general.system_update_finished').' ==='.PHP_EOL);
+        $onOutput(__('general.system_update_version_line', [
+            'installed' => AppVersion::installed(),
+            'target' => AppVersion::current(),
+        ]).PHP_EOL);
 
         return 0;
     }
 
     /**
-     * Post-migrate accounting data that every business needs after a deploy.
-     * All commands are upsert / fill-empty only — no duplicate rows.
-     *
      * @param  Closure(string): void  $onOutput
      */
-    public function runAccountingBootstrap(Closure $onOutput): int
+    public function runPendingVersionUpdates(Closure $onOutput): int
     {
-        foreach ($this->accountingBootstrapCommands() as $command) {
-            $exitCode = $this->artisan($onOutput, $command);
+        $pending = $this->versionUpdates->pending();
 
-            if ($exitCode !== 0) {
-                return $exitCode;
+        if ($pending === []) {
+            $onOutput(__('general.system_update_no_pending_releases').PHP_EOL);
+
+            // Keep installed marker aligned with the packaged target when already applied.
+            if (version_compare(AppVersion::installed(), AppVersion::current(), '<')) {
+                AppVersion::markInstalled(AppVersion::current());
             }
+
+            return 0;
+        }
+
+        foreach ($pending as $update) {
+            $onOutput(PHP_EOL.'--- '.$update->description().' ---'.PHP_EOL);
+
+            foreach ($update->artisanCommands() as $command) {
+                $exitCode = $this->artisan($onOutput, $command);
+
+                if ($exitCode !== 0) {
+                    return $exitCode;
+                }
+            }
+
+            AppVersion::markInstalled($update::version());
+            $onOutput(__('general.system_update_release_applied', [
+                'version' => $update::version(),
+            ]).PHP_EOL);
+        }
+
+        if (version_compare(AppVersion::installed(), AppVersion::current(), '<')) {
+            AppVersion::markInstalled(AppVersion::current());
         }
 
         return 0;
-    }
-
-    /**
-     * @return list<list<string>>
-     */
-    public function accountingBootstrapCommands(): array
-    {
-        return [
-            ['accounting:seed-coa', '--all'],
-            ['accounting:sync-gl-details', '--all'],
-            ['accounting:migrate-categories-to-gl', '--all'],
-            ['accounting:backfill-gl', '--all', '--skip-seed'],
-        ];
     }
 
     /**

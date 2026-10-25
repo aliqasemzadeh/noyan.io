@@ -33,8 +33,17 @@
                 <div class="relative flex h-full w-full flex-col items-start justify-end rounded-lg bg-gradient-to-br from-zinc-900 via-teal-950 to-zinc-900 p-16 text-white">
                     <div class="text-3xl font-semibold xl:text-4xl">{{ __('general.app_name') }}</div>
                     <flux:text class="mt-3 text-zinc-300">{{ __('general.login_panel_tagline') }}</flux:text>
+                    <flux:text class="mt-6 font-mono text-xs text-zinc-400" dir="ltr">
+                        {{ __('general.app_version_label', ['version' => \App\Support\System\AppVersion::current()]) }}
+                    </flux:text>
                 </div>
             </div>
+        </div>
+
+        <div class="pointer-events-none fixed inset-x-0 bottom-3 z-10 flex justify-center lg:hidden">
+            <span class="rounded-full bg-zinc-900/70 px-3 py-1 font-mono text-[11px] text-zinc-300 backdrop-blur" dir="ltr">
+                {{ __('general.app_version_label', ['version' => \App\Support\System\AppVersion::current()]) }}
+            </span>
         </div>
 
         @persist('toast')
