@@ -297,6 +297,118 @@ new class extends Component
                     {{ __('general.support') }}
                 </flux:sidebar.item>
             </div>
+        @elseif (request()->routeIs('warehouse.*'))
+            <div x-show="match(@js(__('general.dashboard')))" x-cloak>
+                <flux:sidebar.item
+                    icon="home"
+                    :href="route('warehouse.dashboard')"
+                    wire:navigate
+                    :current="request()->routeIs('warehouse.dashboard')"
+                    data-nav-label="{{ __('general.dashboard') }}"
+                >
+                    {{ __('general.dashboard') }}
+                </flux:sidebar.item>
+            </div>
+
+            @if (auth()->user()?->canInBusiness(BusinessPermission::StockReceive) || auth()->user()?->canInBusiness(BusinessPermission::StockIssue) || auth()->user()?->canInBusiness(BusinessPermission::StockTransfer) || auth()->user()?->canInBusiness(BusinessPermission::StockAdjust) || auth()->user()?->canInBusiness(BusinessPermission::StockAllocate))
+                <div
+                    x-show="groupVisible(
+                        @js(__('general.stock_operations')),
+                        @js(__('general.stock_receive')),
+                        @js(__('general.stock_issue')),
+                        @js(__('general.stock_transfer')),
+                        @js(__('general.stock_adjust')),
+                        @js(__('general.stock_allocate'))
+                    )"
+                    x-cloak
+                >
+                    <flux:sidebar.group
+                        expandable
+                        :expanded="request()->routeIs('warehouse.stocks.*')"
+                        icon="package-open"
+                        heading="{{ __('general.stock_operations') }}"
+                        class="grid"
+                    >
+                        @if (auth()->user()?->canInBusiness(BusinessPermission::StockMovementView))
+                            <div x-show="match(@js(__('general.inventory_stocks')))" x-cloak>
+                                <flux:sidebar.item
+                                    :href="route('warehouse.stocks.index')"
+                                    wire:navigate
+                                    :current="request()->routeIs('warehouse.stocks.*')"
+                                    data-nav-label="{{ __('general.inventory_stocks') }}"
+                                >
+                                    {{ __('general.inventory_stocks') }}
+                                </flux:sidebar.item>
+                            </div>
+                        @endif
+                    </flux:sidebar.group>
+                </div>
+            @endif
+
+            @if (auth()->user()?->canInBusiness(BusinessPermission::StockMovementView))
+                <div
+                    x-show="groupVisible(
+                        @js(__('general.inventory')),
+                        @js(__('general.inventory_stocks')),
+                        @js(__('general.stock_movements')),
+                        @js(__('general.stock_conversions'))
+                    )"
+                    x-cloak
+                >
+                    <flux:sidebar.group
+                        expandable
+                        :expanded="request()->routeIs('warehouse.stocks.*') || request()->routeIs('warehouse.movements.*') || request()->routeIs('warehouse.conversions.*')"
+                        icon="boxes"
+                        heading="{{ __('general.inventory') }}"
+                        class="grid"
+                    >
+                        <div x-show="match(@js(__('general.inventory_stocks')))" x-cloak>
+                            <flux:sidebar.item
+                                :href="route('warehouse.stocks.index')"
+                                wire:navigate
+                                :current="request()->routeIs('warehouse.stocks.*')"
+                                data-nav-label="{{ __('general.inventory_stocks') }}"
+                            >
+                                {{ __('general.inventory_stocks') }}
+                            </flux:sidebar.item>
+                        </div>
+                        <div x-show="match(@js(__('general.stock_movements')))" x-cloak>
+                            <flux:sidebar.item
+                                :href="route('warehouse.movements.index')"
+                                wire:navigate
+                                :current="request()->routeIs('warehouse.movements.*')"
+                                data-nav-label="{{ __('general.stock_movements') }}"
+                            >
+                                {{ __('general.stock_movements') }}
+                            </flux:sidebar.item>
+                        </div>
+                        <div x-show="match(@js(__('general.stock_conversions')))" x-cloak>
+                            <flux:sidebar.item
+                                :href="route('warehouse.conversions.index')"
+                                wire:navigate
+                                :current="request()->routeIs('warehouse.conversions.*')"
+                                data-nav-label="{{ __('general.stock_conversions') }}"
+                            >
+                                {{ __('general.stock_conversions') }}
+                            </flux:sidebar.item>
+                        </div>
+                    </flux:sidebar.group>
+                </div>
+            @endif
+
+            @if (auth()->user()?->canInBusiness(BusinessPermission::WarehouseView))
+                <div x-show="match(@js(__('general.warehouses')))" x-cloak>
+                    <flux:sidebar.item
+                        icon="warehouse"
+                        :href="route('warehouse.warehouses.index')"
+                        wire:navigate
+                        :current="request()->routeIs('warehouse.warehouses.*')"
+                        data-nav-label="{{ __('general.warehouses') }}"
+                    >
+                        {{ __('general.warehouses') }}
+                    </flux:sidebar.item>
+                </div>
+            @endif
         @elseif (request()->routeIs('sale.*'))
             <div x-show="match(@js(__('general.dashboard')))" x-cloak>
                 <flux:sidebar.item

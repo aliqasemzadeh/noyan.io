@@ -23,12 +23,14 @@ class EnsureBusinessPanelAccessMiddleware
         $businessPanel = BusinessPanel::from($panel);
 
         if (! $user->canAccessPanel($businessPanel)) {
-            if ($user->canAccessPanel(BusinessPanel::Sale)) {
-                return redirect()->route('sale.dashboard');
-            }
-
-            if ($user->canAccessPanel(BusinessPanel::Accounting)) {
-                return redirect()->route('accounting.dashboard');
+            foreach ([
+                BusinessPanel::Accounting,
+                BusinessPanel::Warehouse,
+                BusinessPanel::Sale,
+            ] as $fallback) {
+                if ($user->canAccessPanel($fallback)) {
+                    return redirect()->route($fallback->dashboardRoute());
+                }
             }
 
             abort(403);

@@ -8,6 +8,7 @@ enum BusinessRole: string
     case Admin = 'admin';
     case Accountant = 'accountant';
     case Seller = 'seller';
+    case WarehouseKeeper = 'warehouse_keeper';
     case Viewer = 'viewer';
 
     public function label(): string
@@ -78,6 +79,13 @@ enum BusinessRole: string
                     'product',
                 ], true),
             )),
+            self::WarehouseKeeper => array_values(array_filter(
+                BusinessPermission::all(),
+                fn (BusinessPermission $permission): bool => $permission->isWarehouseRelated()
+                    || $permission === BusinessPermission::ProductView
+                    || $permission === BusinessPermission::ProjectView
+                    || $permission === BusinessPermission::CostCenterView,
+            )),
             self::Viewer => array_values(array_filter(
                 BusinessPermission::all(),
                 fn (BusinessPermission $permission): bool => str_ends_with($permission->value, '_view'),
@@ -121,6 +129,7 @@ enum BusinessRole: string
         return match ($this) {
             self::Owner, self::Admin => true,
             self::Seller => $panel === BusinessPanel::Sale,
+            self::WarehouseKeeper => $panel === BusinessPanel::Warehouse,
             self::Accountant, self::Viewer => $panel === BusinessPanel::Accounting,
         };
     }

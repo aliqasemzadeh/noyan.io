@@ -169,6 +169,10 @@ class User extends Authenticatable
             return BusinessPanel::Accounting;
         }
 
+        if ($this->canAccessPanel(BusinessPanel::Warehouse)) {
+            return BusinessPanel::Warehouse;
+        }
+
         if ($this->canAccessPanel(BusinessPanel::Sale)) {
             return BusinessPanel::Sale;
         }

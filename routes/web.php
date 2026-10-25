@@ -164,6 +164,26 @@ Route::middleware('auth')->group(function () {
         Route::livewire('/projects', 'pages::panel.accounting.project.index')->name('projects.index');
     });
 
+    Route::prefix('warehouse')->name('warehouse.')->middleware(['business.selected', 'business.panel:warehouse'])->group(function () {
+        Route::livewire('/', 'pages::panel.warehouse.dashboard.index')->name('dashboard');
+
+        Route::livewire('/warehouses', 'pages::panel.warehouse.warehouse.index')
+            ->middleware('business.permission:warehouse_view')
+            ->name('warehouses.index');
+
+        Route::livewire('/stocks', 'pages::panel.warehouse.stock.index')
+            ->middleware('business.permission:stock_movement_view')
+            ->name('stocks.index');
+
+        Route::livewire('/movements', 'pages::panel.warehouse.movement.index')
+            ->middleware('business.permission:stock_movement_view')
+            ->name('movements.index');
+
+        Route::livewire('/conversions', 'pages::panel.warehouse.conversion.index')
+            ->middleware('business.permission:stock_movement_view')
+            ->name('conversions.index');
+    });
+
     Route::prefix('sale')->name('sale.')->middleware(['business.selected', 'business.panel:sale'])->group(function () {
         Route::livewire('/', 'pages::panel.sale.dashboard.index')->name('dashboard');
 

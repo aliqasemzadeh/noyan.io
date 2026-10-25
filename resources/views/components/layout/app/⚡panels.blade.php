@@ -22,6 +22,17 @@ new class extends Component
             </flux:sidebar.item>
         @endif
 
+        @if (auth()->user()?->canAccessPanel(BusinessPanel::Warehouse))
+            <flux:sidebar.item
+                icon="warehouse"
+                :href="route('warehouse.dashboard')"
+                wire:navigate
+                :current="request()->routeIs('warehouse.*')"
+            >
+                {{ __('general.warehouse') }}
+            </flux:sidebar.item>
+        @endif
+
         @if (auth()->user()?->canAccessPanel(BusinessPanel::Sale))
             <flux:sidebar.item
                 icon="shopping-bag"

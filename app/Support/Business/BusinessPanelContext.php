@@ -12,6 +12,10 @@ class BusinessPanelContext
             return BusinessPanel::Sale;
         }
 
+        if (request()->routeIs('warehouse.*')) {
+            return BusinessPanel::Warehouse;
+        }
+
         return BusinessPanel::Accounting;
     }
 
@@ -23,6 +27,11 @@ class BusinessPanelContext
     public static function isAccounting(): bool
     {
         return self::current() === BusinessPanel::Accounting;
+    }
+
+    public static function isWarehouse(): bool
+    {
+        return self::current() === BusinessPanel::Warehouse;
     }
 
     /**

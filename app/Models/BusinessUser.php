@@ -172,6 +172,10 @@ class BusinessUser extends Model
             return $this->hasAnySalePermission();
         }
 
+        if ($panel === BusinessPanel::Warehouse) {
+            return $this->hasAnyWarehousePermission();
+        }
+
         if ($panel === BusinessPanel::Accounting) {
             return $this->hasAnyAccountingPermission();
         }
@@ -192,12 +196,25 @@ class BusinessUser extends Model
         return false;
     }
 
+    public function hasAnyWarehousePermission(): bool
+    {
+        foreach ($this->permissionNames() as $permission) {
+            $enum = BusinessPermission::tryFrom($permission);
+
+            if ($enum?->isWarehouseRelated()) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public function hasAnyAccountingPermission(): bool
     {
         foreach ($this->permissionNames() as $permission) {
             $enum = BusinessPermission::tryFrom($permission);
 
-            if ($enum !== null && ! $enum->isSaleRelated()) {
+            if ($enum !== null && $enum->isAccountingRelated()) {
                 return true;
             }
         }

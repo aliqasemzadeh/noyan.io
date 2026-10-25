@@ -79,6 +79,19 @@ enum BusinessPermission: string
     case BrandEdit = 'brand_edit';
     case BrandDelete = 'brand_delete';
 
+    case WarehouseView = 'warehouse_view';
+    case WarehouseCreate = 'warehouse_create';
+    case WarehouseEdit = 'warehouse_edit';
+    case WarehouseDelete = 'warehouse_delete';
+
+    case StockReceive = 'stock_receive';
+    case StockIssue = 'stock_issue';
+    case StockTransfer = 'stock_transfer';
+    case StockAdjust = 'stock_adjust';
+    case StockAllocate = 'stock_allocate';
+    case StockConvert = 'stock_convert';
+    case StockMovementView = 'stock_movement_view';
+
     public function label(): string
     {
         return __('general.business_permission_'.$this->value);
@@ -102,6 +115,8 @@ enum BusinessPermission: string
             self::CategoryView, self::CategoryCreate, self::CategoryEdit, self::CategoryDelete => 'category',
             self::ProductView, self::ProductCreate, self::ProductEdit, self::ProductDelete => 'product',
             self::BrandView, self::BrandCreate, self::BrandEdit, self::BrandDelete => 'brand',
+            self::WarehouseView, self::WarehouseCreate, self::WarehouseEdit, self::WarehouseDelete => 'warehouse',
+            self::StockReceive, self::StockIssue, self::StockTransfer, self::StockAdjust, self::StockAllocate, self::StockConvert, self::StockMovementView => 'stock',
         };
     }
 
@@ -117,7 +132,16 @@ enum BusinessPermission: string
 
     public function isAccountingRelated(): bool
     {
+        if ($this->isWarehouseRelated()) {
+            return false;
+        }
+
         return ! $this->isSaleRelated() || in_array($this->group(), ['party', 'product'], true);
+    }
+
+    public function isWarehouseRelated(): bool
+    {
+        return in_array($this->group(), ['warehouse', 'stock'], true);
     }
 
     /**
