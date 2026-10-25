@@ -104,6 +104,8 @@
         </flux:header>
 
         <flux:main inset class="lg:ms-0">
+            <livewire:layout.impersonation-banner :key="'layout-impersonation-banner'" />
+
             {{ $slot }}
         </flux:main>
 

@@ -8,6 +8,7 @@ return [
         'user_edit' => 'Edit user',
         'user_delete' => 'Delete user',
         'user_access' => 'Manage user access',
+        'user_impersonate' => 'Login as user',
         'role_view' => 'View roles',
         'role_create' => 'Create role',
         'role_edit' => 'Edit role',

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\Business\BusinessPanel;
 use App\Enums\Business\BusinessPermission;
+use App\Enums\Gender;
 use Database\Factories\UserFactory;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -16,14 +17,62 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Cache;
+use Spatie\MediaLibrary\HasMedia;
+use Spatie\MediaLibrary\InteractsWithMedia;
 use Spatie\OneTimePasswords\Models\Concerns\HasOneTimePasswords;
 use Spatie\Permission\Traits\HasRoles;
 
-#[Fillable(['mobile', 'current_business_id'])]
-class User extends Authenticatable
+#[Fillable([
+    'mobile',
+    'current_business_id',
+    'first_name',
+    'last_name',
+    'email',
+    'gender',
+    'birth_date',
+])]
+class User extends Authenticatable implements HasMedia
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, HasOneTimePasswords, HasRoles, Notifiable, SoftDeletes;
+    use HasFactory, HasOneTimePasswords, HasRoles, InteractsWithMedia, Notifiable, SoftDeletes;
+
+    /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'gender' => Gender::class,
+            'birth_date' => 'date',
+        ];
+    }
+
+    public function registerMediaCollections(): void
+    {
+        $this->addMediaCollection('avatar')
+            ->singleFile()
+            ->acceptsMimeTypes(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
+    }
+
+    public function avatarUrl(): ?string
+    {
+        return $this->getFirstMediaUrl('avatar') ?: null;
+    }
+
+    public function fullName(): ?string
+    {
+        $name = trim(implode(' ', array_filter([
+            $this->first_name,
+            $this->last_name,
+        ])));
+
+        return $name !== '' ? $name : null;
+    }
+
+    public function isAdministrator(): bool
+    {
+        return $this->hasRole('administrator');
+    }
 
     public function currentBusiness(): BelongsTo
     {

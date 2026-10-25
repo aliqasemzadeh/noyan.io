@@ -8,6 +8,7 @@ return [
         'user_edit' => 'ویرایش کاربر',
         'user_delete' => 'حذف کاربر',
         'user_access' => 'مدیریت دسترسی کاربر',
+        'user_impersonate' => 'ورود به‌عنوان کاربر',
         'role_view' => 'مشاهده نقش‌ها',
         'role_create' => 'ایجاد نقش',
         'role_edit' => 'ویرایش نقش',

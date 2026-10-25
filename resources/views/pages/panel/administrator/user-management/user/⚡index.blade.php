@@ -1,7 +1,12 @@
 <?php
 
+use App\Actions\Auth\ImpersonateUserAction;
 use App\Models\User;
+use App\Support\Impersonation;
+use Flux\Flux;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
 use Livewire\Component;
@@ -30,8 +35,14 @@ new class extends Component
     public function users(): LengthAwarePaginator
     {
         return User::query()
+            ->with('roles')
             ->when($this->search !== '', function ($query): void {
-                $query->where('mobile', 'like', '%'.$this->search.'%');
+                $query->where(function ($query): void {
+                    $query->where('mobile', 'like', '%'.$this->search.'%')
+                        ->orWhere('first_name', 'like', '%'.$this->search.'%')
+                        ->orWhere('last_name', 'like', '%'.$this->search.'%')
+                        ->orWhere('email', 'like', '%'.$this->search.'%');
+                });
             })
             ->latest()
             ->paginate(15);
@@ -40,6 +51,46 @@ new class extends Component
     public function formatCreatedAt(User $user): string
     {
         return Jalalian::fromDateTime($user->created_at)->format('Y/m/d H:i');
+    }
+
+    public function canImpersonate(User $user): bool
+    {
+        if (! auth()->user()?->can('user_impersonate')) {
+            return false;
+        }
+
+        if (Impersonation::isImpersonating()) {
+            return false;
+        }
+
+        if ($user->isAdministrator()) {
+            return false;
+        }
+
+        return ! auth()->user()->is($user);
+    }
+
+    public function impersonate(int $userId, ImpersonateUserAction $action): void
+    {
+        $target = User::query()->findOrFail($userId);
+
+        try {
+            $action->handle(auth()->user(), $target);
+        } catch (AuthorizationException) {
+            Flux::toast(__('general.impersonation_denied'), variant: 'danger');
+
+            return;
+        } catch (ValidationException $exception) {
+            Flux::toast(collect($exception->errors())->flatten()->first() ?? $exception->getMessage(), variant: 'danger');
+
+            return;
+        }
+
+        Flux::toast(__('general.impersonation_started', [
+            'user' => $target->fullName() ?? $target->mobile,
+        ]));
+
+        $this->redirect(route('user.dashboard'), navigate: true);
     }
 };
 ?>
@@ -93,6 +144,7 @@ new class extends Component
 
         <flux:table :paginate="$this->users">
             <flux:table.columns>
+                <flux:table.column>{{ __('general.name') }}</flux:table.column>
                 <flux:table.column>{{ __('general.mobile') }}</flux:table.column>
                 <flux:table.column>{{ __('general.created_at') }}</flux:table.column>
                 <flux:table.column align="end">{{ __('general.actions') }}</flux:table.column>
@@ -101,10 +153,25 @@ new class extends Component
             <flux:table.rows>
                 @forelse ($this->users as $user)
                     <flux:table.row :key="$user->id">
+                        <flux:table.cell>{{ $user->fullName() ?? '—' }}</flux:table.cell>
                         <flux:table.cell>{{ $user->mobile }}</flux:table.cell>
                         <flux:table.cell>{{ $this->formatCreatedAt($user) }}</flux:table.cell>
                         <flux:table.cell align="end">
                             <div class="flex justify-end gap-2">
+                                @if ($this->canImpersonate($user))
+                                    <flux:tooltip content="{{ __('general.login_as_user') }}">
+                                        <flux:button
+                                            size="xs"
+                                            variant="primary"
+                                            color="violet"
+                                            icon="log-in"
+                                            icon:variant="outline"
+                                            wire:click="impersonate({{ $user->id }})"
+                                            wire:confirm="{{ __('general.impersonation_confirm') }}"
+                                        />
+                                    </flux:tooltip>
+                                @endif
+
                                 @can('user_access')
                                     <flux:tooltip content="{{ __('general.access') }}">
                                         <flux:button
@@ -135,7 +202,7 @@ new class extends Component
                     </flux:table.row>
                 @empty
                     <flux:table.row>
-                        <flux:table.cell colspan="3">
+                        <flux:table.cell colspan="4">
                             {{ __('general.no_users') }}
                         </flux:table.cell>
                     </flux:table.row>

@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Business;
+use App\Support\Impersonation;
 use Flux\Flux;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\Auth;
@@ -41,6 +42,8 @@ new class extends Component
 
     public function logout(): void
     {
+        Impersonation::stop();
+
         Auth::logout();
 
         session()->invalidate();
@@ -71,7 +74,11 @@ new class extends Component
 ?>
 
 @php
-    $profileName = auth()->user()->currentBusiness?->name ?? auth()->user()->mobile;
+    $authUser = auth()->user();
+    $profileName = $authUser->fullName()
+        ?? $authUser->currentBusiness?->name
+        ?? $authUser->mobile;
+    $profileAvatar = $authUser->avatarUrl();
 @endphp
 
 <div>
@@ -89,7 +96,7 @@ new class extends Component
     @if ($variant === 'sidebar')
         <div class="w-full max-lg:hidden">
             <flux:dropdown position="top" align="start" class="w-full">
-                <flux:sidebar.profile :name="$profileName" />
+                <flux:sidebar.profile :name="$profileName" :avatar="$profileAvatar" />
 
                 <flux:menu>
                     @if ($this->businesses->isNotEmpty())
@@ -122,7 +129,10 @@ new class extends Component
         </div>
     @else
         <flux:dropdown position="top" align="start">
-            <flux:profile avatar:name="{{ $profileName }}" />
+            <flux:profile
+                :name="$profileName"
+                :avatar="$profileAvatar"
+            />
 
             <flux:menu>
                 @if ($this->businesses->isNotEmpty())
