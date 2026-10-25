@@ -20,6 +20,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'party_name',
     'quote_number',
     'sale_kind_id',
+    'settlement_type_id',
     'issue_date',
     'valid_until',
     'finalized_at',
@@ -97,6 +98,11 @@ class Quote extends Model
     public function saleKind(): BelongsTo
     {
         return $this->belongsTo(SaleKind::class);
+    }
+
+    public function settlementType(): BelongsTo
+    {
+        return $this->belongsTo(SettlementType::class);
     }
 
     public function invoice(): BelongsTo

@@ -30,7 +30,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'invoice_number',
     'type',
     'sale_kind_id',
-    'settlement_type',
+    'settlement_type_id',
     'issue_date',
     'due_date',
     'finalized_at',
@@ -129,6 +129,11 @@ class Invoice extends Model
     public function saleKind(): BelongsTo
     {
         return $this->belongsTo(SaleKind::class);
+    }
+
+    public function settlementType(): BelongsTo
+    {
+        return $this->belongsTo(SettlementType::class);
     }
 
     /**
