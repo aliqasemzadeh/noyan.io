@@ -96,7 +96,7 @@ class SystemFunctionsPageTest extends TestCase
         });
     }
 
-    public function test_quick_update_skips_composer_but_runs_accounting_bootstrap_and_npm(): void
+    public function test_quick_update_skips_composer_and_runs_pending_version_steps_once(): void
     {
         Process::fake([
             '*' => Process::result(output: 'ok'),
@@ -140,7 +140,7 @@ class SystemFunctionsPageTest extends TestCase
         });
     }
 
-    public function test_full_update_runs_composer_accounting_bootstrap_and_npm(): void
+    public function test_full_update_runs_composer_and_pending_version_steps(): void
     {
         Process::fake([
             '*' => Process::result(output: 'ok'),
