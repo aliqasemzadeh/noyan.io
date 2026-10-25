@@ -29,6 +29,7 @@ use Illuminate\Support\Facades\Cache;
     'is_system',
     'sort_order',
     'is_active',
+    'gl_account_id',
 ])]
 class Category extends Model
 {
