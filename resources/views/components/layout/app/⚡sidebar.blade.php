@@ -42,9 +42,9 @@ new class extends Component
     <flux:modal
         name="sidebar.menu-search"
         variant="bare"
-        class="w-full max-w-[30rem] my-[12vh] max-h-screen overflow-y-hidden"
+        class="w-full max-w-[20rem] my-[16vh] max-h-screen overflow-y-hidden"
     >
-        <flux:command class="border-none shadow-lg inline-flex flex-col max-h-[76vh]">
+        <flux:command class="border-none shadow-lg inline-flex flex-col max-h-[50vh] text-sm">
             <flux:command.input :placeholder="__('general.search_menu')" closable />
 
             <flux:command.items>
@@ -57,8 +57,6 @@ new class extends Component
                         {{ $item['label'] }}
                     </flux:command.item>
                 @endforeach
-
-                <flux:command.empty>{{ __('general.search_menu_empty') }}</flux:command.empty>
             </flux:command.items>
         </flux:command>
     </flux:modal>

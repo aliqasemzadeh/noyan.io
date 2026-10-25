@@ -22,7 +22,9 @@ class SidebarMenuSearchTest extends TestCase
             ->assertOk()
             ->assertSee('sidebar.menu-search', false)
             ->assertSee('data-flux-sidebar-search', false)
-            ->assertSee(__('general.search_menu'));
+            ->assertSee(__('general.search_menu'))
+            ->assertSee(__('general.dashboard'))
+            ->assertSee('max-w-[20rem]', false);
     }
 
     public function test_administrator_sees_permitted_system_menu_items(): void
