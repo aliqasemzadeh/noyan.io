@@ -100,19 +100,25 @@ trait HasFloatingDetail
     {
         $businessId = (int) $this->getAttribute('business_id');
 
-        return GlDetail::withTrashed()->updateOrCreate(
-            [
-                'business_id' => $businessId,
-                'detailable_type' => $this->getMorphClass(),
-                'detailable_id' => $this->getKey(),
-            ],
-            [
-                'type' => $this->floatingDetailType(),
-                'code' => $this->floatingDetailCode(),
-                'name' => $this->floatingDetailName(),
-                'is_active' => $this->floatingDetailIsActive(),
-                'deleted_at' => null,
-            ],
-        );
+        $detail = GlDetail::withTrashed()->firstOrNew([
+            'business_id' => $businessId,
+            'detailable_type' => $this->getMorphClass(),
+            'detailable_id' => $this->getKey(),
+        ]);
+
+        $detail->fill([
+            'type' => $this->floatingDetailType(),
+            'code' => $this->floatingDetailCode(),
+            'name' => $this->floatingDetailName(),
+            'is_active' => $this->floatingDetailIsActive(),
+        ]);
+
+        if ($detail->trashed()) {
+            $detail->restore();
+        } else {
+            $detail->save();
+        }
+
+        return $detail->fresh() ?? $detail;
     }
 }
