@@ -52,7 +52,7 @@ new class extends Component
             }
 
             if (BusinessPanelContext::isSale()) {
-                abort_unless($invoice->type === InvoiceType::Sale, 403);
+                abort_unless(in_array($invoice->type, InvoiceType::creatable(), true), 403);
             }
 
             $invoice->loadMissing('quote');
@@ -67,7 +67,7 @@ new class extends Component
             abort(404);
         }
 
-        if (BusinessPanelContext::isSale() && $resolvedType !== InvoiceType::Sale) {
+        if (BusinessPanelContext::isSale() && ! in_array($resolvedType, InvoiceType::creatable(), true)) {
             abort(403);
         }
 

@@ -37,7 +37,6 @@ new class extends Component
 
         if (BusinessPanelContext::isSale()) {
             abort_unless(Auth::user()?->canInBusiness(BusinessPermission::InvoiceView), 403);
-            $this->typeFilter = InvoiceType::Sale->value;
         }
     }
 
@@ -72,7 +71,7 @@ new class extends Component
             return;
         }
 
-        if (BusinessPanelContext::isSale() && $invoice->type !== InvoiceType::Sale) {
+        if (BusinessPanelContext::isSale() && ! in_array($invoice->type, InvoiceType::creatable(), true)) {
             abort(403);
         }
 
@@ -180,7 +179,12 @@ new class extends Component
             })
             ->when(
                 BusinessPanelContext::isSale(),
-                fn ($query) => $query->where('type', InvoiceType::Sale),
+                fn ($query) => $query
+                    ->whereIn('type', array_map(
+                        fn (InvoiceType $type): string => $type->value,
+                        InvoiceType::creatable(),
+                    ))
+                    ->when($this->typeFilter !== '', fn ($query) => $query->where('type', $this->typeFilter)),
                 fn ($query) => $query->when($this->typeFilter !== '', fn ($query) => $query->where('type', $this->typeFilter)),
             )
             ->when($this->statusFilter === 'draft', fn ($query) => $query->whereNull('finalized_at'))
@@ -246,31 +250,25 @@ new class extends Component
             </div>
 
             @if (auth()->user()?->canInBusiness(BusinessPermission::InvoiceCreate) || ! $this->isSalePanel())
-                @if ($this->isSalePanel())
-                    <flux:button variant="primary" color="teal" icon="plus" class="w-full sm:w-auto" :href="$this->panelRoute('invoices.create', ['type' => 'sale'])" wire:navigate>
-                        {{ __('general.new_sale_invoice') }}
+                <flux:dropdown class="w-full sm:w-auto">
+                    <flux:button variant="primary" color="teal" icon:trailing="chevron-down" class="w-full sm:w-auto">
+                        {{ __('general.create_invoice') }}
                     </flux:button>
-                @else
-                    <flux:dropdown class="w-full sm:w-auto">
-                        <flux:button variant="primary" color="teal" icon:trailing="chevron-down" class="w-full sm:w-auto">
-                            {{ __('general.create_invoice') }}
-                        </flux:button>
-                        <flux:menu>
-                            <flux:menu.item icon="trending-up" :href="$this->panelRoute('invoices.create', ['type' => 'sale'])" wire:navigate>
-                                {{ __('general.new_sale_invoice') }}
-                            </flux:menu.item>
-                            <flux:menu.item icon="trending-down" :href="$this->panelRoute('invoices.create', ['type' => 'purchase'])" wire:navigate>
-                                {{ __('general.new_purchase_invoice') }}
-                            </flux:menu.item>
-                        </flux:menu>
-                    </flux:dropdown>
-                @endif
+                    <flux:menu>
+                        <flux:menu.item icon="trending-up" :href="$this->panelRoute('invoices.create', ['type' => 'sale'])" wire:navigate>
+                            {{ __('general.new_sale_invoice') }}
+                        </flux:menu.item>
+                        <flux:menu.item icon="trending-down" :href="$this->panelRoute('invoices.create', ['type' => 'purchase'])" wire:navigate>
+                            {{ __('general.new_purchase_invoice') }}
+                        </flux:menu.item>
+                    </flux:menu>
+                </flux:dropdown>
             @endif
         </div>
     </div>
 
     <flux:card>
-        <div class="mb-4 grid gap-3 {{ $this->isSalePanel() ? 'md:grid-cols-2' : 'md:grid-cols-3' }}">
+        <div class="mb-4 grid gap-3 md:grid-cols-3">
             <flux:input
                 wire:model.live.debounce.300ms="search"
                 icon="search"
@@ -278,16 +276,14 @@ new class extends Component
                 clearable
             />
 
-            @unless ($this->isSalePanel())
-                <flux:select wire:model.live="typeFilter" searchable variant="listbox" placeholder="{{ __('general.all_invoice_types') }}">
-                    <flux:select.option value="">{{ __('general.all_invoice_types') }}</flux:select.option>
-                    @foreach (InvoiceType::creatable() as $type)
-                        <flux:select.option value="{{ $type->value }}" wire:key="filter-invoice-type-{{ $type->value }}">
-                            {{ $type->label() }}
-                        </flux:select.option>
-                    @endforeach
-                </flux:select>
-            @endunless
+            <flux:select wire:model.live="typeFilter" searchable variant="listbox" placeholder="{{ __('general.all_invoice_types') }}">
+                <flux:select.option value="">{{ __('general.all_invoice_types') }}</flux:select.option>
+                @foreach (InvoiceType::creatable() as $type)
+                    <flux:select.option value="{{ $type->value }}" wire:key="filter-invoice-type-{{ $type->value }}">
+                        {{ $type->label() }}
+                    </flux:select.option>
+                @endforeach
+            </flux:select>
 
             <flux:select wire:model.live="statusFilter" searchable variant="listbox" placeholder="{{ __('general.all_statuses') }}">
                 <flux:select.option value="">{{ __('general.all_statuses') }}</flux:select.option>
