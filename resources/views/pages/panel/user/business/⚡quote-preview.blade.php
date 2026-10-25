@@ -80,16 +80,31 @@ new #[Layout('layouts::invoice')] class extends Component
 
 @php
     $orientation = $this->orientation();
-    $containerClass = $orientation === InvoiceOrientation::Landscape
-        ? 'mx-auto max-w-6xl px-3 py-4 sm:px-4'
-        : 'mx-auto max-w-5xl px-3 py-4 sm:px-4';
 @endphp
 
 <x-slot name="title">{{ __('general.preview_quote') }} - {{ $business->name }}</x-slot>
 <x-slot name="invoiceOrientation">{{ $orientation->value }}</x-slot>
 
-<div class="{{ $containerClass }}">
-    <div class="no-print mb-4 flex justify-end">
+<x-accounting.printable-document
+    :business="$business"
+    :document-label="__('general.quote')"
+    :number="__('general.quote_preview_sample_number')"
+    :party-name="__('general.invoice_preview_sample_party')"
+    :dates="[
+        ['label' => __('general.issue_date'), 'value' => $this->formatDate(now())],
+        ['label' => __('general.valid_until'), 'value' => $this->formatDate(now()->addDays(14))],
+    ]"
+    :items="$this->sampleItems"
+    items-total="640000"
+    global-discount="0"
+    global-tax="0"
+    total-amount="640000"
+    :note="__('general.invoice_preview_sample_note')"
+    :orientation="$orientation"
+    print-storage-key="quote-preview-print-settings"
+    :format-amount="fn (string $amount): string => $this->formatAmount($amount)"
+>
+    <x-slot:toolbar>
         <flux:button
             type="button"
             variant="primary"
@@ -99,35 +114,17 @@ new #[Layout('layouts::invoice')] class extends Component
         >
             {{ __('general.print_quote') }}
         </flux:button>
-    </div>
+    </x-slot:toolbar>
 
-    <x-accounting.printable-document
-        :business="$business"
-        :document-label="__('general.quote')"
-        :number="__('general.quote_preview_sample_number')"
-        :party-name="__('general.invoice_preview_sample_party')"
-        :dates="[
-            ['label' => __('general.issue_date'), 'value' => $this->formatDate(now())],
-            ['label' => __('general.valid_until'), 'value' => $this->formatDate(now()->addDays(14))],
-        ]"
-        :items="$this->sampleItems"
-        items-total="640000"
-        global-discount="0"
-        global-tax="0"
-        total-amount="640000"
-        :note="__('general.invoice_preview_sample_note')"
-        :format-amount="fn (string $amount): string => $this->formatAmount($amount)"
-    >
-        <x-slot:banner>
-            <div class="no-print rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100">
-                {{ __('general.invoice_preview_sample_notice') }}
-            </div>
-        </x-slot:banner>
+    <x-slot:banner>
+        <div class="no-print rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100">
+            {{ __('general.invoice_preview_sample_notice') }}
+        </div>
+    </x-slot:banner>
 
-        @if ($footer = $this->documentFooter())
-            <x-slot:footer>
-                {{ $footer }}
-            </x-slot:footer>
-        @endif
-    </x-accounting.printable-document>
-</div>
+    @if ($footer = $this->documentFooter())
+        <x-slot:footer>
+            {{ $footer }}
+        </x-slot:footer>
+    @endif
+</x-accounting.printable-document>

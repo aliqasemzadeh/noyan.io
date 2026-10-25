@@ -21,13 +21,19 @@
     'buyerPhone' => null,
     'buyerAddress' => null,
     'heading' => null,
-    'printStorageKey' => 'printable-document-columns',
+    'orientation' => null,
+    'printStorageKey' => 'printable-document-print-settings',
 ])
 
 @php
+    use App\Enums\Business\InvoiceOrientation;
     use App\Enums\Catalog\ProductUnit;
     use App\Support\Accounting\DocumentLineAmounts;
     use App\Support\PersianAmountInWords;
+
+    $defaultOrientation = $orientation instanceof InvoiceOrientation
+        ? $orientation
+        : (InvoiceOrientation::tryFrom((string) ($orientation ?? '')) ?? InvoiceOrientation::Portrait);
 
     $logoUrl = $business->logoUrl();
     $primary = $business->invoicePrimaryColor();
@@ -62,6 +68,7 @@
 <div
     x-data="{
         storageKey: @js($printStorageKey),
+        orientation: @js($defaultOrientation->value),
         columns: {
             sku: true,
             unit: true,
@@ -75,36 +82,57 @@
             try {
                 const saved = JSON.parse(sessionStorage.getItem(this.storageKey) || 'null');
                 if (saved && typeof saved === 'object') {
-                    this.columns = { ...this.columns, ...saved };
+                    if (saved.columns && typeof saved.columns === 'object') {
+                        this.columns = { ...this.columns, ...saved.columns };
+                    } else if (! ('orientation' in saved) && ! ('columns' in saved)) {
+                        this.columns = { ...this.columns, ...saved };
+                    }
+
+                    if (saved.orientation === 'portrait' || saved.orientation === 'landscape') {
+                        this.orientation = saved.orientation;
+                    }
                 }
             } catch (e) {}
-            this.$watch('columns', (value) => {
-                sessionStorage.setItem(this.storageKey, JSON.stringify(value));
-            }, { deep: true });
+
+            this.applyPageOrientation();
+            this.$watch('columns', () => this.persist(), { deep: true });
+            this.$watch('orientation', () => {
+                this.persist();
+                this.applyPageOrientation();
+            });
         },
-        visibleCount() {
-            let count = 5; // row, description, quantity, unit_price, final_total
-            if (this.columns.sku) count++;
-            if (this.columns.unit) count++;
-            if (this.columns.line_total) count++;
-            if (this.columns.discount) count++;
-            if (this.columns.after_discount) count++;
-            if (this.columns.tax) count++;
-            return count;
+        persist() {
+            sessionStorage.setItem(this.storageKey, JSON.stringify({
+                columns: this.columns,
+                orientation: this.orientation,
+            }));
+        },
+        applyPageOrientation() {
+            let style = document.getElementById('print-page-orientation');
+            if (! style) {
+                style = document.createElement('style');
+                style.id = 'print-page-orientation';
+                document.head.appendChild(style);
+            }
+            style.textContent = '@media print { @page { size: A4 ' + this.orientation + '; margin: 8mm; } }';
         },
         labelColspan() {
-            let count = 3; // row, description, quantity (+ optional sku/unit) then unit_price before money cols
+            let count = 3;
             if (this.columns.sku) count++;
             if (this.columns.unit) count++;
-            count++; // unit_price
+            count++;
             return count;
         },
     }"
-    {{ $attributes->merge([
-        'class' => 'invoice-sheet overflow-hidden border-2 bg-white text-black dark:bg-white',
-        'style' => "border-color: {$borderColor}; print-color-adjust: exact; -webkit-print-color-adjust: exact;",
-    ]) }}
+    class="mx-auto px-3 py-4 sm:px-4"
+    :class="orientation === 'landscape' ? 'max-w-6xl' : 'max-w-5xl'"
 >
+    <div
+        {{ $attributes->merge([
+            'class' => 'invoice-sheet overflow-hidden border-2 bg-white text-black dark:bg-white',
+            'style' => "border-color: {$borderColor}; print-color-adjust: exact; -webkit-print-color-adjust: exact;",
+        ]) }}
+    >
     <div class="no-print mb-3 flex flex-wrap items-start justify-end gap-2">
         <div class="relative">
             <flux:button
@@ -121,9 +149,22 @@
                 x-show="advancedOpen"
                 x-cloak
                 x-on:click.outside="advancedOpen = false"
-                class="absolute end-0 z-20 mt-2 w-64 rounded-lg border border-zinc-200 bg-white p-3 shadow-lg dark:border-zinc-700 dark:bg-zinc-900"
+                class="absolute end-0 z-20 mt-2 w-72 rounded-lg border border-zinc-200 bg-white p-3 shadow-lg dark:border-zinc-700 dark:bg-zinc-900"
             >
                 <p class="mb-2 text-xs text-zinc-600 dark:text-zinc-300">{{ __('general.advanced_print_hint') }}</p>
+
+                <div class="mb-3 space-y-2 border-b border-zinc-200 pb-3 dark:border-zinc-700">
+                    <p class="text-xs font-semibold text-zinc-700 dark:text-zinc-200">{{ __('general.invoice_orientation') }}</p>
+                    <label class="flex items-center gap-2 text-sm text-zinc-800 dark:text-zinc-100">
+                        <input type="radio" class="border-zinc-300" name="print-orientation" value="portrait" x-model="orientation">
+                        <span>{{ __('general.invoice_orientation_portrait') }}</span>
+                    </label>
+                    <label class="flex items-center gap-2 text-sm text-zinc-800 dark:text-zinc-100">
+                        <input type="radio" class="border-zinc-300" name="print-orientation" value="landscape" x-model="orientation">
+                        <span>{{ __('general.invoice_orientation_landscape') }}</span>
+                    </label>
+                </div>
+
                 <div class="space-y-2">
                     @foreach ($toggleableColumns as $key => $label)
                         <label class="flex items-center gap-2 text-sm text-zinc-800 dark:text-zinc-100">
@@ -362,5 +403,6 @@
         </div>
 
         {{ $footer ?? '' }}
+    </div>
     </div>
 </div>
