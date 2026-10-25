@@ -651,6 +651,7 @@ return [
     'stock_conversion_direction_input' => 'Input (consume)',
     'stock_conversion_direction_output' => 'Output (produce)',
     'search_menu' => 'Search menu...',
+    'search_menu_empty' => 'No menu items available',
     'warehouse' => 'Warehouse',
     'warehouses' => 'Warehouses',
     'warehouse_dashboard_hint' => 'Manage warehouses, inventory, receiving and issuing stock.',

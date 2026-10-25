@@ -651,6 +651,7 @@ return [
     'stock_conversion_direction_input' => 'ورودی (مصرف)',
     'stock_conversion_direction_output' => 'خروجی (تولید)',
     'search_menu' => 'جستجوی منو...',
+    'search_menu_empty' => 'منویی برای نمایش نیست',
     'warehouse' => 'انبار',
     'warehouses' => 'انبارها',
     'warehouse_dashboard_hint' => 'مدیریت انبارها، موجودی، ورود و خروج کالا.',
