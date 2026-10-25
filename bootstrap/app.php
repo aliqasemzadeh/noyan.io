@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\CheckBannedIp;
 use App\Http\Middleware\EnsureBusinessIsSelectedMiddleware;
 use App\Http\Middleware\EnsureBusinessPanelAccessMiddleware;
 use App\Http\Middleware\EnsureBusinessPermissionMiddleware;
@@ -23,6 +24,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->redirectUsersTo(fn () => route('dashboard'));
         $middleware->web(append: [
             SetLocale::class,
+            CheckBannedIp::class,
         ]);
         $middleware->alias([
             'business.selected' => EnsureBusinessIsSelectedMiddleware::class,
