@@ -49,7 +49,7 @@ new class extends Component
 
         @if ($user)
             <flux:callout icon="box" variant="secondary" inline>
-                {{ $user->mobile }}
+                {{ $user->fullName() ?? $user->mobile }}
             </flux:callout>
         @endif
 
