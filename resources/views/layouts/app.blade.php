@@ -45,62 +45,21 @@
 
             <livewire:layout.app.panels :key="'layout-app-panels'" />
 
+            <div class="px-4 pb-3 in-data-flux-sidebar-collapsed-desktop:hidden">
+                <flux:radio.group x-data variant="segmented" x-model="$flux.appearance" class="w-full">
+                    <flux:radio value="light" icon="sun" />
+                    <flux:radio value="dark" icon="moon" />
+                    <flux:radio value="system" icon="computer-desktop" />
+                </flux:radio.group>
+            </div>
+
             <livewire:layout.app-shell variant="sidebar" :key="'layout-app-shell-sidebar'" />
         </flux:sidebar>
 
-        <flux:header class="lg:hidden border-b border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-800">
-            <flux:sidebar.toggle class="lg:hidden" icon="bars-2" inset="left" />
+        <flux:header class="lg:hidden flex items-center gap-2 border-b border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-800">
+            <flux:sidebar.toggle class="lg:hidden shrink-0" icon="bars-2" inset="left" />
 
-            <flux:spacer />
-
-            <flux:brand
-                :href="route('dashboard')"
-                wire:navigate
-                :name="$brandName"
-                :logo="$brandLogo"
-                :alt="$brandName"
-                class="me-0"
-            />
-
-            <flux:spacer />
-
-            <div
-                class="me-1"
-                x-data="{
-                    dark: document.documentElement.classList.contains('dark'),
-                    toggle() {
-                        this.dark = ! this.dark;
-                        window.Flux.applyAppearance(this.dark ? 'dark' : 'light');
-                    },
-                }"
-                x-init="
-                    dark = document.documentElement.classList.contains('dark');
-                    new MutationObserver(() => { dark = document.documentElement.classList.contains('dark') }).observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
-                "
-            >
-                <flux:tooltip content="{{ __('general.toggle_theme') }}">
-                    <flux:button
-                        size="sm"
-                        variant="ghost"
-                        class="relative"
-                        x-on:click="toggle()"
-                        x-bind:aria-label="dark ? '{{ __('general.theme_light') }}' : '{{ __('general.theme_dark') }}'"
-                    >
-                        <span class="relative block size-5">
-                            <flux:icon.sun
-                                class="absolute inset-0 size-5 transition-opacity duration-300"
-                                x-bind:class="dark ? 'opacity-0' : 'opacity-100'"
-                            />
-                            <flux:icon.moon
-                                class="absolute inset-0 size-5 transition-opacity duration-300"
-                                x-bind:class="dark ? 'opacity-100' : 'opacity-0'"
-                            />
-                        </span>
-                    </flux:button>
-                </flux:tooltip>
-            </div>
-
-            <livewire:layout.app-shell variant="header" :key="'layout-app-shell-header'" />
+            <livewire:layout.app-shell variant="mobile-brand" :key="'layout-app-shell-mobile-brand'" />
         </flux:header>
 
         <flux:main inset class="lg:ms-0">

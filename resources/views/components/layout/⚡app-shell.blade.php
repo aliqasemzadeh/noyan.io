@@ -75,13 +75,19 @@ new class extends Component
 
 @php
     $authUser = auth()->user();
+    $currentBusiness = $authUser->currentBusiness;
+    $brandName = $currentBusiness?->name ?? __('general.app_name');
+    $canSwitchBusiness = $this->businesses->count() > 1;
     $profileName = $authUser->fullName()
-        ?? $authUser->currentBusiness?->name
+        ?? $currentBusiness?->name
         ?? $authUser->mobile;
     $profileAvatar = $authUser->avatarUrl();
 @endphp
 
-<div>
+<div @class([
+    'min-w-0 flex-1' => $variant === 'mobile-brand',
+    'w-full' => $variant === 'sidebar',
+])>
     <div
         wire:loading.flex
         wire:target="switchBusiness"
@@ -93,43 +99,45 @@ new class extends Component
         </div>
     </div>
 
-    @if ($variant === 'sidebar')
-        <div class="w-full max-lg:hidden">
-            <flux:dropdown position="top" align="start" class="w-full">
-                <flux:sidebar.profile :name="$profileName" :avatar="$profileAvatar" />
+    @if ($variant === 'mobile-brand')
+        @if ($canSwitchBusiness)
+            <flux:dropdown position="bottom" align="start" class="max-w-full">
+                <button
+                    type="button"
+                    class="group flex max-w-full min-w-0 items-center gap-1 rounded-lg px-1.5 py-1 text-start hover:bg-zinc-800/5 dark:hover:bg-white/10"
+                >
+                    <span class="truncate text-sm font-medium text-zinc-800 dark:text-zinc-100">
+                        {{ $brandName }}
+                    </span>
+                    <flux:icon
+                        name="chevron-down"
+                        variant="micro"
+                        class="size-4 shrink-0 text-zinc-400 group-hover:text-zinc-800 dark:text-white/80 dark:group-hover:text-white"
+                    />
+                </button>
 
                 <flux:menu>
-                    @if ($this->businesses->isNotEmpty())
-                        <flux:menu.radio.group>
-                            @foreach ($this->businesses as $business)
-                                <flux:menu.radio
-                                    wire:key="sidebar-business-{{ $business->id }}"
-                                    :checked="auth()->user()->current_business_id === $business->id"
-                                    wire:click="switchBusiness({{ $business->id }})"
-                                >
-                                    {{ $business->name }}
-                                </flux:menu.radio>
-                            @endforeach
-                        </flux:menu.radio.group>
-
-                        <flux:menu.separator />
-                    @endif
-
-                    <flux:menu.item icon="plus" :href="route('user.businesses.create')" wire:navigate>
-                        {{ __('general.add_business') }}
-                    </flux:menu.item>
-
-                    <flux:menu.separator />
-
-                    <flux:menu.item icon="arrow-right-start-on-rectangle" wire:click="logout">
-                        {{ __('general.logout') }}
-                    </flux:menu.item>
+                    <flux:menu.radio.group>
+                        @foreach ($this->businesses as $business)
+                            <flux:menu.radio
+                                wire:key="mobile-brand-business-{{ $business->id }}"
+                                :checked="auth()->user()->current_business_id === $business->id"
+                                wire:click="switchBusiness({{ $business->id }})"
+                            >
+                                {{ $business->name }}
+                            </flux:menu.radio>
+                        @endforeach
+                    </flux:menu.radio.group>
                 </flux:menu>
             </flux:dropdown>
-        </div>
+        @else
+            <span class="block truncate px-1.5 text-sm font-medium text-zinc-800 dark:text-zinc-100">
+                {{ $brandName }}
+            </span>
+        @endif
     @else
-        <flux:dropdown position="top" align="start">
-            <flux:profile
+        <flux:dropdown position="top" align="start" class="w-full">
+            <flux:sidebar.profile
                 :name="$profileName"
                 :avatar="$profileAvatar"
             />
@@ -139,7 +147,7 @@ new class extends Component
                     <flux:menu.radio.group>
                         @foreach ($this->businesses as $business)
                             <flux:menu.radio
-                                wire:key="header-business-{{ $business->id }}"
+                                wire:key="sidebar-business-{{ $business->id }}"
                                 :checked="auth()->user()->current_business_id === $business->id"
                                 wire:click="switchBusiness({{ $business->id }})"
                             >
