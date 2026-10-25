@@ -2,11 +2,15 @@
 
 namespace Tests\Feature;
 
+use App\Actions\Business\AcceptBusinessInvitationAction;
 use App\Enums\Business\BusinessRole;
 use App\Models\Business;
+use App\Models\BusinessInvitation;
 use App\Models\BusinessUser;
 use App\Models\User;
+use App\Settings\InvoiceSystemSettings;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Queue;
 use Livewire\Livewire;
 use Tests\Concerns\GrantsAdministratorAccess;
 use Tests\TestCase;
@@ -84,27 +88,36 @@ class BusinessManagementTest extends TestCase
         $this->assertTrue($oldOwnerMembership->hasRole(BusinessRole::Admin));
     }
 
-    public function test_admin_can_add_and_remove_business_user(): void
+    public function test_admin_can_invite_and_remove_business_user(): void
     {
+        Queue::fake();
+
         $admin = $this->grantAdministratorAccess(User::factory()->create());
         $owner = User::factory()->create();
-        $member = User::factory()->create();
-        $business = Business::factory()->for($owner, 'owner')->create();
+        $member = User::factory()->create(['mobile' => '09125556677']);
+        $business = Business::factory()->for($owner, 'owner')->create([
+            'sms_wallet_balance' => '5000',
+        ]);
+
+        $settings = app(InvoiceSystemSettings::class);
+        $settings->sms_unit_cost = '1000';
+        $settings->save();
 
         Livewire::actingAs($admin)
             ->test('business.create-user')
             ->call('assignData', $business)
-            ->set('form.user_id', $member->id)
+            ->set('form.mobile', $member->mobile)
             ->set('form.roles', [BusinessRole::Accountant->value])
             ->call('save')
             ->assertHasNoErrors();
 
-        $membership = BusinessUser::query()
+        $invitation = BusinessInvitation::query()
             ->where('business_id', $business->id)
-            ->where('user_id', $member->id)
-            ->first();
+            ->where('mobile', $member->mobile)
+            ->firstOrFail();
 
-        $this->assertNotNull($membership);
+        $membership = app(AcceptBusinessInvitationAction::class)->handle($invitation, $member);
+
         $this->assertTrue($membership->hasRole(BusinessRole::Accountant));
 
         Livewire::actingAs($admin)

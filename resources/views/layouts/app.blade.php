@@ -15,10 +15,10 @@
             $currentBusiness = auth()->user()?->currentBusiness;
             $brandName = $currentBusiness?->name ?? __('general.app_name');
             $brandLogo = $currentBusiness?->logoUrl();
-            $showAiComposer = auth()->check() && (
-                request()->routeIs('system.*')
-                || request()->routeIs('user.*')
-                || request()->routeIs('accounting.*')
+            $authUser = auth()->user();
+            $showAiComposer = $authUser !== null && (
+                (request()->routeIs('system.users.*') && $authUser->can('user_view'))
+                || (request()->routeIs('accounting.*') && $authUser->canAccessPanel(\App\Enums\Business\BusinessPanel::Accounting))
             );
             $aiComposerContext = request()->routeIs('system.users.*') ? 'users' : 'accounting';
             $aiAssistantTitle = $aiComposerContext === 'users'

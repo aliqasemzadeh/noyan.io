@@ -263,6 +263,14 @@ class Business extends Model implements HasMedia
         return $this->hasMany(BusinessUser::class);
     }
 
+    /**
+     * @return HasMany<BusinessInvitation, $this>
+     */
+    public function invitations(): HasMany
+    {
+        return $this->hasMany(BusinessInvitation::class);
+    }
+
     public function users(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'business_user')

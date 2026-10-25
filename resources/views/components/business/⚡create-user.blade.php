@@ -1,14 +1,13 @@
 <?php
 
+use App\Actions\Business\InviteBusinessUserAction;
 use App\Enums\Business\BusinessPermission;
 use App\Enums\Business\BusinessRole;
 use App\Livewire\Forms\BusinessUserForm;
 use App\Models\Business;
-use App\Models\User;
+use App\Models\BusinessInvitation;
 use Flux\Flux;
-use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
-use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
 use Livewire\Component;
 
@@ -17,8 +16,6 @@ new class extends Component
     public BusinessUserForm $form;
 
     public ?Business $business = null;
-
-    public string $userSearch = '';
 
     public ?string $editingRole = null;
 
@@ -30,10 +27,8 @@ new class extends Component
 
         $this->business = $business;
         $this->form->setBusiness($business);
-        $this->userSearch = '';
         $this->editingRole = null;
         $this->resetValidation();
-        unset($this->users);
 
         Flux::modal('business.create-user')->show();
     }
@@ -47,6 +42,12 @@ new class extends Component
     {
         $this->dispatch('panels.administrator.business.users.table');
         $this->dispatch('panels.user.business.users.table');
+    }
+
+    public function updatedFormMobile(): void
+    {
+        $this->form->resolveMembershipFromMobile();
+        $this->resetValidation('form.mobile');
     }
 
     public function updatedFormRoles(): void
@@ -118,41 +119,6 @@ new class extends Component
         return in_array($permission, $this->form->permissions[$this->editingRole] ?? [], true);
     }
 
-    #[Computed]
-    public function users(): Collection
-    {
-        $userId = $this->form->user_id;
-        $search = $this->userSearch;
-        $businessId = $this->business?->id;
-
-        return User::query()
-            ->when($search !== '' || $userId, function ($query) use ($userId, $search): void {
-                $query->where(function ($query) use ($userId, $search): void {
-                    if ($search !== '') {
-                        $query->where('mobile', 'like', '%'.$search.'%');
-                    }
-
-                    if ($userId) {
-                        $query->orWhere('id', $userId);
-                    }
-                });
-            })
-            ->when($businessId, function ($query) use ($userId, $businessId): void {
-                $query->where(function ($query) use ($userId, $businessId): void {
-                    $query->whereDoesntHave('memberships', function ($query) use ($businessId): void {
-                        $query->where('business_id', $businessId);
-                    });
-
-                    if ($userId) {
-                        $query->orWhere('id', $userId);
-                    }
-                });
-            })
-            ->orderByDesc('id')
-            ->limit(20)
-            ->get();
-    }
-
     /**
      * @return array<int, BusinessRole>
      */
@@ -176,22 +142,26 @@ new class extends Component
         return $this->editingRoleEnum()?->applicablePermissionGroups() ?? [];
     }
 
-    public function save(): void
+    public function save(InviteBusinessUserAction $inviteAction): void
     {
         abort_unless($this->business !== null, 403);
         $this->authorizeManage($this->business);
 
-        $this->form->syncPermissionsFromRoles();
-        $this->form->store();
+        $result = $this->form->saveOrInvite($inviteAction);
 
-        $this->reset('userSearch', 'business', 'editingRole');
-        unset($this->users);
+        $this->reset('business', 'editingRole');
 
         $this->dispatchUsersTableRefresh();
 
         Flux::modals()->close();
 
-        Flux::toast(__('general.business_user_added'));
+        if ($result instanceof BusinessInvitation) {
+            Flux::toast(__('general.business_invitation_sent'));
+
+            return;
+        }
+
+        Flux::toast(__('general.business_user_updated'));
     }
 };
 ?>
@@ -200,6 +170,7 @@ new class extends Component
 <flux:modal name="business.create-user" flyout position="right" class="space-y-6">
     <div>
         <flux:heading size="lg">{{ __('general.create_business_user') }}</flux:heading>
+        <flux:text class="mt-1">{{ __('general.business_user_invite_hint') }}</flux:text>
     </div>
 
     @if ($business)
@@ -210,27 +181,26 @@ new class extends Component
 
     <form wire:submit="save" class="space-y-6">
         <flux:field>
-            <flux:label>{{ __('general.user') }}</flux:label>
-            <flux:select
-                wire:model="form.user_id"
-                variant="combobox"
-                :filter="false"
-                placeholder="{{ __('general.select_user') }}"
-            >
-                <x-slot name="input">
-                    <flux:select.input
-                        wire:model.live="userSearch"
-                        placeholder="{{ __('general.search_user_placeholder') }}"
-                    />
-                </x-slot>
-
-                @foreach ($this->users as $user)
-                    <flux:select.option value="{{ $user->id }}" wire:key="business-user-{{ $user->id }}">
-                        {{ $user->mobile }}
-                    </flux:select.option>
-                @endforeach
-            </flux:select>
-            <flux:error name="form.user_id" />
+            <flux:label>{{ __('general.mobile') }}</flux:label>
+            <flux:input
+                wire:model.live.debounce.400ms="form.mobile"
+                type="tel"
+                inputmode="numeric"
+                maxlength="11"
+                placeholder="{{ __('general.mobile_placeholder') }}"
+                dir="ltr"
+                clearable
+            />
+            <flux:error name="form.mobile" />
+            @if ($form->membership)
+                <flux:description>
+                    {{ __('general.business_user_existing_member_hint') }}
+                </flux:description>
+            @else
+                <flux:description>
+                    {{ __('general.business_user_invite_description') }}
+                </flux:description>
+            @endif
         </flux:field>
 
         <div class="space-y-3">
@@ -289,7 +259,7 @@ new class extends Component
         @endif
 
         <flux:button type="submit" variant="primary" color="teal" class="w-full">
-            {{ __('general.save') }}
+            {{ $form->membership ? __('general.save') : __('general.send_invitation') }}
         </flux:button>
     </form>
 </flux:modal>

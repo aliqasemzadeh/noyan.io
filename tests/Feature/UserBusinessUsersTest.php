@@ -46,12 +46,20 @@ class UserBusinessUsersTest extends TestCase
             ->assertForbidden();
     }
 
-    public function test_owner_can_add_user_with_custom_permissions(): void
+    public function test_owner_can_update_existing_member_with_custom_permissions_by_mobile(): void
     {
         $owner = User::factory()->create();
-        $member = User::factory()->create();
-        $business = Business::factory()->for($owner, 'owner')->create();
+        $member = User::factory()->create(['mobile' => '09120001122']);
+        $business = Business::factory()->for($owner, 'owner')->create([
+            'sms_wallet_balance' => '5000',
+        ]);
         $owner->forceFill(['current_business_id' => $business->id])->save();
+
+        BusinessUser::factory()
+            ->seller()
+            ->for($business)
+            ->for($member, 'user')
+            ->create();
 
         $customPermissions = [
             BusinessPermission::QuoteView->value,
@@ -63,7 +71,7 @@ class UserBusinessUsersTest extends TestCase
         Livewire::actingAs($owner)
             ->test('business.create-user')
             ->call('assignData', $business)
-            ->set('form.user_id', $member->id)
+            ->set('form.mobile', '09120001122')
             ->set('form.roles', [BusinessRole::Seller->value])
             ->set('form.permissions', [
                 BusinessRole::Seller->value => $customPermissions,

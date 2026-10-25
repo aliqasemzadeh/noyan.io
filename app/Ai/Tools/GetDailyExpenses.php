@@ -2,7 +2,9 @@
 
 namespace App\Ai\Tools;
 
+use App\Ai\Tools\Concerns\ChecksBusinessPermission;
 use App\Enums\Accounting\TransactionType;
+use App\Enums\Business\BusinessPermission;
 use App\Models\Accounting\Transaction;
 use App\Support\LocaleDate;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
@@ -13,6 +15,8 @@ use Stringable;
 
 class GetDailyExpenses implements Tool
 {
+    use ChecksBusinessPermission;
+
     /**
      * Get the description of the tool's purpose.
      */
@@ -26,6 +30,10 @@ class GetDailyExpenses implements Tool
      */
     public function handle(Request $request): Stringable|string
     {
+        if ($denied = $this->denyUnlessCan(BusinessPermission::TransactionView)) {
+            return $denied;
+        }
+
         $user = Auth::user();
         $businessId = $user?->current_business_id;
 

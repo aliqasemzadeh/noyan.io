@@ -2,8 +2,10 @@
 
 namespace App\Ai\Tools;
 
+use App\Ai\Tools\Concerns\ChecksBusinessPermission;
 use App\Ai\Tools\Concerns\ImportsFormalSaleDocument;
 use App\Enums\Accounting\FormalSaleDocumentKind;
+use App\Enums\Business\BusinessPermission;
 use App\Jobs\Accounting\ImportFormalSaleDocumentJob;
 use App\Services\Imports\FormalSaleDocument;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
@@ -14,6 +16,7 @@ use Stringable;
 
 class ImportInvoice implements Tool
 {
+    use ChecksBusinessPermission;
     use ImportsFormalSaleDocument;
 
     /**
@@ -29,6 +32,10 @@ class ImportInvoice implements Tool
      */
     public function handle(Request $request): Stringable|string
     {
+        if ($denied = $this->denyUnlessCan(BusinessPermission::InvoiceCreate)) {
+            return $denied;
+        }
+
         $user = Auth::user();
         $businessId = $user?->current_business_id;
 

@@ -2,8 +2,10 @@
 
 use App\Ai\Agents\AccountingAssistant;
 use App\Ai\Agents\UserAssistant;
+use App\Enums\Business\BusinessPanel;
 use Flux\Flux;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Laravel\Ai\Enums\Lab;
@@ -45,6 +47,24 @@ new class extends Component
     public function mount(string $context = 'accounting'): void
     {
         $this->context = $context;
+        $this->authorizeComposerAccess();
+    }
+
+    protected function authorizeComposerAccess(): void
+    {
+        $user = Auth::user();
+
+        if ($user === null) {
+            abort(403);
+        }
+
+        if ($this->context === 'users') {
+            abort_unless($user->can('user_view'), 403);
+
+            return;
+        }
+
+        abort_unless($user->canAccessPanel(BusinessPanel::Accounting), 403);
     }
 
     public function notifyMicDenied(): void
@@ -152,6 +172,8 @@ new class extends Component
 
     public function sendPrompt(): void
     {
+        $this->authorizeComposerAccess();
+
         $hasDocument = $this->context === 'accounting' && $this->document !== null;
 
         $this->validate([

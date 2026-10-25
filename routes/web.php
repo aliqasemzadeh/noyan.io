@@ -36,6 +36,9 @@ Route::livewire('/quotes/public/{quote}', 'pages::public.quote.show')
     ->middleware('signed')
     ->name('quotes.public');
 
+Route::livewire('/invites/{token}', 'pages::auth.business-invite')
+    ->name('business-invitations.accept');
+
 Route::middleware('guest')->group(function () {
     Route::livewire('/login', 'pages::auth.login')->name('login');
 });

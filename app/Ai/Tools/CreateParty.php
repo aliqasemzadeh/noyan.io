@@ -2,6 +2,8 @@
 
 namespace App\Ai\Tools;
 
+use App\Ai\Tools\Concerns\ChecksBusinessPermission;
+use App\Enums\Business\BusinessPermission;
 use App\Enums\PartyType;
 use App\Services\Accounting\PartyRegistrar;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
@@ -12,6 +14,8 @@ use Stringable;
 
 class CreateParty implements Tool
 {
+    use ChecksBusinessPermission;
+
     /**
      * Get the description of the tool's purpose.
      */
@@ -25,6 +29,10 @@ class CreateParty implements Tool
      */
     public function handle(Request $request): Stringable|string
     {
+        if ($denied = $this->denyUnlessCan(BusinessPermission::PartyCreate)) {
+            return $denied;
+        }
+
         $user = Auth::user();
         $businessId = $user?->current_business_id;
 

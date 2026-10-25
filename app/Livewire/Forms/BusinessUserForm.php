@@ -2,14 +2,18 @@
 
 namespace App\Livewire\Forms;
 
+use App\Actions\Business\InviteBusinessUserAction;
 use App\Enums\Business\BusinessPermission;
 use App\Enums\Business\BusinessRole;
 use App\Models\Business;
+use App\Models\BusinessInvitation;
 use App\Models\BusinessUser;
 use App\Models\User;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Livewire\Form;
+use Sadegh19b\LaravelPersianValidation\Rules\IranianMobile;
 
 class BusinessUserForm extends Form
 {
@@ -18,6 +22,8 @@ class BusinessUserForm extends Form
     public ?BusinessUser $membership = null;
 
     public ?int $user_id = null;
+
+    public string $mobile = '';
 
     /** @var list<string> */
     public array $roles = [];
@@ -29,7 +35,7 @@ class BusinessUserForm extends Form
     {
         $this->business = $business;
         $this->membership = null;
-        $this->reset(['user_id', 'roles', 'permissions']);
+        $this->reset(['user_id', 'mobile', 'roles', 'permissions']);
         $this->roles = [BusinessRole::Viewer->value];
         $this->permissions = [
             BusinessRole::Viewer->value => BusinessRole::Viewer->defaultPermissions(),
@@ -40,6 +46,44 @@ class BusinessUserForm extends Form
     {
         $this->membership = $membership;
         $this->business = $membership->business;
+        $this->user_id = $membership->user_id;
+        $this->mobile = $membership->user?->mobile ?? '';
+        $this->roles = $membership->roleValues();
+        $this->permissions = $this->normalizePermissionsMap(
+            $membership->permissions,
+            $this->roles,
+        );
+    }
+
+    public function resolveMembershipFromMobile(): void
+    {
+        $this->membership = null;
+        $this->user_id = null;
+
+        if ($this->business === null || $this->mobile === '') {
+            return;
+        }
+
+        try {
+            validator(
+                ['mobile' => $this->mobile],
+                ['mobile' => ['required', 'string', new IranianMobile(format: 'zero')]],
+            )->validate();
+        } catch (ValidationException) {
+            return;
+        }
+
+        $membership = BusinessUser::query()
+            ->with('user')
+            ->where('business_id', $this->business->id)
+            ->whereHas('user', fn ($query) => $query->where('mobile', $this->mobile))
+            ->first();
+
+        if ($membership === null || $membership->isOwner()) {
+            return;
+        }
+
+        $this->membership = $membership;
         $this->user_id = $membership->user_id;
         $this->roles = $membership->roleValues();
         $this->permissions = $this->normalizePermissionsMap(
@@ -72,31 +116,8 @@ class BusinessUserForm extends Form
      */
     public function rules(): array
     {
-        $userRules = [
-            'required',
-            'integer',
-            'exists:users,id',
-        ];
-
-        if ($this->membership === null) {
-            $userRules[] = function (string $attribute, mixed $value, \Closure $fail): void {
-                if ($this->business === null || $value === null) {
-                    return;
-                }
-
-                $exists = BusinessUser::query()
-                    ->where('business_id', $this->business->id)
-                    ->where('user_id', $value)
-                    ->exists();
-
-                if ($exists) {
-                    $fail(__('general.business_user_already_member'));
-                }
-            };
-        }
-
         return [
-            'user_id' => $userRules,
+            'mobile' => ['required', 'string', new IranianMobile(format: 'zero')],
             'roles' => ['required', 'array', 'min:1'],
             'roles.*' => [
                 'string',
@@ -114,56 +135,74 @@ class BusinessUserForm extends Form
     public function validationAttributes(): array
     {
         return [
-            'user_id' => __('general.user'),
+            'mobile' => __('general.mobile'),
             'roles' => __('general.roles'),
             'permissions' => __('general.business_permissions'),
         ];
     }
 
-    public function store(): BusinessUser
+    public function saveOrInvite(InviteBusinessUserAction $inviteAction): BusinessUser|BusinessInvitation
     {
         if ($this->business === null) {
             throw ValidationException::withMessages([
-                'user_id' => __('general.business_required'),
+                'mobile' => __('general.business_required'),
             ]);
         }
 
+        $this->syncPermissionsFromRoles();
         $validated = $this->validate();
         $roles = $this->normalizedRoles($validated['roles'] ?? []);
         $permissions = $this->normalizePermissionsMap($validated['permissions'] ?? [], $roles);
+        $mobile = $validated['mobile'];
 
-        $membership = BusinessUser::withTrashed()
+        $membership = BusinessUser::query()
+            ->with('user')
             ->where('business_id', $this->business->id)
-            ->where('user_id', $validated['user_id'])
+            ->whereHas('user', fn ($query) => $query->where('mobile', $mobile))
             ->first();
 
         if ($membership !== null) {
-            if ($membership->trashed()) {
-                $membership->restore();
+            if ($membership->isOwner()) {
+                throw ValidationException::withMessages([
+                    'mobile' => __('general.cannot_edit_business_owner'),
+                ]);
             }
+
+            $this->membership = $membership;
+            $this->user_id = $membership->user_id;
 
             $membership->update([
                 'roles' => $roles,
                 'permissions' => $permissions,
             ]);
-        } else {
-            $membership = BusinessUser::create([
-                'business_id' => $this->business->id,
-                'user_id' => $validated['user_id'],
-                'roles' => $roles,
-                'permissions' => $permissions,
+
+            $membership->user?->forgetBusinessesCache();
+
+            $fresh = $membership->fresh() ?? $membership;
+            $this->resetFormState();
+
+            return $fresh;
+        }
+
+        $inviter = Auth::user();
+
+        if (! $inviter instanceof User) {
+            throw ValidationException::withMessages([
+                'mobile' => __('general.business_required'),
             ]);
         }
 
-        User::query()->find($validated['user_id'])?->forgetBusinessesCache();
+        $invitation = $inviteAction->handle(
+            $this->business,
+            $mobile,
+            $roles,
+            $permissions,
+            $inviter,
+        );
 
-        $this->reset(['user_id', 'roles', 'permissions', 'membership']);
-        $this->roles = [BusinessRole::Viewer->value];
-        $this->permissions = [
-            BusinessRole::Viewer->value => BusinessRole::Viewer->defaultPermissions(),
-        ];
+        $this->resetFormState();
 
-        return $membership;
+        return $invitation;
     }
 
     public function update(): BusinessUser
@@ -203,13 +242,22 @@ class BusinessUserForm extends Form
 
         $membership = $this->membership->fresh();
 
-        $this->reset(['user_id', 'roles', 'permissions', 'membership', 'business']);
+        $this->reset(['user_id', 'mobile', 'roles', 'permissions', 'membership', 'business']);
         $this->roles = [BusinessRole::Viewer->value];
         $this->permissions = [
             BusinessRole::Viewer->value => BusinessRole::Viewer->defaultPermissions(),
         ];
 
         return $membership;
+    }
+
+    protected function resetFormState(): void
+    {
+        $this->reset(['user_id', 'mobile', 'roles', 'permissions', 'membership']);
+        $this->roles = [BusinessRole::Viewer->value];
+        $this->permissions = [
+            BusinessRole::Viewer->value => BusinessRole::Viewer->defaultPermissions(),
+        ];
     }
 
     /**

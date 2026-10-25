@@ -1,10 +1,14 @@
 <?php
 
+use App\Actions\Business\AcceptBusinessInvitationAction;
 use App\Jobs\Notification\User\SendUserOtpJob;
+use App\Models\BusinessInvitation;
 use App\Models\User;
 use Flux\Flux;
+use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
+use Livewire\Attributes\Url;
 use Livewire\Component;
 use Sadegh19b\LaravelPersianValidation\Rules\IranianMobile;
 use Spatie\OneTimePasswords\Enums\ConsumeOneTimePasswordResult;
@@ -22,6 +26,25 @@ class extends Component
     public ?int $resendAvailableAt = null;
 
     public ?string $debugOtpCode = null;
+
+    #[Url]
+    public ?string $invitation = null;
+
+    public function mount(): void
+    {
+        $token = $this->invitation ?: session('business_invitation_token');
+
+        if (is_string($token) && $token !== '') {
+            $this->invitation = $token;
+            session(['business_invitation_token' => $token]);
+
+            $invite = BusinessInvitation::query()->where('token', $token)->pending()->first();
+
+            if ($invite !== null) {
+                $this->mobile = $invite->mobile;
+            }
+        }
+    }
 
     public function sendCode(): void
     {
@@ -96,11 +119,56 @@ class extends Component
 
         session()->regenerate();
 
+        $redirect = $this->acceptPendingInvitation($user);
+
+        if ($redirect !== null) {
+            return $redirect;
+        }
+
         $user->ensureCurrentBusiness();
 
         Flux::toast(__('general.login_success'));
 
         return $this->redirectIntended(default: route('dashboard'), navigate: true);
+    }
+
+    protected function acceptPendingInvitation(User $user): mixed
+    {
+        $token = $this->invitation ?: session('business_invitation_token');
+
+        if (! is_string($token) || $token === '') {
+            return null;
+        }
+
+        $invitation = BusinessInvitation::query()
+            ->where('token', $token)
+            ->pending()
+            ->first();
+
+        if ($invitation === null) {
+            session()->forget('business_invitation_token');
+
+            return null;
+        }
+
+        try {
+            app(AcceptBusinessInvitationAction::class)->handle($invitation, $user);
+        } catch (ValidationException $exception) {
+            session()->forget('business_invitation_token');
+
+            $message = collect($exception->errors())->flatten()->first()
+                ?: __('general.business_invitation_invalid');
+
+            Flux::toast($message, variant: 'danger');
+
+            return $this->redirect(route('dashboard'), navigate: true);
+        }
+
+        session()->forget('business_invitation_token');
+
+        Flux::toast(__('general.business_invitation_accepted'));
+
+        return $this->redirect(route('user.dashboard'), navigate: true);
     }
 
     public function resendCode(): void

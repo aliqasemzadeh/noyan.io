@@ -2,13 +2,17 @@
 
 namespace Tests\Feature;
 
+use App\Actions\Business\AcceptBusinessInvitationAction;
 use App\Enums\Business\BusinessPanel;
 use App\Enums\Business\BusinessPermission;
 use App\Enums\Business\BusinessRole;
 use App\Models\Business;
+use App\Models\BusinessInvitation;
 use App\Models\BusinessUser;
 use App\Models\User;
+use App\Settings\InvoiceSystemSettings;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Queue;
 use Livewire\Livewire;
 use Tests\Concerns\GrantsAdministratorAccess;
 use Tests\TestCase;
@@ -69,12 +73,20 @@ class SalePanelAccessTest extends TestCase
             ->assertForbidden();
     }
 
-    public function test_admin_can_add_seller_with_custom_permissions(): void
+    public function test_admin_can_invite_seller_with_custom_permissions(): void
     {
+        Queue::fake();
+
         $admin = $this->grantAdministratorAccess(User::factory()->create());
         $owner = User::factory()->create();
-        $member = User::factory()->create();
-        $business = Business::factory()->for($owner, 'owner')->create();
+        $member = User::factory()->create(['mobile' => '09123334455']);
+        $business = Business::factory()->for($owner, 'owner')->create([
+            'sms_wallet_balance' => '5000',
+        ]);
+
+        $settings = app(InvoiceSystemSettings::class);
+        $settings->sms_unit_cost = '1000';
+        $settings->save();
 
         $customPermissions = [
             BusinessPermission::QuoteView->value,
@@ -86,7 +98,7 @@ class SalePanelAccessTest extends TestCase
         Livewire::actingAs($admin)
             ->test('business.create-user')
             ->call('assignData', $business)
-            ->set('form.user_id', $member->id)
+            ->set('form.mobile', $member->mobile)
             ->set('form.roles', [BusinessRole::Seller->value])
             ->set('form.permissions', [
                 BusinessRole::Seller->value => $customPermissions,
@@ -94,12 +106,16 @@ class SalePanelAccessTest extends TestCase
             ->call('save')
             ->assertHasNoErrors();
 
-        $membership = BusinessUser::query()
+        $invitation = BusinessInvitation::query()
             ->where('business_id', $business->id)
-            ->where('user_id', $member->id)
+            ->where('mobile', $member->mobile)
             ->first();
 
-        $this->assertNotNull($membership);
+        $this->assertNotNull($invitation);
+
+        $membership = app(AcceptBusinessInvitationAction::class)
+            ->handle($invitation, $member);
+
         $this->assertTrue($membership->hasRole(BusinessRole::Seller));
         $this->assertSame($customPermissions, $membership->permissionsFor(BusinessRole::Seller));
         $this->assertFalse($membership->hasPermission(BusinessPermission::InvoiceCreate));

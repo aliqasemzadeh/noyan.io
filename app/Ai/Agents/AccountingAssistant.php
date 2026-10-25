@@ -8,7 +8,9 @@ use App\Ai\Tools\CreateTransaction;
 use App\Ai\Tools\GetDailyExpenses;
 use App\Ai\Tools\ImportInvoice;
 use App\Ai\Tools\ImportQuote;
+use App\Enums\Business\BusinessPermission;
 use App\Models\Accounting\Account;
+use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Laravel\Ai\Attributes\MaxSteps;
 use Laravel\Ai\Attributes\Provider;
@@ -115,14 +117,39 @@ PROMPT;
      */
     public function tools(): iterable
     {
-        return [
-            new CreateBankAccount,
-            new CreateTransaction,
-            new GetDailyExpenses,
-            new ImportQuote,
-            new ImportInvoice,
-            new CreateParty,
-        ];
+        $user = Auth::user();
+
+        if (! $user instanceof User) {
+            return [];
+        }
+
+        $tools = [];
+
+        if ($user->canInBusiness(BusinessPermission::AccountCreate)) {
+            $tools[] = new CreateBankAccount;
+        }
+
+        if ($user->canInBusiness(BusinessPermission::TransactionCreate)) {
+            $tools[] = new CreateTransaction;
+        }
+
+        if ($user->canInBusiness(BusinessPermission::TransactionView)) {
+            $tools[] = new GetDailyExpenses;
+        }
+
+        if ($user->canInBusiness(BusinessPermission::QuoteCreate)) {
+            $tools[] = new ImportQuote;
+        }
+
+        if ($user->canInBusiness(BusinessPermission::InvoiceCreate)) {
+            $tools[] = new ImportInvoice;
+        }
+
+        if ($user->canInBusiness(BusinessPermission::PartyCreate)) {
+            $tools[] = new CreateParty;
+        }
+
+        return $tools;
     }
 
     protected function activeBusinessBlock(): string
@@ -138,10 +165,15 @@ PROMPT;
 
     protected function existingAccountsBlock(): string
     {
-        $businessId = Auth::user()?->current_business_id;
+        $user = Auth::user();
+        $businessId = $user?->current_business_id;
 
         if ($businessId === null) {
             return 'حساب‌های موجود: هیچ (کسب‌وکار فعال نیست).';
+        }
+
+        if (! $user instanceof User || ! $user->canInBusiness(BusinessPermission::AccountView)) {
+            return 'حساب‌های موجود: دسترسی مشاهده حساب ندارید.';
         }
 
         $accounts = Account::query()

@@ -434,11 +434,11 @@ new class extends Component
                                         @endif
 
                                         @if (auth()->user()?->canInBusiness(BusinessPermission::InvoiceDelete) || ! $this->isSalePanel())
-                                            <flux:tooltip content="{{ __('general.delete') }}">
-                                                <flux:modal.trigger name="invoice.delete.{{ $invoice->id }}">
+                                            <flux:modal.trigger name="invoice.delete.{{ $invoice->id }}">
+                                                <flux:tooltip content="{{ __('general.delete') }}">
                                                     <flux:button size="xs" variant="danger" icon="trash" icon:variant="outline" />
-                                                </flux:modal.trigger>
-                                            </flux:tooltip>
+                                                </flux:tooltip>
+                                            </flux:modal.trigger>
                                         @endif
                                     @else
                                         <flux:tooltip content="{{ __('general.copy_invoice_link') }}">

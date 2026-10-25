@@ -432,19 +432,19 @@ new class extends Component
                                     @endif
 
                                     @if ($quote->canBeConverted() && (auth()->user()?->canInBusiness(BusinessPermission::InvoiceCreate) || ! $this->isSalePanel()))
-                                        <flux:tooltip content="{{ __('general.convert_to_invoice') }}">
-                                            <flux:modal.trigger name="quote.convert.{{ $quote->id }}">
+                                        <flux:modal.trigger name="quote.convert.{{ $quote->id }}">
+                                            <flux:tooltip content="{{ __('general.convert_to_invoice') }}">
                                                 <flux:button size="xs" variant="primary" color="green" icon="file-check" icon:variant="outline" />
-                                            </flux:modal.trigger>
-                                        </flux:tooltip>
+                                            </flux:tooltip>
+                                        </flux:modal.trigger>
                                     @endif
 
                                     @if ($quote->isDeletable() && (auth()->user()?->canInBusiness(BusinessPermission::QuoteDelete) || ! $this->isSalePanel()))
-                                        <flux:tooltip content="{{ __('general.delete') }}">
-                                            <flux:modal.trigger name="quote.delete.{{ $quote->id }}">
+                                        <flux:modal.trigger name="quote.delete.{{ $quote->id }}">
+                                            <flux:tooltip content="{{ __('general.delete') }}">
                                                 <flux:button size="xs" variant="danger" icon="trash" icon:variant="outline" />
-                                            </flux:modal.trigger>
-                                        </flux:tooltip>
+                                            </flux:tooltip>
+                                        </flux:modal.trigger>
                                     @endif
                                 </div>
                             </flux:table.cell>

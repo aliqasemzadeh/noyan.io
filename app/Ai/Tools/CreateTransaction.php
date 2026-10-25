@@ -3,7 +3,9 @@
 namespace App\Ai\Tools;
 
 use App\Actions\Transactions\ProcessTransactionAction;
+use App\Ai\Tools\Concerns\ChecksBusinessPermission;
 use App\Enums\Accounting\TransactionType;
+use App\Enums\Business\BusinessPermission;
 use App\Models\Accounting\Account;
 use App\Models\Accounting\BusinessCurrency;
 use App\Models\Accounting\Transaction;
@@ -21,6 +23,8 @@ use Stringable;
 
 class CreateTransaction implements Tool
 {
+    use ChecksBusinessPermission;
+
     /**
      * Get the description of the tool's purpose.
      */
@@ -34,6 +38,10 @@ class CreateTransaction implements Tool
      */
     public function handle(Request $request): Stringable|string
     {
+        if ($denied = $this->denyUnlessCan(BusinessPermission::TransactionCreate)) {
+            return $denied;
+        }
+
         $user = Auth::user();
         $businessId = $user?->current_business_id;
 
