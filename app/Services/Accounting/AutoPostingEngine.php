@@ -45,6 +45,15 @@ class AutoPostingEngine
 
         $invoice->loadMissing(['items', 'party']);
 
+        if ($invoice->party_id === null) {
+            Log::warning('Auto-post skipped: invoice has no party for AR/AP detail.', [
+                'invoice_id' => $invoice->id,
+                'business_id' => $invoice->business_id,
+            ]);
+
+            return null;
+        }
+
         $entryDate = $invoice->issue_date?->toDateString() ?? now()->toDateString();
         $fiscalYear = $this->resolveFiscalYear((int) $invoice->business_id, $entryDate);
 
@@ -67,19 +76,13 @@ class AutoPostingEngine
         $user->forceFill(['current_business_id' => $invoice->business_id])->saveQuietly();
 
         try {
-            $status = match ($settings->auto_post_mode) {
-                AutoPostMode::Realtime => JournalEntryStatus::Draft,
-                AutoPostMode::ManualReview, AutoPostMode::DailyBatch => JournalEntryStatus::Draft,
-                AutoPostMode::Off => JournalEntryStatus::Draft,
-            };
-
             $entry = $this->createJournalEntry->handle($user, [
                 'fiscal_year_id' => $fiscalYear->id,
                 'entry_date' => $entryDate,
                 'description' => __('general.auto_post_invoice_description', [
                     'number' => $invoice->invoice_number,
                 ]),
-                'status' => $status,
+                'status' => JournalEntryStatus::Draft,
                 'referenceable_type' => $invoice->getMorphClass(),
                 'referenceable_id' => $invoice->id,
             ], $lines);
