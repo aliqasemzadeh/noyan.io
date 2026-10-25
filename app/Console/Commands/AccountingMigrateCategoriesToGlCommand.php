@@ -3,9 +3,9 @@
 namespace App\Console\Commands;
 
 use App\Enums\CategoryType;
-use App\Models\Accounting\GlAccount;
 use App\Models\Business;
 use App\Models\Category;
+use App\Support\Accounting\CategoryGlAccountMap;
 use Illuminate\Console\Command;
 
 class AccountingMigrateCategoriesToGlCommand extends Command
@@ -14,7 +14,7 @@ class AccountingMigrateCategoriesToGlCommand extends Command
                             {business? : Business ID}
                             {--all : Run for every business}';
 
-    protected $description = 'Link accounting categories to matching GL subsidiary accounts by system key / code heuristics';
+    protected $description = 'Link accounting categories to matching GL subsidiary accounts (business rows + code heuristics)';
 
     public function handle(): int
     {
@@ -28,22 +28,9 @@ class AccountingMigrateCategoriesToGlCommand extends Command
             return self::FAILURE;
         }
 
-        $map = [
-            'sales' => 'sales',
-            'services' => 'services',
-            'receivable' => 'accounts_receivable',
-            'payable' => 'accounts_payable',
-            'cash_bank' => 'cash_and_bank',
-            'inventory' => 'inventory',
-            'tax_payable' => 'vat_payable',
-            'fx_gain' => 'fx_gain',
-            'rent' => 'rent_expense',
-            'salary' => 'payroll_expense',
-            'bank_fee' => 'bank_fees',
-        ];
-
         foreach ($businesses as $business) {
             $linked = 0;
+            $resolvedRuntime = 0;
 
             $categories = Category::query()
                 ->where(function ($query) use ($business): void {
@@ -51,32 +38,32 @@ class AccountingMigrateCategoriesToGlCommand extends Command
                         ->orWhere('business_id', $business->id);
                 })
                 ->whereIn('type', CategoryType::accountingCases())
-                ->whereNull('gl_account_id')
                 ->get();
 
             foreach ($categories as $category) {
-                $systemKey = $map[$category->code] ?? null;
-
-                if ($systemKey === null) {
-                    continue;
-                }
-
-                $glAccount = GlAccount::findBySystemKey($business, $systemKey);
+                $glAccount = CategoryGlAccountMap::resolve($business, $category);
 
                 if ($glAccount === null) {
                     continue;
                 }
 
-                // Only attach business-owned category rows; system categories stay shared.
-                if ($category->business_id === null) {
+                // Persist FK only on business-owned rows (system categories are shared).
+                if ($category->business_id !== null) {
+                    if ((int) $category->gl_account_id !== (int) $glAccount->id) {
+                        $category->forceFill(['gl_account_id' => $glAccount->id])->save();
+                        $linked++;
+                    }
+
                     continue;
                 }
 
-                $category->forceFill(['gl_account_id' => $glAccount->id])->save();
-                $linked++;
+                // System / shared categories resolve at runtime via CategoryGlAccountMap.
+                if ($category->gl_account_id === null) {
+                    $resolvedRuntime++;
+                }
             }
 
-            $this->info("Business #{$business->id}: linked {$linked} categories.");
+            $this->info("Business #{$business->id}: linked {$linked} business categories; {$resolvedRuntime} system categories resolve via code map.");
         }
 
         return self::SUCCESS;
