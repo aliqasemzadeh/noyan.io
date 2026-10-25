@@ -8,6 +8,11 @@ return [
      */
     'settings' => [
         App\Settings\InvoiceSystemSettings::class,
+        App\Settings\GeneralSettings::class,
+        App\Settings\ContactSettings::class,
+        App\Settings\MaintenanceSettings::class,
+        App\Settings\SecuritySettings::class,
+        App\Settings\SocialSettings::class,
     ],
 
     /*
