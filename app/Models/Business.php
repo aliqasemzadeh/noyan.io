@@ -16,6 +16,8 @@ use App\Models\Accounting\Quote;
 use App\Models\Accounting\SaleKind;
 use App\Models\Catalog\Brand;
 use App\Models\Catalog\Product;
+use App\Models\Catalog\StockConversion;
+use App\Models\Catalog\Warehouse;
 use Database\Factories\BusinessFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -288,6 +290,27 @@ class Business extends Model implements HasMedia
     public function products(): HasMany
     {
         return $this->hasMany(Product::class);
+    }
+
+    /**
+     * @return HasMany<Warehouse, $this>
+     */
+    public function warehouses(): HasMany
+    {
+        return $this->hasMany(Warehouse::class);
+    }
+
+    public function defaultWarehouse(): ?Warehouse
+    {
+        return $this->warehouses()->default()->first();
+    }
+
+    /**
+     * @return HasMany<StockConversion, $this>
+     */
+    public function stockConversions(): HasMany
+    {
+        return $this->hasMany(StockConversion::class);
     }
 
     /**

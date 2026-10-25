@@ -3,6 +3,8 @@
 namespace App\Models\Catalog;
 
 use App\Enums\Catalog\StockMovementType;
+use App\Models\Accounting\CostCenter;
+use App\Models\Accounting\Project;
 use App\Models\Business;
 use App\Models\User;
 use Database\Factories\Catalog\ProductStockMovementFactory;
@@ -15,6 +17,9 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
 #[Fillable([
     'business_id',
     'product_id',
+    'warehouse_id',
+    'project_id',
+    'cost_center_id',
     'movement_type',
     'quantity',
     'unit_cost',
@@ -57,6 +62,21 @@ class ProductStockMovement extends Model
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
+    }
+
+    public function warehouse(): BelongsTo
+    {
+        return $this->belongsTo(Warehouse::class);
+    }
+
+    public function project(): BelongsTo
+    {
+        return $this->belongsTo(Project::class);
+    }
+
+    public function costCenter(): BelongsTo
+    {
+        return $this->belongsTo(CostCenter::class);
     }
 
     public function reference(): MorphTo
