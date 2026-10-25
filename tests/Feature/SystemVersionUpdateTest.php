@@ -2,7 +2,11 @@
 
 namespace Tests\Feature;
 
+use App\Actions\Accounting\SeedBusinessChartOfAccountsAction;
 use App\Enums\System\UpdateMode;
+use App\Models\Accounting\GlAccount;
+use App\Models\Business;
+use App\Models\User;
 use App\Services\System\ProjectUpdater;
 use App\Services\System\VersionUpdateRegistry;
 use App\Support\System\AppVersion;
@@ -17,12 +21,13 @@ class SystemVersionUpdateTest extends TestCase
     public function test_pending_releases_include_initial_beta_when_not_installed(): void
     {
         $this->assertSame('0.0.0', AppVersion::installed());
-        $this->assertSame('0.1.0-beta.1', AppVersion::current());
+        $this->assertSame('0.1.0-beta.2', AppVersion::current());
 
         $pending = app(VersionUpdateRegistry::class)->pending();
 
         $this->assertNotEmpty($pending);
         $this->assertSame('0.1.0-beta.1', $pending[0]::version());
+        $this->assertSame('0.1.0-beta.2', $pending[array_key_last($pending)]::version());
     }
 
     public function test_second_update_skips_already_applied_version_commands(): void
@@ -34,7 +39,7 @@ class SystemVersionUpdateTest extends TestCase
         $updater = app(ProjectUpdater::class);
 
         $this->assertSame(0, $updater->run(UpdateMode::Quick, fn () => null));
-        $this->assertSame('0.1.0-beta.1', AppVersion::installed());
+        $this->assertSame('0.1.0-beta.2', AppVersion::installed());
         $this->assertSame([], app(VersionUpdateRegistry::class)->pending());
 
         $versionCommands = [];
@@ -62,6 +67,25 @@ class SystemVersionUpdateTest extends TestCase
     {
         $this->get('/')
             ->assertOk()
-            ->assertSee('0.1.0-beta.1', false);
+            ->assertSee('0.1.0-beta.2', false);
+    }
+
+    public function test_standard_coa_uses_persian_account_names(): void
+    {
+        $user = User::factory()->create();
+        $business = Business::factory()->for($user, 'owner')->create();
+
+        app(SeedBusinessChartOfAccountsAction::class)->handle($business);
+
+        $sales = GlAccount::findBySystemKey($business, 'sales');
+        $cash = GlAccount::findBySystemKey($business, 'cash_and_bank');
+
+        $this->assertSame('فروش کالا', $sales?->name);
+        $this->assertSame('موجودی نقد و بانک', $cash?->name);
+        $this->assertDatabaseHas('gl_accounts', [
+            'business_id' => $business->id,
+            'full_code' => '1',
+            'name' => 'دارایی‌ها',
+        ]);
     }
 }

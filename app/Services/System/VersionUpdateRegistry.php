@@ -3,6 +3,7 @@
 namespace App\Services\System;
 
 use App\Console\Commands\Updates\Update_0_1_0_beta_1;
+use App\Console\Commands\Updates\Update_0_1_0_beta_2;
 use App\Console\Commands\Updates\VersionUpdate;
 use App\Support\System\AppVersion;
 
@@ -17,6 +18,7 @@ class VersionUpdateRegistry
     {
         return [
             Update_0_1_0_beta_1::class,
+            Update_0_1_0_beta_2::class,
         ];
     }
 

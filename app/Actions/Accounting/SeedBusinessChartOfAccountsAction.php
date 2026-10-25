@@ -121,19 +121,19 @@ class SeedBusinessChartOfAccountsAction
         return [
             [
                 'code' => '1',
-                'name' => 'Assets',
+                'name' => 'دارایی‌ها',
                 'nature' => AccountNature::Debit,
                 'statement_type' => StatementType::BalanceSheet,
                 'children' => [
                     [
                         'code' => '1',
-                        'name' => 'Current assets',
+                        'name' => 'دارایی‌های جاری',
                         'nature' => AccountNature::Debit,
                         'statement_type' => StatementType::BalanceSheet,
                         'children' => [
                             [
                                 'code' => '01',
-                                'name' => 'Cash and bank',
+                                'name' => 'موجودی نقد و بانک',
                                 'nature' => AccountNature::Debit,
                                 'statement_type' => StatementType::BalanceSheet,
                                 'system_key' => 'cash_and_bank',
@@ -141,7 +141,7 @@ class SeedBusinessChartOfAccountsAction
                             ],
                             [
                                 'code' => '02',
-                                'name' => 'Accounts receivable',
+                                'name' => 'حساب‌های دریافتنی',
                                 'nature' => AccountNature::Debit,
                                 'statement_type' => StatementType::BalanceSheet,
                                 'system_key' => 'accounts_receivable',
@@ -149,14 +149,14 @@ class SeedBusinessChartOfAccountsAction
                             ],
                             [
                                 'code' => '03',
-                                'name' => 'Inventory',
+                                'name' => 'موجودی کالا',
                                 'nature' => AccountNature::Debit,
                                 'statement_type' => StatementType::BalanceSheet,
                                 'system_key' => 'inventory',
                             ],
                             [
                                 'code' => '04',
-                                'name' => 'VAT receivable',
+                                'name' => 'مالیات بر ارزش افزوده دریافتنی',
                                 'nature' => AccountNature::Debit,
                                 'statement_type' => StatementType::BalanceSheet,
                                 'system_key' => 'vat_receivable',
@@ -165,13 +165,13 @@ class SeedBusinessChartOfAccountsAction
                     ],
                     [
                         'code' => '2',
-                        'name' => 'Non-current assets',
+                        'name' => 'دارایی‌های غیرجاری',
                         'nature' => AccountNature::Debit,
                         'statement_type' => StatementType::BalanceSheet,
                         'children' => [
                             [
                                 'code' => '01',
-                                'name' => 'Property, plant and equipment',
+                                'name' => 'اموال، ماشین‌آلات و تجهیزات',
                                 'nature' => AccountNature::Debit,
                                 'statement_type' => StatementType::BalanceSheet,
                                 'system_key' => 'ppe',
@@ -182,19 +182,19 @@ class SeedBusinessChartOfAccountsAction
             ],
             [
                 'code' => '2',
-                'name' => 'Liabilities',
+                'name' => 'بدهی‌ها',
                 'nature' => AccountNature::Credit,
                 'statement_type' => StatementType::BalanceSheet,
                 'children' => [
                     [
                         'code' => '1',
-                        'name' => 'Current liabilities',
+                        'name' => 'بدهی‌های جاری',
                         'nature' => AccountNature::Credit,
                         'statement_type' => StatementType::BalanceSheet,
                         'children' => [
                             [
                                 'code' => '01',
-                                'name' => 'Accounts payable',
+                                'name' => 'حساب‌های پرداختنی',
                                 'nature' => AccountNature::Credit,
                                 'statement_type' => StatementType::BalanceSheet,
                                 'system_key' => 'accounts_payable',
@@ -202,14 +202,14 @@ class SeedBusinessChartOfAccountsAction
                             ],
                             [
                                 'code' => '02',
-                                'name' => 'VAT payable',
+                                'name' => 'مالیات بر ارزش افزوده پرداختنی',
                                 'nature' => AccountNature::Credit,
                                 'statement_type' => StatementType::BalanceSheet,
                                 'system_key' => 'vat_payable',
                             ],
                             [
                                 'code' => '03',
-                                'name' => 'Short-term loans',
+                                'name' => 'وام‌های کوتاه‌مدت',
                                 'nature' => AccountNature::Credit,
                                 'statement_type' => StatementType::BalanceSheet,
                                 'system_key' => 'short_term_loans',
@@ -218,13 +218,13 @@ class SeedBusinessChartOfAccountsAction
                     ],
                     [
                         'code' => '2',
-                        'name' => 'Non-current liabilities',
+                        'name' => 'بدهی‌های غیرجاری',
                         'nature' => AccountNature::Credit,
                         'statement_type' => StatementType::BalanceSheet,
                         'children' => [
                             [
                                 'code' => '01',
-                                'name' => 'Long-term loans',
+                                'name' => 'وام‌های بلندمدت',
                                 'nature' => AccountNature::Credit,
                                 'statement_type' => StatementType::BalanceSheet,
                                 'system_key' => 'long_term_loans',
@@ -235,26 +235,26 @@ class SeedBusinessChartOfAccountsAction
             ],
             [
                 'code' => '3',
-                'name' => 'Equity',
+                'name' => 'حقوق صاحبان سهام',
                 'nature' => AccountNature::Credit,
                 'statement_type' => StatementType::BalanceSheet,
                 'children' => [
                     [
                         'code' => '1',
-                        'name' => 'Capital and reserves',
+                        'name' => 'سرمایه و اندوخته‌ها',
                         'nature' => AccountNature::Credit,
                         'statement_type' => StatementType::BalanceSheet,
                         'children' => [
                             [
                                 'code' => '01',
-                                'name' => 'Owner capital',
+                                'name' => 'سرمایه',
                                 'nature' => AccountNature::Credit,
                                 'statement_type' => StatementType::BalanceSheet,
                                 'system_key' => 'owner_capital',
                             ],
                             [
                                 'code' => '02',
-                                'name' => 'Retained earnings',
+                                'name' => 'سود انباشته',
                                 'nature' => AccountNature::Credit,
                                 'statement_type' => StatementType::BalanceSheet,
                                 'system_key' => 'retained_earnings',
@@ -265,33 +265,33 @@ class SeedBusinessChartOfAccountsAction
             ],
             [
                 'code' => '4',
-                'name' => 'Revenue',
+                'name' => 'درآمدها',
                 'nature' => AccountNature::Credit,
                 'statement_type' => StatementType::IncomeStatement,
                 'children' => [
                     [
                         'code' => '1',
-                        'name' => 'Operating revenue',
+                        'name' => 'درآمدهای عملیاتی',
                         'nature' => AccountNature::Credit,
                         'statement_type' => StatementType::IncomeStatement,
                         'children' => [
                             [
                                 'code' => '01',
-                                'name' => 'Sales',
+                                'name' => 'فروش کالا',
                                 'nature' => AccountNature::Credit,
                                 'statement_type' => StatementType::IncomeStatement,
                                 'system_key' => 'sales',
                             ],
                             [
                                 'code' => '02',
-                                'name' => 'Services',
+                                'name' => 'درآمد خدمات',
                                 'nature' => AccountNature::Credit,
                                 'statement_type' => StatementType::IncomeStatement,
                                 'system_key' => 'services',
                             ],
                             [
                                 'code' => '03',
-                                'name' => 'Sales discounts',
+                                'name' => 'تخفیفات فروش',
                                 'nature' => AccountNature::Debit,
                                 'statement_type' => StatementType::IncomeStatement,
                                 'system_key' => 'sales_discount',
@@ -300,13 +300,13 @@ class SeedBusinessChartOfAccountsAction
                     ],
                     [
                         'code' => '2',
-                        'name' => 'Other income',
+                        'name' => 'سایر درآمدها',
                         'nature' => AccountNature::Credit,
                         'statement_type' => StatementType::IncomeStatement,
                         'children' => [
                             [
                                 'code' => '01',
-                                'name' => 'Foreign exchange gain',
+                                'name' => 'سود تسعیر ارز',
                                 'nature' => AccountNature::Credit,
                                 'statement_type' => StatementType::IncomeStatement,
                                 'system_key' => 'fx_gain',
@@ -317,19 +317,19 @@ class SeedBusinessChartOfAccountsAction
             ],
             [
                 'code' => '5',
-                'name' => 'Expenses',
+                'name' => 'هزینه‌ها',
                 'nature' => AccountNature::Debit,
                 'statement_type' => StatementType::IncomeStatement,
                 'children' => [
                     [
                         'code' => '1',
-                        'name' => 'Cost of sales',
+                        'name' => 'بهای تمام‌شده',
                         'nature' => AccountNature::Debit,
                         'statement_type' => StatementType::IncomeStatement,
                         'children' => [
                             [
                                 'code' => '01',
-                                'name' => 'Cost of goods sold',
+                                'name' => 'بهای تمام‌شده کالای فروش‌رفته',
                                 'nature' => AccountNature::Debit,
                                 'statement_type' => StatementType::IncomeStatement,
                                 'system_key' => 'cogs',
@@ -338,27 +338,27 @@ class SeedBusinessChartOfAccountsAction
                     ],
                     [
                         'code' => '2',
-                        'name' => 'Operating expenses',
+                        'name' => 'هزینه‌های عملیاتی',
                         'nature' => AccountNature::Debit,
                         'statement_type' => StatementType::IncomeStatement,
                         'children' => [
                             [
                                 'code' => '01',
-                                'name' => 'Rent expense',
+                                'name' => 'هزینه اجاره',
                                 'nature' => AccountNature::Debit,
                                 'statement_type' => StatementType::IncomeStatement,
                                 'system_key' => 'rent_expense',
                             ],
                             [
                                 'code' => '02',
-                                'name' => 'Payroll expense',
+                                'name' => 'هزینه حقوق و دستمزد',
                                 'nature' => AccountNature::Debit,
                                 'statement_type' => StatementType::IncomeStatement,
                                 'system_key' => 'payroll_expense',
                             ],
                             [
                                 'code' => '03',
-                                'name' => 'Bank fees',
+                                'name' => 'کارمزد بانکی',
                                 'nature' => AccountNature::Debit,
                                 'statement_type' => StatementType::IncomeStatement,
                                 'system_key' => 'bank_fees',
@@ -367,13 +367,13 @@ class SeedBusinessChartOfAccountsAction
                     ],
                     [
                         'code' => '3',
-                        'name' => 'Other expenses',
+                        'name' => 'سایر هزینه‌ها',
                         'nature' => AccountNature::Debit,
                         'statement_type' => StatementType::IncomeStatement,
                         'children' => [
                             [
                                 'code' => '01',
-                                'name' => 'Foreign exchange loss',
+                                'name' => 'زیان تسعیر ارز',
                                 'nature' => AccountNature::Debit,
                                 'statement_type' => StatementType::IncomeStatement,
                                 'system_key' => 'fx_loss',
