@@ -4,6 +4,7 @@ use App\Actions\Business\AcceptBusinessInvitationAction;
 use App\Jobs\Notification\User\SendUserOtpJob;
 use App\Models\BusinessInvitation;
 use App\Models\User;
+use App\Settings\SecuritySettings;
 use App\Support\Money;
 use Flux\Flux;
 use Illuminate\Validation\ValidationException;
@@ -13,6 +14,7 @@ use Livewire\Attributes\Url;
 use Livewire\Component;
 use Sadegh19b\LaravelPersianValidation\Rules\IranianMobile;
 use Spatie\OneTimePasswords\Enums\ConsumeOneTimePasswordResult;
+use Throwable;
 
 new
 #[Layout('layouts::auth')]
@@ -56,6 +58,13 @@ class extends Component
         ], attributes: [
             'mobile' => __('general.mobile'),
         ]);
+
+        if ($this->isMobileBanned($this->mobile)) {
+            $this->addError('mobile', __('general.mobile_banned'));
+            Flux::toast(__('general.mobile_banned'), variant: 'danger');
+
+            return;
+        }
 
         if ($this->resendAvailableAt !== null && now()->getTimestamp() < $this->resendAvailableAt) {
             $this->addError('mobile', __('general.otp_resend_wait'));
@@ -103,6 +112,13 @@ class extends Component
             'mobile' => __('general.mobile'),
             'code' => __('general.otp_code'),
         ]);
+
+        if ($this->isMobileBanned($this->mobile)) {
+            $this->addError('mobile', __('general.mobile_banned'));
+            Flux::toast(__('general.mobile_banned'), variant: 'danger');
+
+            return null;
+        }
 
         $user = User::query()->where('mobile', $this->mobile)->first();
 
