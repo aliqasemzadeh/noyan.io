@@ -6,6 +6,7 @@ use App\Enums\Catalog\StockMovementType;
 use App\Models\Business;
 use App\Models\Catalog\Product;
 use App\Models\Catalog\ProductStockMovement;
+use App\Models\Catalog\Warehouse;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -23,6 +24,9 @@ class ProductStockMovementFactory extends Factory
         return [
             'business_id' => Business::factory(),
             'product_id' => Product::factory(),
+            'warehouse_id' => Warehouse::factory()->default(),
+            'project_id' => null,
+            'cost_center_id' => null,
             'movement_type' => StockMovementType::Opening,
             'quantity' => '10',
             'unit_cost' => '100000',

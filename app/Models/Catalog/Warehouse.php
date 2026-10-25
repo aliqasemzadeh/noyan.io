@@ -3,7 +3,6 @@
 namespace App\Models\Catalog;
 
 use App\Enums\Catalog\WarehouseType;
-use App\Models\Business;
 use App\Models\Concerns\BelongsToBusiness;
 use Database\Factories\Catalog\WarehouseFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;

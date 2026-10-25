@@ -2,7 +2,6 @@
 
 namespace App\Models\Catalog;
 
-use App\Models\Business;
 use App\Models\Concerns\BelongsToBusiness;
 use Database\Factories\Catalog\InventoryStockFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
