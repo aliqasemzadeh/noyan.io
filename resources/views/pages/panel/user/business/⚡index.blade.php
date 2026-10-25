@@ -131,6 +131,17 @@ new class extends Component
                                             wire:navigate
                                         />
                                     </flux:tooltip>
+                                    <flux:tooltip content="{{ __('general.business_activity_log') }}">
+                                        <flux:button
+                                            size="xs"
+                                            variant="primary"
+                                            color="amber"
+                                            icon="history"
+                                            icon:variant="outline"
+                                            :href="route('user.businesses.activity', $business)"
+                                            wire:navigate
+                                        />
+                                    </flux:tooltip>
                                 @endif
                                 <flux:tooltip content="{{ __('general.edit') }}">
                                     <flux:button

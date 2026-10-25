@@ -124,6 +124,7 @@ Route::middleware('auth')->group(function () {
             Route::livewire('/', 'pages::panel.user.dashboard.index')->name('dashboard');
             Route::livewire('/businesses', 'pages::panel.user.business.index')->name('businesses.index');
             Route::livewire('/businesses/{business}/users', 'pages::panel.user.business.users')->name('businesses.users');
+            Route::livewire('/businesses/{business}/activity', 'pages::panel.user.business.activity')->name('businesses.activity');
             Route::livewire('/businesses/{business}', 'pages::panel.user.business.view')->name('businesses.view');
             Route::livewire('/businesses/{business}/edit', 'pages::panel.user.business.edit')->name('businesses.edit');
             Route::livewire('/businesses/{business}/invoice-preview', 'pages::panel.user.business.invoice-preview')
