@@ -8,6 +8,7 @@ use App\Livewire\Forms\Accounting\JournalEntryForm;
 use App\Models\Accounting\Account;
 use App\Models\Accounting\CostCenter;
 use App\Models\Accounting\FiscalYear;
+use App\Models\Accounting\GlAccount;
 use App\Models\Accounting\JournalEntry;
 use App\Models\Accounting\Party;
 use App\Models\Accounting\Project;
@@ -29,6 +30,7 @@ new class extends Component
         if ($journalEntry !== null) {
             abort_unless((int) $journalEntry->business_id === (int) Auth::user()?->current_business_id, 404);
             abort_unless($journalEntry->isDraft(), 403);
+            abort_if($journalEntry->isSystemGenerated(), 403, __('general.journal_system_generated_locked'));
 
             $journalEntry->load('lines');
             $this->form->setJournalEntry($journalEntry);
@@ -115,6 +117,26 @@ new class extends Component
             ->flatMap(fn (CategoryType $type) => Category::selectOptionsForBusiness($businessId, $type))
             ->filter(fn (array $option): bool => $option['is_leaf'])
             ->values();
+    }
+
+    /**
+     * @return Collection<int, GlAccount>
+     */
+    #[Computed]
+    public function glAccounts(): Collection
+    {
+        $businessId = Auth::user()?->current_business_id;
+
+        if ($businessId === null) {
+            return collect();
+        }
+
+        return GlAccount::query()
+            ->where('business_id', $businessId)
+            ->postable()
+            ->active()
+            ->orderBy('full_code')
+            ->get(['id', 'full_code', 'name']);
     }
 
     /**
@@ -311,12 +333,31 @@ new class extends Component
 
                         <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                             <flux:field class="md:col-span-2 xl:col-span-3">
-                                <flux:label>{{ __('general.category') }}</flux:label>
+                                <flux:label>{{ __('general.gl_account') }}</flux:label>
+                                <flux:select
+                                    wire:model="form.lines.{{ $index }}.gl_account_id"
+                                    searchable
+                                    variant="listbox"
+                                    placeholder="{{ __('general.select_gl_account') }}"
+                                    clearable
+                                >
+                                    @foreach ($this->glAccounts as $glAccount)
+                                        <flux:select.option value="{{ $glAccount->id }}" wire:key="line-{{ $index }}-gl-{{ $glAccount->id }}">
+                                            <span dir="ltr">{{ $glAccount->full_code }}</span> — {{ $glAccount->name }}
+                                        </flux:select.option>
+                                    @endforeach
+                                </flux:select>
+                                <flux:error name="form.lines.{{ $index }}.gl_account_id" />
+                            </flux:field>
+
+                            <flux:field class="md:col-span-2 xl:col-span-3">
+                                <flux:label>{{ __('general.category') }} ({{ __('general.legacy') }})</flux:label>
                                 <flux:select
                                     wire:model="form.lines.{{ $index }}.category_id"
                                     searchable
                                     variant="listbox"
                                     placeholder="{{ __('general.select_category') }}"
+                                    clearable
                                 >
                                     @foreach ($this->categoryOptions as $option)
                                         <flux:select.option value="{{ $option['id'] }}" wire:key="line-{{ $index }}-cat-{{ $option['id'] }}">
