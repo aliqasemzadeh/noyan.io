@@ -4,6 +4,7 @@ use App\Enums\System\UpdateMode;
 use App\Exceptions\System\DisallowedArtisanCommandException;
 use App\Services\System\ProjectUpdater;
 use App\Services\System\SystemCommandRunner;
+use App\Support\System\AppVersion;
 use Flux\Flux;
 use Livewire\Attributes\Computed;
 use Livewire\Component;
@@ -149,7 +150,20 @@ new class extends Component
     </div>
 
     <flux:card>
-        <flux:heading size="lg" class="mb-4">{{ __('general.system_updates') }}</flux:heading>
+        <div class="mb-4 flex flex-wrap items-start justify-between gap-3">
+            <flux:heading size="lg">{{ __('general.system_updates') }}</flux:heading>
+            <div class="space-y-1 text-end" dir="ltr">
+                <flux:text class="font-mono text-sm text-zinc-600 dark:text-zinc-400">
+                    {{ __('general.app_version_label', ['version' => AppVersion::current()]) }}
+                </flux:text>
+                <flux:text class="block font-mono text-xs text-zinc-500">
+                    {{ __('general.system_update_version_line', [
+                        'installed' => AppVersion::installed(),
+                        'target' => AppVersion::current(),
+                    ]) }}
+                </flux:text>
+            </div>
+        </div>
 
         <div class="flex flex-wrap gap-3">
             <flux:button

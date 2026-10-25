@@ -255,6 +255,9 @@
                 <flux:text class="text-sm text-zinc-500 dark:text-zinc-500">
                     &copy; {{ date('Y') }} {{ __('general.app_name') }}
                 </flux:text>
+                <flux:text class="mt-2 block font-mono text-xs text-zinc-400 dark:text-zinc-600" dir="ltr">
+                    {{ __('general.app_version_label', ['version' => \App\Support\System\AppVersion::current()]) }}
+                </flux:text>
             </footer>
         </div>
 
