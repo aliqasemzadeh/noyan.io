@@ -13,8 +13,10 @@ use App\Models\Accounting\FiscalYear;
 use App\Models\Accounting\Invoice;
 use App\Models\Accounting\JournalEntry;
 use App\Models\Accounting\Transaction;
+use App\Models\Business;
 use App\Models\BusinessLedgerSetting;
 use App\Models\User;
+use App\Support\Accounting\CategoryGlAccountMap;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
@@ -28,11 +30,14 @@ class AutoPostingEngine
         private PostJournalEntryAction $postJournalEntry,
     ) {}
 
-    public function postInvoice(Invoice $invoice, User $user): ?JournalEntry
+    /**
+     * @param  bool  $forceDraft  When true, create a draft voucher even if auto-post is Off (backfill).
+     */
+    public function postInvoice(Invoice $invoice, User $user, bool $forceDraft = false): ?JournalEntry
     {
         $settings = $this->ledgerSettings->get((int) $invoice->business_id);
 
-        if ($settings->auto_post_mode === AutoPostMode::Off) {
+        if (! $forceDraft && $settings->auto_post_mode === AutoPostMode::Off) {
             return null;
         }
 
@@ -70,14 +75,18 @@ class AutoPostingEngine
             $lines,
             $settings,
             ['invoice_id' => $invoice->id],
+            forceDraft: $forceDraft,
         );
     }
 
-    public function postTransaction(Transaction $transaction, User $user): ?JournalEntry
+    /**
+     * @param  bool  $forceDraft  When true, create a draft voucher even if auto-post is Off (backfill).
+     */
+    public function postTransaction(Transaction $transaction, User $user, bool $forceDraft = false): ?JournalEntry
     {
         $settings = $this->ledgerSettings->get((int) $transaction->business_id);
 
-        if ($settings->auto_post_mode === AutoPostMode::Off) {
+        if (! $forceDraft && $settings->auto_post_mode === AutoPostMode::Off) {
             return null;
         }
 
@@ -112,6 +121,7 @@ class AutoPostingEngine
             $lines,
             $settings,
             ['transaction_id' => $transaction->id],
+            forceDraft: $forceDraft,
         );
     }
 
@@ -273,15 +283,18 @@ class AutoPostingEngine
 
     protected function requireCategoryGlAccountId(Transaction $transaction): int
     {
-        $glAccountId = $transaction->category?->gl_account_id;
+        $account = CategoryGlAccountMap::resolve(
+            (int) $transaction->business_id,
+            $transaction->category,
+        );
 
-        if ($glAccountId === null) {
+        if ($account === null) {
             throw ValidationException::withMessages([
                 'category_id' => [__('general.auto_post_category_needs_gl_account')],
             ]);
         }
 
-        return (int) $glAccountId;
+        return (int) $account->id;
     }
 
     protected function transactionAmount(Transaction $transaction): string
