@@ -10,6 +10,12 @@ enum StockMovementType: string
     case ReturnIn = 'return_in';
     case ReturnOut = 'return_out';
     case Adjustment = 'adjustment';
+    case TransferIn = 'transfer_in';
+    case TransferOut = 'transfer_out';
+    case Reserve = 'reserve';
+    case ReleaseReserve = 'release_reserve';
+    case Consume = 'consume';
+    case Produce = 'produce';
 
     public function label(): string
     {
@@ -20,6 +26,12 @@ enum StockMovementType: string
             self::ReturnIn => __('general.stock_movement_return_in'),
             self::ReturnOut => __('general.stock_movement_return_out'),
             self::Adjustment => __('general.stock_movement_adjustment'),
+            self::TransferIn => __('general.stock_movement_transfer_in'),
+            self::TransferOut => __('general.stock_movement_transfer_out'),
+            self::Reserve => __('general.stock_movement_reserve'),
+            self::ReleaseReserve => __('general.stock_movement_release_reserve'),
+            self::Consume => __('general.stock_movement_consume'),
+            self::Produce => __('general.stock_movement_produce'),
         };
     }
 
