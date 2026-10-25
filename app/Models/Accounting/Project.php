@@ -2,6 +2,8 @@
 
 namespace App\Models\Accounting;
 
+use App\Models\Catalog\ProductStockMovement;
+use App\Models\Catalog\StockConversion;
 use App\Models\Concerns\BelongsToBusiness;
 use Database\Factories\Accounting\ProjectFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -45,6 +47,22 @@ class Project extends Model
     public function journalLines(): HasMany
     {
         return $this->hasMany(JournalLine::class);
+    }
+
+    /**
+     * @return HasMany<ProductStockMovement, $this>
+     */
+    public function stockMovements(): HasMany
+    {
+        return $this->hasMany(ProductStockMovement::class);
+    }
+
+    /**
+     * @return HasMany<StockConversion, $this>
+     */
+    public function stockConversions(): HasMany
+    {
+        return $this->hasMany(StockConversion::class);
     }
 
     /**
