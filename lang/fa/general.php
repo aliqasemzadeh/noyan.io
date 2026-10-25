@@ -1298,7 +1298,7 @@ return [
     'voucher_number_pad' => 'تعداد ارقام شماره',
     'default_voucher_status' => 'وضعیت پیش‌فرض سند',
     'auto_posting_policy' => 'سیاست ثبت خودکار',
-    'auto_posting_policy_hint' => 'نحوه ایجاد سند دفترکل هنگام قطعی‌شدن فاکتور را مشخص می‌کند.',
+    'auto_posting_policy_hint' => 'نحوه ایجاد سند دفترکل هنگام قطعی‌شدن فاکتور و ثبت تراکنش خزانه را مشخص می‌کند.',
     'auto_post_mode' => 'حالت ثبت خودکار',
     'auto_post_mode_off' => 'غیرفعال',
     'auto_post_mode_realtime' => 'آنی (ثبت قطعی)',

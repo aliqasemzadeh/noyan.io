@@ -1298,7 +1298,7 @@ return [
     'voucher_number_pad' => 'Number padding digits',
     'default_voucher_status' => 'Default voucher status',
     'auto_posting_policy' => 'Auto-posting policy',
-    'auto_posting_policy_hint' => 'Controls how finalized invoices create general-ledger vouchers.',
+    'auto_posting_policy_hint' => 'Controls how finalized invoices and treasury transactions create general-ledger vouchers.',
     'auto_post_mode' => 'Auto-post mode',
     'auto_post_mode_off' => 'Off',
     'auto_post_mode_realtime' => 'Realtime (posted)',
