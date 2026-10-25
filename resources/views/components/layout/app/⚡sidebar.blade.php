@@ -403,7 +403,7 @@ new class extends Component
 
             <flux:sidebar.group
                 expandable
-                :expanded="request()->routeIs('accounting.journal-entries.*') || request()->routeIs('accounting.fiscal-years.*') || request()->routeIs('accounting.cost-centers.*') || request()->routeIs('accounting.projects.*')"
+                :expanded="request()->routeIs('accounting.journal-entries.*') || request()->routeIs('accounting.fiscal-years.*') || request()->routeIs('accounting.cost-centers.*') || request()->routeIs('accounting.projects.*') || request()->routeIs('accounting.ledger-settings.*')"
                 icon="book-open"
                 heading="{{ __('general.general_ledger') }}"
                 class="grid"
@@ -442,6 +442,15 @@ new class extends Component
                     data-nav-label="{{ __('general.projects') }}"
                 >
                     {{ __('general.projects') }}
+                </flux:sidebar.item>
+
+                <flux:sidebar.item
+                    :href="route('accounting.ledger-settings.index')"
+                    wire:navigate
+                    :current="request()->routeIs('accounting.ledger-settings.*')"
+                    data-nav-label="{{ __('general.ledger_settings') }}"
+                >
+                    {{ __('general.ledger_settings') }}
                 </flux:sidebar.item>
             </flux:sidebar.group>
 

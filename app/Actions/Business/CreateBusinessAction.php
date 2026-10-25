@@ -11,6 +11,7 @@ use App\Enums\Business\BusinessType;
 use App\Enums\Business\InvoiceOrientation;
 use App\Models\Business;
 use App\Models\BusinessInvoiceSetting;
+use App\Models\BusinessLedgerSetting;
 use App\Models\BusinessUser;
 use App\Models\Currency;
 use App\Models\User;
@@ -115,6 +116,7 @@ class CreateBusinessAction
             app(InitializeBusinessWarehousesAction::class)->handle($business);
 
             BusinessInvoiceSetting::forBusiness($business);
+            BusinessLedgerSetting::forBusiness($business);
 
             return $business->fresh();
         });

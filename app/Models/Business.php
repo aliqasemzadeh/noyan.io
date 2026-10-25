@@ -309,6 +309,16 @@ class Business extends Model implements HasMedia
         return $this->hasOne(BusinessInvoiceSetting::class);
     }
 
+    public function ledgerSettings(): HasOne
+    {
+        return $this->hasOne(BusinessLedgerSetting::class);
+    }
+
+    public function resolveLedgerSettings(): BusinessLedgerSetting
+    {
+        return BusinessLedgerSetting::forBusiness($this);
+    }
+
     /**
      * @return HasMany<BusinessSmsWalletTransaction, $this>
      */

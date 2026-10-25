@@ -25,6 +25,8 @@ class JournalEntryFactory extends Factory
             'business_id' => Business::factory(),
             'fiscal_year_id' => FiscalYear::factory(),
             'voucher_number' => str_pad((string) fake()->unique()->numberBetween(1, 9999), 4, '0', STR_PAD_LEFT),
+            'sequence_number' => null,
+            'sequence_scope' => null,
             'entry_date' => now()->toDateString(),
             'description' => fake()->sentence(),
             'referenceable_type' => null,

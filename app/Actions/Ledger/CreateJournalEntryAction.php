@@ -25,6 +25,7 @@ class CreateJournalEntryAction
      *     entry_date: string,
      *     description: string,
      *     status?: string|JournalEntryStatus,
+     *     voucher_number?: string|null,
      *     referenceable_type?: string|null,
      *     referenceable_id?: int|null
      * }  $entryData
@@ -61,10 +62,19 @@ class CreateJournalEntryAction
                 ? $status
                 : JournalEntryStatus::from((string) $status);
 
+            $numbering = $this->voucherNumberGenerator->generate(
+                (int) $businessId,
+                $fiscalYear->id,
+                $entryDate,
+                isset($entryData['voucher_number']) ? (string) $entryData['voucher_number'] : null,
+            );
+
             $entry = JournalEntry::query()->create([
                 'business_id' => $businessId,
                 'fiscal_year_id' => $fiscalYear->id,
-                'voucher_number' => $this->voucherNumberGenerator->generate((int) $businessId, $fiscalYear->id),
+                'voucher_number' => $numbering['voucher_number'],
+                'sequence_number' => $numbering['sequence_number'],
+                'sequence_scope' => $numbering['sequence_scope'],
                 'entry_date' => $entryDate,
                 'description' => $description,
                 'referenceable_type' => $entryData['referenceable_type'] ?? null,

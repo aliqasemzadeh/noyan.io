@@ -19,6 +19,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'business_id',
     'fiscal_year_id',
     'voucher_number',
+    'sequence_number',
+    'sequence_scope',
     'entry_date',
     'description',
     'referenceable_type',
@@ -37,6 +39,7 @@ class JournalEntry extends Model
     protected function casts(): array
     {
         return [
+            'sequence_number' => 'integer',
             'entry_date' => 'date',
             'status' => JournalEntryStatus::class,
         ];
