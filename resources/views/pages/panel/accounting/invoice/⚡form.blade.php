@@ -33,16 +33,23 @@ new class extends Component
         Auth::user()?->ensureCurrentBusiness();
 
         if (BusinessPanelContext::isSale()) {
-            $permission = $invoice !== null
-                ? BusinessPermission::InvoiceEdit
-                : BusinessPermission::InvoiceCreate;
+            $permission = match (true) {
+                $invoice === null => BusinessPermission::InvoiceCreate,
+                $invoice->isFinalized() => BusinessPermission::InvoiceEditFinalized,
+                default => BusinessPermission::InvoiceEdit,
+            };
 
             abort_unless(Auth::user()?->canInBusiness($permission), 403);
         }
 
         if ($invoice !== null) {
             abort_unless((int) $invoice->business_id === (int) Auth::user()?->current_business_id, 404);
-            abort_unless($invoice->isDraft(), 403);
+
+            if ($invoice->isFinalized()) {
+                abort_unless(Auth::user()?->canInBusiness(BusinessPermission::InvoiceEditFinalized), 403);
+            } else {
+                abort_unless($invoice->isDraft(), 403);
+            }
 
             if (BusinessPanelContext::isSale()) {
                 abort_unless($invoice->type === InvoiceType::Sale, 403);
@@ -172,7 +179,15 @@ new class extends Component
 
     public function saveAsDraft(SaveInvoiceAction $action): void
     {
+        $wasFinalized = $this->form->invoice?->isFinalized() ?? false;
         $invoice = $this->form->saveAsDraft($action);
+
+        if ($wasFinalized || $invoice->isFinalized()) {
+            Flux::toast(__('general.invoice_finalized_updated', ['number' => $invoice->invoice_number]));
+            $this->redirect(BusinessPanelContext::route('invoices.index'), navigate: true);
+
+            return;
+        }
 
         Flux::toast(__('general.invoice_draft_saved', ['number' => $invoice->invoice_number]));
 
@@ -181,6 +196,8 @@ new class extends Component
 
     public function saveAndFinalize(SaveInvoiceAction $saveAction, FinalizeInvoiceAction $finalizeAction): void
     {
+        abort_if($this->form->invoice?->isFinalized(), 403);
+
         $invoice = $this->form->saveAndFinalize($saveAction, $finalizeAction);
 
         Flux::toast(__('general.invoice_finalized', ['number' => $invoice->invoice_number]));
@@ -352,9 +369,14 @@ new class extends Component
                 <flux:text class="mt-1">{{ __('general.invoice_form_hint') }}</flux:text>
             </div>
 
-            <flux:badge size="sm" :color="$form->type === 'purchase' ? 'amber' : 'teal'" class="self-start sm:self-auto">
-                {{ InvoiceType::from($form->type)->label() }}
-            </flux:badge>
+            <div class="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+                <flux:badge size="sm" :color="$form->type === 'purchase' ? 'amber' : 'teal'">
+                    {{ InvoiceType::from($form->type)->label() }}
+                </flux:badge>
+                @if ($form->invoice?->isFinalized())
+                    <flux:badge size="sm" color="green">{{ __('general.finalized') }}</flux:badge>
+                @endif
+            </div>
         </div>
     </div>
 
@@ -534,15 +556,17 @@ new class extends Component
 
         <div class="sticky bottom-0 z-10 -mx-1 border-t border-zinc-200 bg-white/95 px-1 py-3 backdrop-blur dark:border-zinc-700 dark:bg-zinc-900/95 sm:static sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none dark:sm:bg-transparent">
             <div class="flex flex-col gap-3 sm:flex-row">
-                <flux:button type="submit" variant="primary" color="zinc" class="w-full sm:w-auto">
+                <flux:button type="submit" variant="primary" color="{{ $form->invoice?->isFinalized() ? 'orange' : 'zinc' }}" class="w-full sm:w-auto">
                     {{ $form->invoice !== null ? __('general.update') : __('general.save_as_draft') }}
                 </flux:button>
                 <flux:button type="button" variant="primary" color="sky" class="w-full sm:w-auto" wire:click="recalculateTotals">
                     {{ __('general.recalculate_totals') }}
                 </flux:button>
-                <flux:button type="button" variant="primary" color="teal" class="w-full sm:w-auto" wire:click="saveAndFinalize">
-                    {{ __('general.save_and_finalize') }}
-                </flux:button>
+                @if (! $form->invoice?->isFinalized())
+                    <flux:button type="button" variant="primary" color="teal" class="w-full sm:w-auto" wire:click="saveAndFinalize">
+                        {{ __('general.save_and_finalize') }}
+                    </flux:button>
+                @endif
             </div>
         </div>
     </form>

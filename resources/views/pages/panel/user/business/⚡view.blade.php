@@ -83,7 +83,7 @@ new class extends Component
                                 {{ __('general.business_users') }}
                             </flux:menu.item>
                             <flux:menu.item
-                                icon="history"
+                                icon="scroll-text"
                                 :href="route('user.businesses.activity', $business)"
                                 wire:navigate
                             >

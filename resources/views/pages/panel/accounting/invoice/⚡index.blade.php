@@ -331,6 +331,11 @@ new class extends Component
                                             </flux:modal.trigger>
                                         @endif
                                     @else
+                                        @if (auth()->user()?->canInBusiness(BusinessPermission::InvoiceEditFinalized))
+                                            <flux:menu.item icon="pencil" :href="$this->panelRoute('invoices.edit', $invoice)" wire:navigate>
+                                                {{ __('general.edit') }}
+                                            </flux:menu.item>
+                                        @endif
                                         <flux:menu.item icon="link" wire:click="copyShareLink({{ $invoice->id }})">
                                             {{ __('general.copy_invoice_link') }}
                                         </flux:menu.item>
@@ -441,6 +446,19 @@ new class extends Component
                                             </flux:modal.trigger>
                                         @endif
                                     @else
+                                        @if (auth()->user()?->canInBusiness(BusinessPermission::InvoiceEditFinalized))
+                                            <flux:tooltip content="{{ __('general.edit') }}">
+                                                <flux:button
+                                                    size="xs"
+                                                    variant="primary"
+                                                    color="orange"
+                                                    icon="pencil"
+                                                    icon:variant="outline"
+                                                    :href="$this->panelRoute('invoices.edit', $invoice)"
+                                                    wire:navigate
+                                                />
+                                            </flux:tooltip>
+                                        @endif
                                         <flux:tooltip content="{{ __('general.copy_invoice_link') }}">
                                             <flux:button
                                                 size="xs"

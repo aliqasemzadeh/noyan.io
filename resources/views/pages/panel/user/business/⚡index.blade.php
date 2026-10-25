@@ -136,7 +136,7 @@ new class extends Component
                                             size="xs"
                                             variant="primary"
                                             color="amber"
-                                            icon="history"
+                                            icon="scroll-text"
                                             icon:variant="outline"
                                             :href="route('user.businesses.activity', $business)"
                                             wire:navigate
