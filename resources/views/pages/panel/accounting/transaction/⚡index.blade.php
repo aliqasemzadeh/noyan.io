@@ -1,8 +1,10 @@
 <?php
 
 use App\Enums\Accounting\TransactionType;
+use App\Enums\CategoryType;
 use App\Models\Accounting\Account;
 use App\Models\Accounting\Transaction;
+use App\Models\Category;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
@@ -27,6 +29,9 @@ new class extends Component
 
     #[Url]
     public string $accountFilter = '';
+
+    #[Url]
+    public string $categoryFilter = '';
 
     #[Url]
     public string $sortDirection = 'desc';
@@ -60,6 +65,11 @@ new class extends Component
         $this->resetPage();
     }
 
+    public function updatedCategoryFilter(): void
+    {
+        $this->resetPage();
+    }
+
     public function updatedSortDirection(): void
     {
         if (! in_array($this->sortDirection, ['asc', 'desc'], true)) {
@@ -72,7 +82,7 @@ new class extends Component
     #[On('panels.accounting.transaction.index.table')]
     public function refreshTable(): void
     {
-        unset($this->transactions, $this->filterTags, $this->filterAccounts);
+        unset($this->transactions, $this->filterTags, $this->filterAccounts, $this->filterCategories);
     }
 
     /**
@@ -103,6 +113,26 @@ new class extends Component
         }
 
         return Account::cachedOptionsForBusiness($businessId);
+    }
+
+    /**
+     * @return Collection<int, Category>
+     */
+    #[Computed]
+    public function filterCategories(): Collection
+    {
+        $businessId = Auth::user()?->current_business_id;
+
+        if ($businessId === null) {
+            return collect();
+        }
+
+        return Category::query()
+            ->where('business_id', $businessId)
+            ->where('type', CategoryType::Expense)
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get(['id', 'name']);
     }
 
     /**
@@ -145,6 +175,8 @@ new class extends Component
                         ->orWhere('destination_account_id', $accountId);
                 });
             })
+            ->when($this->categoryFilter === 'none', fn ($query) => $query->whereNull('category_id'))
+            ->when(ctype_digit($this->categoryFilter), fn ($query) => $query->where('category_id', (int) $this->categoryFilter))
             ->orderBy('transaction_date', $direction)
             ->orderBy('created_at', $direction)
             ->paginate(config('general.per_page', 15));
@@ -241,6 +273,16 @@ new class extends Component
                 @foreach ($this->filterTags as $tagName)
                     <flux:select.option value="{{ $tagName }}" wire:key="filter-tx-tag-{{ $tagName }}">
                         {{ $tagName }}
+                    </flux:select.option>
+                @endforeach
+            </flux:select>
+
+            <flux:select wire:model.live="categoryFilter" searchable variant="listbox" placeholder="{{ __('general.all_categories') }}" clearable>
+                <flux:select.option value="">{{ __('general.all_categories') }}</flux:select.option>
+                <flux:select.option value="none">{{ __('general.dashboard_uncategorized') }}</flux:select.option>
+                @foreach ($this->filterCategories as $category)
+                    <flux:select.option value="{{ $category->id }}" wire:key="filter-tx-category-{{ $category->id }}">
+                        {{ $category->name }}
                     </flux:select.option>
                 @endforeach
             </flux:select>

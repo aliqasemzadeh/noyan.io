@@ -12,6 +12,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Js;
 use Livewire\Attributes\Computed;
+use Livewire\Attributes\On;
 use Livewire\Component;
 
 new class extends Component
@@ -27,10 +28,28 @@ new class extends Component
 
     public function updatedFormType(): void
     {
+        $this->applyType($this->form->type);
+    }
+
+    #[On('panels.accounting.transaction.create.open')]
+    public function openAs(string $type): void
+    {
+        if (! in_array($type, TransactionType::values(), true)) {
+            return;
+        }
+
+        $this->form->type = $type;
+        $this->applyType($type);
+
+        Flux::modal('transaction.create')->show();
+    }
+
+    private function applyType(string $type): void
+    {
         $this->form->category_id = null;
         unset($this->transactionCategories);
 
-        if ($this->form->type === TransactionType::Transfer->value) {
+        if ($type === TransactionType::Transfer->value) {
             $this->form->party_id = null;
         } else {
             $this->form->destination_account_id = null;

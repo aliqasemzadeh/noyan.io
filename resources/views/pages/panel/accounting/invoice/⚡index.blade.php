@@ -2,8 +2,10 @@
 
 use App\Actions\Invoices\CreateInvoiceShareLinkAction;
 use App\Actions\Notifications\SendInvoiceNotificationAction;
+use App\Enums\Accounting\InvoiceAging;
 use App\Enums\Accounting\InvoiceNotificationChannel;
 use App\Enums\Accounting\InvoiceNotificationType;
+use App\Enums\Accounting\InvoicePaymentStatus;
 use App\Enums\Accounting\InvoiceType;
 use App\Enums\Business\BusinessPermission;
 use App\Models\Accounting\Invoice;
@@ -31,6 +33,9 @@ new class extends Component
     #[Url]
     public string $statusFilter = '';
 
+    #[Url]
+    public string $aging = '';
+
     public function mount(): void
     {
         Auth::user()?->ensureCurrentBusiness();
@@ -51,6 +56,11 @@ new class extends Component
     }
 
     public function updatedStatusFilter(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatedAging(): void
     {
         $this->resetPage();
     }
@@ -189,6 +199,29 @@ new class extends Component
             )
             ->when($this->statusFilter === 'draft', fn ($query) => $query->whereNull('finalized_at'))
             ->when($this->statusFilter === 'finalized', fn ($query) => $query->whereNotNull('finalized_at'))
+            ->when(InvoiceAging::tryFrom($this->aging) !== null, function ($query): void {
+                $bucket = InvoiceAging::from($this->aging);
+                $today = now()->toDateString();
+                $days30 = now()->subDays(30)->toDateString();
+                $days60 = now()->subDays(60)->toDateString();
+
+                $query->whereNotNull('finalized_at')
+                    ->where('payment_status', '!=', InvoicePaymentStatus::Paid->value)
+                    ->whereColumn('total_amount', '>', 'paid_amount');
+
+                match ($bucket) {
+                    InvoiceAging::Current => $query->where(function ($query) use ($today): void {
+                        $query->whereNull('due_date')->orWhereDate('due_date', '>=', $today);
+                    }),
+                    InvoiceAging::Days1To30 => $query
+                        ->whereDate('due_date', '<', $today)
+                        ->whereDate('due_date', '>=', $days30),
+                    InvoiceAging::Days31To60 => $query
+                        ->whereDate('due_date', '<', $days30)
+                        ->whereDate('due_date', '>=', $days60),
+                    InvoiceAging::Over60 => $query->whereDate('due_date', '<', $days60),
+                };
+            })
             ->latest('issue_date')
             ->latest('id')
             ->paginate(config('general.per_page', 15));
@@ -268,7 +301,7 @@ new class extends Component
     </div>
 
     <flux:card>
-        <div class="mb-4 grid gap-3 md:grid-cols-3">
+        <div class="mb-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
             <flux:input
                 wire:model.live.debounce.300ms="search"
                 icon="search"
@@ -289,6 +322,15 @@ new class extends Component
                 <flux:select.option value="">{{ __('general.all_statuses') }}</flux:select.option>
                 <flux:select.option value="draft">{{ __('general.draft') }}</flux:select.option>
                 <flux:select.option value="finalized">{{ __('general.finalized') }}</flux:select.option>
+            </flux:select>
+
+            <flux:select wire:model.live="aging" searchable variant="listbox" placeholder="{{ __('general.all_aging') }}">
+                <flux:select.option value="">{{ __('general.all_aging') }}</flux:select.option>
+                @foreach (InvoiceAging::cases() as $bucket)
+                    <flux:select.option value="{{ $bucket->value }}" wire:key="filter-invoice-aging-{{ $bucket->value }}">
+                        {{ $bucket->label() }}
+                    </flux:select.option>
+                @endforeach
             </flux:select>
         </div>
 
