@@ -71,10 +71,30 @@ return new class extends Migration
         }
 
         Schema::table('journal_lines', function (Blueprint $table) {
-            $table->dropIndex(['detail_level_4_id', 'created_at']);
-            $table->dropConstrainedForeignId('detail_level_6_id');
-            $table->dropConstrainedForeignId('detail_level_5_id');
-            $table->dropConstrainedForeignId('detail_level_4_id');
+            $table->dropForeign(['detail_level_6_id']);
+            $table->dropForeign(['detail_level_5_id']);
+            $table->dropForeign(['detail_level_4_id']);
+        });
+
+        foreach ([
+            'journal_lines_detail_level_4_id_created_at_index',
+            'journal_lines_detail_level_4_id_foreign',
+            'journal_lines_detail_level_5_id_foreign',
+            'journal_lines_detail_level_6_id_foreign',
+        ] as $index) {
+            if (collect(Schema::getIndexes('journal_lines'))->contains(fn (array $existing): bool => $existing['name'] === $index)) {
+                Schema::table('journal_lines', function (Blueprint $table) use ($index): void {
+                    $table->dropIndex($index);
+                });
+            }
+        }
+
+        Schema::table('journal_lines', function (Blueprint $table) {
+            $table->dropColumn([
+                'detail_level_6_id',
+                'detail_level_5_id',
+                'detail_level_4_id',
+            ]);
         });
 
         Schema::table('gl_accounts', function (Blueprint $table) {

@@ -288,7 +288,7 @@ new class extends Component
                             <flux:field class="md:col-span-2 xl:col-span-3">
                                 <flux:label>{{ __('general.gl_account') }}</flux:label>
                                 <flux:select
-                                    wire:model="form.lines.{{ $index }}.gl_account_id"
+                                    wire:model.live="form.lines.{{ $index }}.gl_account_id"
                                     searchable
                                     variant="listbox"
                                     placeholder="{{ __('general.select_gl_account') }}"
