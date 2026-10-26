@@ -183,7 +183,7 @@ class GlCoreCompletionTest extends TestCase
         $sales = GlAccount::findBySystemKey($business, 'sales');
 
         $this->assertNotNull($sales);
-        $this->assertSame(DetailType::Project, $sales->requires_detail_level_5_type);
+        $this->assertSame(DetailType::Project, $sales->detailTypeForLevel(5));
     }
 
     /**

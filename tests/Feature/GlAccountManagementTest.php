@@ -10,6 +10,7 @@ use App\Enums\Business\BusinessCategory;
 use App\Enums\Business\BusinessType;
 use App\Enums\CurrencyType;
 use App\Models\Accounting\GlAccount;
+use App\Models\Accounting\GlAccountDetailLevel;
 use App\Models\Business;
 use App\Models\Currency;
 use App\Models\User;
@@ -51,11 +52,11 @@ class GlAccountManagementTest extends TestCase
         $this->assertNotNull(GlAccount::findBySystemKey($business, 'accounts_receivable'));
         $this->assertSame(
             DetailType::Party,
-            GlAccount::findBySystemKey($business, 'accounts_receivable')?->requires_detail_level_4_type,
+            GlAccount::findBySystemKey($business, 'accounts_receivable')?->detailTypeForLevel(4),
         );
         $this->assertSame(
             DetailType::Account,
-            GlAccount::findBySystemKey($business, 'cash_and_bank')?->requires_detail_level_4_type,
+            GlAccount::findBySystemKey($business, 'cash_and_bank')?->detailTypeForLevel(4),
         );
     }
 
@@ -77,6 +78,20 @@ class GlAccountManagementTest extends TestCase
             GlAccount::query()->where('business_id', $business->id)->where('system_key', 'sales')->value('id'),
         );
         $this->assertSame($user->id, $business->owner_id);
+
+        $detailCount = GlAccountDetailLevel::query()
+            ->whereIn('gl_account_id', GlAccount::query()->where('business_id', $business->id)->select('id'))
+            ->count();
+
+        $this->assertGreaterThan(0, $detailCount);
+        $action->handle($business);
+
+        $this->assertSame(
+            $detailCount,
+            GlAccountDetailLevel::query()
+                ->whereIn('gl_account_id', GlAccount::query()->where('business_id', $business->id)->select('id'))
+                ->count(),
+        );
     }
 
     public function test_seed_restores_soft_deleted_system_account_without_duplicate(): void
@@ -169,6 +184,66 @@ class GlAccountManagementTest extends TestCase
             'id' => $sales->id,
             'deleted_at' => null,
         ]);
+    }
+
+    public function test_user_can_define_more_than_three_detail_levels_including_a_repeated_type(): void
+    {
+        [$user, $business] = $this->actingBusinessUser();
+        app(SeedBusinessChartOfAccountsAction::class)->handle($business);
+
+        $control = GlAccount::query()
+            ->where('business_id', $business->id)
+            ->where('level', AccountLevel::Control)
+            ->where('full_code', '11')
+            ->firstOrFail();
+
+        Livewire::actingAs($user)
+            ->test('accounting.gl-account.create')
+            ->call('assignData', $control->id)
+            ->set('form.code', '98')
+            ->set('form.name', 'Seven level expense')
+            ->set('form.detailLevels', [
+                ['level' => 4, 'detail_type' => DetailType::Party->value],
+                ['level' => 5, 'detail_type' => DetailType::Project->value],
+                ['level' => 6, 'detail_type' => DetailType::CostCenter->value],
+                ['level' => 7, 'detail_type' => DetailType::Party->value],
+            ])
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $account = GlAccount::query()
+            ->where('business_id', $business->id)
+            ->where('full_code', '1198')
+            ->firstOrFail();
+
+        $this->assertSame(DetailType::Party, $account->detailTypeForLevel(4));
+        $this->assertSame(DetailType::Project, $account->detailTypeForLevel(5));
+        $this->assertSame(DetailType::CostCenter, $account->detailTypeForLevel(6));
+        $this->assertSame(DetailType::Party, $account->detailTypeForLevel(7));
+    }
+
+    public function test_system_subsidiary_detail_levels_can_change_without_renaming(): void
+    {
+        [$user, $business] = $this->actingBusinessUser();
+        app(SeedBusinessChartOfAccountsAction::class)->handle($business);
+
+        $sales = GlAccount::findBySystemKey($business, 'sales');
+        $this->assertNotNull($sales);
+        $originalName = $sales->name;
+
+        Livewire::actingAs($user)
+            ->test('accounting.gl-account.edit')
+            ->call('assignData', $sales->id)
+            ->set('form.name', 'Changed sales')
+            ->call('addDetailLevel')
+            ->set('form.detailLevels.0.detail_type', DetailType::Project->value)
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $sales->refresh();
+
+        $this->assertSame($originalName, $sales->name);
+        $this->assertSame(DetailType::Project, $sales->detailTypeForLevel(4));
     }
 
     /**
