@@ -78,6 +78,7 @@ enum BusinessRole: string
                     'invoice',
                     'party',
                     'product',
+                    'stock_value',
                 ], true),
             )),
             self::WarehouseKeeper => array_values(array_filter(

@@ -5,6 +5,7 @@ namespace App\Models\Accounting;
 use App\Enums\Accounting\InvoicePaymentStatus;
 use App\Enums\Accounting\InvoiceType;
 use App\Models\Business;
+use App\Models\Catalog\StockDocument;
 use App\Models\Concerns\LogsBusinessActivity;
 use App\Models\User;
 use Database\Factories\Accounting\InvoiceFactory;
@@ -146,6 +147,14 @@ class Invoice extends Model
     public function items(): HasMany
     {
         return $this->hasMany(InvoiceItem::class)->orderBy('sort_order');
+    }
+
+    /**
+     * @return HasMany<StockDocument, $this>
+     */
+    public function stockDocuments(): HasMany
+    {
+        return $this->hasMany(StockDocument::class);
     }
 
     /**

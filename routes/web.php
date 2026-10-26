@@ -120,6 +120,8 @@ Route::middleware('auth')->group(function () {
         Route::livewire('/support/tickets/{ticket}', 'pages::panel.user.support.ticket.view')
             ->name('support.tickets.view');
 
+        Route::livewire('/profile', 'pages::panel.user.profile.index')->name('profile');
+
         Route::middleware('business.selected')->group(function () {
             Route::livewire('/', 'pages::panel.user.dashboard.index')->name('dashboard');
             Route::livewire('/businesses', 'pages::panel.user.business.index')->name('businesses.index');

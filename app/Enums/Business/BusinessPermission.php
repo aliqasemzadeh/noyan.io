@@ -98,6 +98,8 @@ enum BusinessPermission: string
     case StockAllocate = 'stock_allocate';
     case StockConvert = 'stock_convert';
     case StockMovementView = 'stock_movement_view';
+    case StockCount = 'stock_count';
+    case StockViewValue = 'stock_view_value';
 
     public function label(): string
     {
@@ -124,7 +126,8 @@ enum BusinessPermission: string
             self::ProductView, self::ProductCreate, self::ProductEdit, self::ProductDelete => 'product',
             self::BrandView, self::BrandCreate, self::BrandEdit, self::BrandDelete => 'brand',
             self::WarehouseView, self::WarehouseCreate, self::WarehouseEdit, self::WarehouseDelete => 'warehouse',
-            self::StockReceive, self::StockIssue, self::StockTransfer, self::StockAdjust, self::StockAllocate, self::StockConvert, self::StockMovementView => 'stock',
+            self::StockReceive, self::StockIssue, self::StockTransfer, self::StockAdjust, self::StockAllocate, self::StockConvert, self::StockMovementView, self::StockCount => 'stock',
+            self::StockViewValue => 'stock_value',
         };
     }
 

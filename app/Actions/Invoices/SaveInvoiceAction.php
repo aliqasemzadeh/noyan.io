@@ -3,6 +3,8 @@
 namespace App\Actions\Invoices;
 
 use App\Actions\Concerns\NormalizesLineItems;
+use App\Actions\Inventory\GuardInvoiceStockEditAction;
+use App\Actions\Inventory\SyncInvoiceStockDocumentAction;
 use App\Enums\Accounting\InvoicePaymentStatus;
 use App\Enums\Accounting\InvoiceType;
 use App\Enums\Business\BusinessPermission;
@@ -23,6 +25,8 @@ class SaveInvoiceAction
     public function __construct(
         private InvoiceNumberGenerator $invoiceNumberGenerator,
         private ApplyInvoiceEffectsAction $applyEffects,
+        private GuardInvoiceStockEditAction $guardInvoiceStockEdit,
+        private SyncInvoiceStockDocumentAction $syncInvoiceStockDocument,
     ) {}
 
     /**
@@ -92,6 +96,10 @@ class SaveInvoiceAction
 
                     $editingFinalized = true;
                     $previousTotal = (string) $invoice->total_amount;
+                    $this->guardInvoiceStockEdit->handle(
+                        $invoice,
+                        $this->normalizeItems($businessId, $data['items'] ?? []),
+                    );
                     $this->applyEffects->handle($invoice, $user, reverse: true);
                 }
             }
@@ -176,6 +184,10 @@ class SaveInvoiceAction
                 }
 
                 $this->applyEffects->handle($invoice, $user);
+                $this->syncInvoiceStockDocument->handle(
+                    $invoice->fresh(['items.product', 'party', 'business']) ?? $invoice,
+                    $user,
+                );
 
                 activity()
                     ->performedOn($invoice)

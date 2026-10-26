@@ -163,6 +163,10 @@ new class extends Component
                     {{ __('general.add_business') }}
                 </flux:menu.item>
 
+                <flux:menu.item icon="circle-user" :href="route('user.profile')" wire:navigate>
+                    {{ __('general.user_settings') }}
+                </flux:menu.item>
+
                 <flux:menu.separator />
 
                 <flux:menu.item icon="arrow-right-start-on-rectangle" wire:click="logout">

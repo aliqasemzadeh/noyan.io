@@ -24,7 +24,7 @@ class UserProfileTest extends TestCase
         $user->forceFill(['current_business_id' => $business->id])->save();
 
         Livewire::actingAs($user)
-            ->test('pages::panel.user.dashboard.index')
+            ->test('pages::panel.user.profile.index')
             ->set('form.first_name', 'علی')
             ->set('form.last_name', 'رضایی')
             ->set('form.email', 'ali@example.com')
@@ -43,5 +43,16 @@ class UserProfileTest extends TestCase
         $this->assertSame('1990-05-15', $user->birth_date?->format('Y-m-d'));
         $this->assertNotNull($user->avatarUrl());
         $this->assertSame('علی رضایی', $user->fullName());
+    }
+
+    public function test_profile_page_is_available_without_a_business(): void
+    {
+        $user = User::factory()->create(['current_business_id' => null]);
+
+        $this->actingAs($user)
+            ->get(route('user.profile'))
+            ->assertOk()
+            ->assertSee(__('general.user_settings'))
+            ->assertSee(__('general.no_business_yet'));
     }
 }

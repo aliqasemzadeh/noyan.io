@@ -70,6 +70,7 @@ class SidebarMenuSearchTest extends TestCase
             __('general.dashboard'),
             __('general.my_businesses'),
             __('general.support'),
+            __('general.user_settings'),
         ], $labels);
     }
 

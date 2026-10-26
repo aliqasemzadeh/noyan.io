@@ -98,6 +98,7 @@ class SidebarMenu
             self::item(__('general.dashboard'), 'home', route('user.dashboard')),
             self::item(__('general.my_businesses'), 'building', route('user.businesses.index')),
             self::item(__('general.support'), 'life-buoy', route('user.support.tickets.index')),
+            self::item(__('general.user_settings'), 'circle-user', route('user.profile')),
         ];
     }
 

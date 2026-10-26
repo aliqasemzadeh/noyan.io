@@ -50,7 +50,7 @@ new class extends Component
             wire:navigate
             :current="request()->routeIs('user.*')"
         >
-            {{ __('general.user_settings') }}
+            {{ __('general.user_panel') }}
         </flux:sidebar.item>
 
         <flux:sidebar.item

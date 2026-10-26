@@ -2,6 +2,7 @@
 
 namespace App\Actions\Invoices;
 
+use App\Actions\Inventory\OpenInvoiceStockDocumentAction;
 use App\Enums\Accounting\InvoiceNotificationType;
 use App\Jobs\Notifications\SendInvoiceNotificationJob;
 use App\Models\Accounting\Invoice;
@@ -17,6 +18,7 @@ class FinalizeInvoiceAction
 {
     public function __construct(
         protected ApplyInvoiceEffectsAction $applyEffects,
+        protected OpenInvoiceStockDocumentAction $openStockDocument,
         protected AutoPostingEngine $autoPostingEngine,
     ) {}
 
@@ -66,6 +68,8 @@ class FinalizeInvoiceAction
                 ...$buyerSnapshots,
                 'finalized_at' => now(),
             ])->save();
+
+            $this->openStockDocument->handle($invoice->fresh(['items.product', 'party', 'business']) ?? $invoice, $user);
 
             try {
                 $this->autoPostingEngine->postInvoice($invoice->fresh(['items', 'party']) ?? $invoice, $user);

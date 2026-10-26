@@ -9,6 +9,7 @@ use App\Models\Catalog\InventoryStock;
 use App\Models\Catalog\Product;
 use App\Models\Catalog\ProductStockMovement;
 use App\Models\Catalog\Warehouse;
+use App\Support\Warehouse\WarehouseDashboardCache;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
@@ -53,7 +54,7 @@ class AdjustStockAction
             ]);
         }
 
-        return DB::transaction(function () use (
+        $movement = DB::transaction(function () use (
             $business,
             $product,
             $quantityDelta,
@@ -151,6 +152,10 @@ class AdjustStockAction
 
             return $movement;
         });
+
+        WarehouseDashboardCache::bump((int) $business->id);
+
+        return $movement;
     }
 
     protected function applyReserve(

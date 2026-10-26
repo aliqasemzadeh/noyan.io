@@ -266,6 +266,16 @@ new class extends Component
             >
                 {{ __('general.support') }}
             </flux:sidebar.item>
+
+            <flux:sidebar.item
+                icon="circle-user"
+                :href="route('user.profile')"
+                wire:navigate
+                :current="request()->routeIs('user.profile')"
+                data-nav-label="{{ __('general.user_settings') }}"
+            >
+                {{ __('general.user_settings') }}
+            </flux:sidebar.item>
         @elseif (request()->routeIs('warehouse.*'))
             <flux:sidebar.item
                 icon="home"
