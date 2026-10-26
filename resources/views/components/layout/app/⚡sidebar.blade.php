@@ -311,11 +311,35 @@ new class extends Component
             @if (auth()->user()?->canInBusiness(BusinessPermission::StockMovementView))
                 <flux:sidebar.group
                     expandable
-                    :expanded="request()->routeIs('warehouse.stocks.*') || request()->routeIs('warehouse.movements.*') || request()->routeIs('warehouse.conversions.*')"
+                    :expanded="request()->routeIs('warehouse.stocks.*') || request()->routeIs('warehouse.movements.*') || request()->routeIs('warehouse.conversions.*') || request()->routeIs('warehouse.dispatches.*') || request()->routeIs('warehouse.receipts.*') || request()->routeIs('warehouse.transfers.*') || request()->routeIs('warehouse.counts.*')"
                     icon="boxes"
                     heading="{{ __('general.inventory') }}"
                     class="grid"
                 >
+                    <flux:sidebar.item
+                        :href="route('warehouse.dispatches.index')"
+                        wire:navigate
+                        :current="request()->routeIs('warehouse.dispatches.*')"
+                        data-nav-label="{{ __('general.dispatches') }}"
+                    >
+                        {{ __('general.dispatches') }}
+                    </flux:sidebar.item>
+                    <flux:sidebar.item
+                        :href="route('warehouse.receipts.index')"
+                        wire:navigate
+                        :current="request()->routeIs('warehouse.receipts.*')"
+                        data-nav-label="{{ __('general.receipts') }}"
+                    >
+                        {{ __('general.receipts') }}
+                    </flux:sidebar.item>
+                    <flux:sidebar.item
+                        :href="route('warehouse.transfers.index')"
+                        wire:navigate
+                        :current="request()->routeIs('warehouse.transfers.*')"
+                        data-nav-label="{{ __('general.stock_transfers') }}"
+                    >
+                        {{ __('general.stock_transfers') }}
+                    </flux:sidebar.item>
                     <flux:sidebar.item
                         :href="route('warehouse.stocks.index')"
                         wire:navigate
@@ -340,6 +364,16 @@ new class extends Component
                     >
                         {{ __('general.stock_conversions') }}
                     </flux:sidebar.item>
+                    @if (auth()->user()?->canInBusiness(BusinessPermission::StockCount))
+                        <flux:sidebar.item
+                            :href="route('warehouse.counts.index')"
+                            wire:navigate
+                            :current="request()->routeIs('warehouse.counts.*')"
+                            data-nav-label="{{ __('general.stock_counts') }}"
+                        >
+                            {{ __('general.stock_counts') }}
+                        </flux:sidebar.item>
+                    @endif
                 </flux:sidebar.group>
             @endif
 

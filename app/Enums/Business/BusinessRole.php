@@ -69,6 +69,7 @@ enum BusinessRole: string
                     'party',
                     'invoice',
                     'quote',
+                    'stock_value',
                 ], true),
             )),
             self::Seller => array_values(array_filter(
@@ -78,7 +79,6 @@ enum BusinessRole: string
                     'invoice',
                     'party',
                     'product',
-                    'stock_value',
                 ], true),
             )),
             self::WarehouseKeeper => array_values(array_filter(

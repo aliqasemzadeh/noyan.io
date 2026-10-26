@@ -136,6 +136,9 @@ new class extends Component
                 <flux:table.column>{{ __('general.warehouse') }}</flux:table.column>
                 <flux:table.column>{{ __('general.type') }}</flux:table.column>
                 <flux:table.column>{{ __('general.quantity') }}</flux:table.column>
+                @if (auth()->user()?->canInBusiness(BusinessPermission::StockViewValue))
+                    <flux:table.column>{{ __('general.unit_cost') }}</flux:table.column>
+                @endif
                 <flux:table.column>{{ __('general.balance_after') }}</flux:table.column>
                 <flux:table.column>{{ __('general.note') }}</flux:table.column>
             </flux:table.columns>
@@ -147,6 +150,9 @@ new class extends Component
                         <flux:table.cell>{{ $movement->warehouse?->name }}</flux:table.cell>
                         <flux:table.cell>{{ $movement->movement_type->label() }}</flux:table.cell>
                         <flux:table.cell dir="ltr">{{ rtrim(rtrim(number_format((float) $movement->quantity, 4, '.', ''), '0'), '.') }}</flux:table.cell>
+                        @if (auth()->user()?->canInBusiness(BusinessPermission::StockViewValue))
+                            <flux:table.cell dir="ltr">{{ number_format((float) $movement->unit_cost) }}</flux:table.cell>
+                        @endif
                         <flux:table.cell dir="ltr">{{ rtrim(rtrim(number_format((float) $movement->balance_after, 4, '.', ''), '0'), '.') }}</flux:table.cell>
                         <flux:table.cell>
                             <div class="space-y-1">
@@ -162,7 +168,7 @@ new class extends Component
                     </flux:table.row>
                 @empty
                     <flux:table.row>
-                        <flux:table.cell colspan="7">{{ __('general.no_stock_movements') }}</flux:table.cell>
+                        <flux:table.cell colspan="{{ auth()->user()?->canInBusiness(BusinessPermission::StockViewValue) ? 8 : 7 }}">{{ __('general.no_stock_movements') }}</flux:table.cell>
                     </flux:table.row>
                 @endforelse
             </flux:table.rows>

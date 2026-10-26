@@ -180,6 +180,22 @@ Route::middleware('auth')->group(function () {
             ->middleware('business.permission:warehouse_view')
             ->name('warehouses.index');
 
+        Route::livewire('/dispatches', 'pages::panel.warehouse.dispatch.index')
+            ->middleware('business.permission:stock_movement_view')
+            ->name('dispatches.index');
+        Route::livewire('/dispatches/{stockDocument}/pick-list', 'pages::panel.warehouse.dispatch.pick-list')
+            ->middleware('business.permission:stock_movement_view')
+            ->name('dispatches.pick-list');
+        Route::livewire('/receipts', 'pages::panel.warehouse.receipt.index')
+            ->middleware('business.permission:stock_movement_view')
+            ->name('receipts.index');
+        Route::livewire('/transfers', 'pages::panel.warehouse.transfer.index')
+            ->middleware('business.permission:stock_movement_view')
+            ->name('transfers.index');
+        Route::livewire('/counts', 'pages::panel.warehouse.count.index')
+            ->middleware('business.permission:stock_count')
+            ->name('counts.index');
+
         Route::livewire('/stocks', 'pages::panel.warehouse.stock.index')
             ->middleware('business.permission:stock_movement_view')
             ->name('stocks.index');

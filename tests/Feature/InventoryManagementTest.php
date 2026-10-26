@@ -339,13 +339,14 @@ class InventoryManagementTest extends TestCase
 
         app(FinalizeInvoiceAction::class)->handle($invoice, $user);
 
-        $this->assertSame(0, bccomp((string) $goods->fresh()->stock_quantity, '8', 18));
+        $this->assertSame(0, bccomp((string) $goods->fresh()->stock_quantity, '10', 18));
+        $this->assertSame(0, bccomp((string) $goods->fresh()->reserved_quantity, '2', 18));
         $this->assertSame(0, bccomp((string) $service->fresh()->stock_quantity, '0', 18));
 
         $movement = ProductStockMovement::query()->where('product_id', $goods->id)->first();
         $this->assertNotNull($movement);
         $this->assertSame((int) $business->defaultWarehouse()->id, (int) $movement->warehouse_id);
-        $this->assertSame(StockMovementType::Sale, $movement->movement_type);
+        $this->assertSame(StockMovementType::Reserve, $movement->movement_type);
         $this->assertSame(1, ProductStockMovement::query()->count());
     }
 

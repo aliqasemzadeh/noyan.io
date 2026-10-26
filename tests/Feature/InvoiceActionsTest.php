@@ -84,13 +84,19 @@ class InvoiceActionsTest extends TestCase
         $finalized = app(FinalizeInvoiceAction::class)->handle($invoice, $user);
 
         $this->assertNotNull($finalized->finalized_at);
-        $this->assertSame(0, bccomp((string) $product->fresh()->stock_quantity, '7', 18));
+        $this->assertSame(0, bccomp((string) $product->fresh()->stock_quantity, '10', 18));
+        $this->assertSame(0, bccomp((string) $product->fresh()->reserved_quantity, '3', 18));
         $this->assertSame(0, bccomp((string) $party->fresh()->balance, '45000', 18));
 
         $movement = ProductStockMovement::query()->first();
         $this->assertNotNull($movement);
-        $this->assertSame(StockMovementType::Sale, $movement->movement_type);
-        $this->assertSame(0, bccomp((string) $movement->quantity, '-3', 18));
+        $this->assertSame(StockMovementType::Reserve, $movement->movement_type);
+        $this->assertSame(0, bccomp((string) $movement->quantity, '3', 18));
+        $this->assertDatabaseHas('stock_documents', [
+            'invoice_id' => $finalized->id,
+            'type' => 'outbound',
+            'status' => 'pending_pick',
+        ]);
     }
 
     public function test_finalize_purchase_increments_stock_and_decreases_party_balance(): void
@@ -126,11 +132,16 @@ class InvoiceActionsTest extends TestCase
 
         app(FinalizeInvoiceAction::class)->handle($invoice, $user);
 
-        $this->assertSame(0, bccomp((string) $product->fresh()->stock_quantity, '7', 18));
+        $this->assertSame(0, bccomp((string) $product->fresh()->stock_quantity, '5', 18));
         $this->assertSame(0, bccomp((string) $party->fresh()->balance, '-16000', 18));
-        $this->assertDatabaseHas('product_stock_movements', [
+        $this->assertDatabaseMissing('product_stock_movements', [
             'product_id' => $product->id,
             'movement_type' => StockMovementType::Purchase->value,
+        ]);
+        $this->assertDatabaseHas('stock_documents', [
+            'invoice_id' => $invoice->id,
+            'type' => 'inbound',
+            'status' => 'expected',
         ]);
     }
 
@@ -218,7 +229,8 @@ class InvoiceActionsTest extends TestCase
 
         app(FinalizeInvoiceAction::class)->handle($invoice, $user);
 
-        $this->assertSame(0, bccomp((string) $product->fresh()->stock_quantity, '3', 18));
+        $this->assertSame(0, bccomp((string) $product->fresh()->stock_quantity, '4', 18));
+        $this->assertSame(0, bccomp((string) $product->fresh()->reserved_quantity, '1', 18));
         $this->assertDatabaseCount('parties', 1);
     }
 

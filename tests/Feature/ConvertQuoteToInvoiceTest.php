@@ -77,7 +77,8 @@ class ConvertQuoteToInvoiceTest extends TestCase
 
         app(FinalizeInvoiceAction::class)->handle($invoice, $user);
 
-        $this->assertSame(0, bccomp((string) $product->fresh()->stock_quantity, '8', 18));
+        $this->assertSame(0, bccomp((string) $product->fresh()->stock_quantity, '10', 18));
+        $this->assertSame(0, bccomp((string) $product->fresh()->reserved_quantity, '2', 18));
         $this->assertSame(0, bccomp((string) $party->fresh()->balance, '20000', 18));
     }
 

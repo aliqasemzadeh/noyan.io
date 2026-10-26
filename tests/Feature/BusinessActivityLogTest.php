@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Actions\Invoices\FinalizeInvoiceAction;
+use App\Actions\Invoices\SaveInvoiceAction;
 use App\Enums\Accounting\InvoiceType;
 use App\Enums\Business\BusinessPermission;
 use App\Enums\Business\BusinessRole;
@@ -13,6 +15,7 @@ use App\Models\BusinessUser;
 use App\Models\Catalog\Product;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Validation\ValidationException;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -132,7 +135,7 @@ class BusinessActivityLogTest extends TestCase
     {
         [$user, $business, $party, $product] = $this->seedSaleContext(stock: '10');
 
-        $invoice = app(\App\Actions\Invoices\SaveInvoiceAction::class)->handle($user, [
+        $invoice = app(SaveInvoiceAction::class)->handle($user, [
             'type' => InvoiceType::Sale->value,
             'party_id' => $party->id,
             'issue_date' => now()->toDateString(),
@@ -149,12 +152,13 @@ class BusinessActivityLogTest extends TestCase
             ],
         ]);
 
-        $invoice = app(\App\Actions\Invoices\FinalizeInvoiceAction::class)->handle($invoice, $user);
+        $invoice = app(FinalizeInvoiceAction::class)->handle($invoice, $user);
 
-        $this->assertSame(0, bccomp((string) $product->fresh()->stock_quantity, '8', 18));
+        $this->assertSame(0, bccomp((string) $product->fresh()->stock_quantity, '10', 18));
+        $this->assertSame(0, bccomp((string) $product->fresh()->reserved_quantity, '2', 18));
         $this->assertSame(0, bccomp((string) $party->fresh()->balance, '20000', 18));
 
-        $updated = app(\App\Actions\Invoices\SaveInvoiceAction::class)->handle($user, [
+        $updated = app(SaveInvoiceAction::class)->handle($user, [
             'type' => InvoiceType::Sale->value,
             'party_id' => $party->id,
             'issue_date' => now()->toDateString(),
@@ -173,7 +177,8 @@ class BusinessActivityLogTest extends TestCase
 
         $this->assertNotNull($updated->finalized_at);
         $this->assertSame(0, bccomp((string) $updated->total_amount, '30000', 18));
-        $this->assertSame(0, bccomp((string) $product->fresh()->stock_quantity, '7', 18));
+        $this->assertSame(0, bccomp((string) $product->fresh()->stock_quantity, '10', 18));
+        $this->assertSame(0, bccomp((string) $product->fresh()->reserved_quantity, '3', 18));
         $this->assertSame(0, bccomp((string) $party->fresh()->balance, '30000', 18));
 
         $this->assertDatabaseHas('activity_log', [
@@ -215,7 +220,7 @@ class BusinessActivityLogTest extends TestCase
 
         $owner->forceFill(['current_business_id' => $business->id])->save();
 
-        $invoice = app(\App\Actions\Invoices\SaveInvoiceAction::class)->handle($owner, [
+        $invoice = app(SaveInvoiceAction::class)->handle($owner, [
             'type' => InvoiceType::Sale->value,
             'party_id' => $party->id,
             'issue_date' => now()->toDateString(),
@@ -232,11 +237,11 @@ class BusinessActivityLogTest extends TestCase
             ],
         ]);
 
-        $invoice = app(\App\Actions\Invoices\FinalizeInvoiceAction::class)->handle($invoice, $owner);
+        $invoice = app(FinalizeInvoiceAction::class)->handle($invoice, $owner);
 
-        $this->expectException(\Illuminate\Validation\ValidationException::class);
+        $this->expectException(ValidationException::class);
 
-        app(\App\Actions\Invoices\SaveInvoiceAction::class)->handle($member, [
+        app(SaveInvoiceAction::class)->handle($member, [
             'type' => InvoiceType::Sale->value,
             'party_id' => $party->id,
             'issue_date' => now()->toDateString(),

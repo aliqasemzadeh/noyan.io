@@ -4,10 +4,12 @@ namespace App\Livewire\Forms\Catalog;
 
 use App\Actions\Inventory\AdjustStockAction;
 use App\Actions\Inventory\AllocateStockAction;
-use App\Actions\Inventory\TransferStockAction;
+use App\Actions\Inventory\ManualStockOperationAction;
+use App\Actions\Inventory\ShipStockTransferAction;
 use App\Enums\Catalog\StockMovementType;
 use App\Models\Business;
 use App\Models\Catalog\Product;
+use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -159,27 +161,32 @@ class StockOperationForm extends Form
         $unitCost = (string) ($validated['unit_cost'] ?? '0');
         $note = filled($validated['note'] ?? null) ? (string) $validated['note'] : null;
         $userId = Auth::id();
+        $user = Auth::user();
+
+        if (! $user instanceof User) {
+            throw ValidationException::withMessages([
+                'product_id' => [__('general.business_required')],
+            ]);
+        }
 
         match ($this->mode) {
-            'receive' => app(AdjustStockAction::class)->handle(
+            'receive' => app(ManualStockOperationAction::class)->receive(
                 business: $business,
                 product: $product,
-                quantityDelta: $quantity,
-                movementType: StockMovementType::Purchase,
                 warehouseId: (int) $validated['warehouse_id'],
+                quantity: $quantity,
                 unitCost: $unitCost,
                 note: $note,
-                userId: $userId,
+                user: $user,
             ),
-            'issue' => app(AdjustStockAction::class)->handle(
+            'issue' => app(ManualStockOperationAction::class)->issue(
                 business: $business,
                 product: $product,
-                quantityDelta: bcmul($quantity, '-1', 18),
-                movementType: StockMovementType::Sale,
                 warehouseId: (int) $validated['warehouse_id'],
+                quantity: $quantity,
                 unitCost: $unitCost,
                 note: $note,
-                userId: $userId,
+                user: $user,
             ),
             'adjust' => app(AdjustStockAction::class)->handle(
                 business: $business,
@@ -192,7 +199,7 @@ class StockOperationForm extends Form
                 userId: $userId,
                 allowNegative: true,
             ),
-            'transfer' => app(TransferStockAction::class)->handle(
+            'transfer' => app(ShipStockTransferAction::class)->handle(
                 business: $business,
                 product: $product,
                 sourceWarehouseId: (int) $validated['source_warehouse_id'],

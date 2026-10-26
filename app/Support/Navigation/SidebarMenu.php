@@ -112,9 +112,16 @@ class SidebarMenu
         ];
 
         if ($user->canInBusiness(BusinessPermission::StockMovementView)) {
+            $items[] = self::item(__('general.dispatches'), 'arrow-up-from-line', route('warehouse.dispatches.index'));
+            $items[] = self::item(__('general.receipts'), 'arrow-down-to-line', route('warehouse.receipts.index'));
+            $items[] = self::item(__('general.stock_transfers'), 'arrow-left-right', route('warehouse.transfers.index'));
             $items[] = self::item(__('general.inventory_stocks'), 'boxes', route('warehouse.stocks.index'));
             $items[] = self::item(__('general.stock_movements'), 'arrow-left-right', route('warehouse.movements.index'));
             $items[] = self::item(__('general.stock_conversions'), 'refresh-cw', route('warehouse.conversions.index'));
+        }
+
+        if ($user->canInBusiness(BusinessPermission::StockCount)) {
+            $items[] = self::item(__('general.stock_counts'), 'clipboard-list', route('warehouse.counts.index'));
         }
 
         if ($user->canInBusiness(BusinessPermission::WarehouseView)) {
