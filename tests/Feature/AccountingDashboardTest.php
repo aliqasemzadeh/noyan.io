@@ -272,7 +272,8 @@ class AccountingDashboardTest extends TestCase
             ->assertSee(__('general.dashboard_overdue_invoices'))
             ->assertDontSee(__('general.dashboard_cash_balance'))
             ->assertDontSee(__('general.dashboard_bank_balances'))
-            ->assertDontSee(__('general.dashboard_total_expenses'))
+            ->assertDontSee(__('general.dashboard_expense_breakdown'))
+            ->assertDontSee(__('general.dashboard_cash_flow'))
             ->assertDontSee(__('general.create_journal_entry'));
     }
 
