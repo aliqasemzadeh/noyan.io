@@ -90,7 +90,7 @@ new class extends Component
             'user' => $target->fullName() ?? $target->mobile,
         ]));
 
-        $this->redirect(route('user.dashboard'), navigate: true);
+        $this->redirect(route('user.dashboard'), navigate: false);
     }
 };
 ?>

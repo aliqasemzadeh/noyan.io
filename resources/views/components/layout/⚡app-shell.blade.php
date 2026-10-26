@@ -51,7 +51,7 @@ new class extends Component
 
         Flux::toast(__('general.logout'));
 
-        $this->redirect(route('login'), navigate: true);
+        $this->redirect(route('login'), navigate: false);
     }
 
     private function urlAfterBusinessSwitch(): string

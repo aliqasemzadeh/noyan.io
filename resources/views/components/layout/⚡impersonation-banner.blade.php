@@ -23,7 +23,7 @@ new class extends Component
 
         Flux::toast(__('general.impersonation_left'));
 
-        $this->redirect(route('system.users.index'), navigate: true);
+        $this->redirect(route('system.users.index'), navigate: false);
     }
 };
 ?>

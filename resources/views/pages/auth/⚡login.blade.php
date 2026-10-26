@@ -101,6 +101,10 @@ class extends Component
 
     public function verify(): mixed
     {
+        if (auth()->check()) {
+            return $this->redirectIntended(default: route('dashboard'), navigate: false);
+        }
+
         $this->mobile = Money::normalize($this->mobile);
         $this->code = Money::normalize($this->code);
 
@@ -158,7 +162,7 @@ class extends Component
 
         Flux::toast(__('general.login_success'));
 
-        return $this->redirectIntended(default: route('dashboard'), navigate: true);
+        return $this->redirectIntended(default: route('dashboard'), navigate: false);
     }
 
     protected function acceptPendingInvitation(User $user): mixed
@@ -190,14 +194,14 @@ class extends Component
 
             Flux::toast($message, variant: 'danger');
 
-            return $this->redirect(route('dashboard'), navigate: true);
+            return $this->redirect(route('dashboard'), navigate: false);
         }
 
         session()->forget('business_invitation_token');
 
         Flux::toast(__('general.business_invitation_accepted'));
 
-        return $this->redirect(route('user.dashboard'), navigate: true);
+        return $this->redirect(route('user.dashboard'), navigate: false);
     }
 
     public function resendCode(): void
@@ -279,7 +283,18 @@ class extends Component
             </flux:button>
         </form>
     @else
-        <form wire:submit="verify" class="space-y-6" x-data="{
+        <form
+            wire:submit="verify"
+            class="space-y-6"
+            x-on:submit.capture="
+                if (window.__noyanOtpVerifyLock) {
+                    $event.preventDefault()
+                    $event.stopImmediatePropagation()
+                } else {
+                    window.__noyanOtpVerifyLock = Date.now()
+                }
+            "
+            x-data="{
             remaining: Math.max(0, ($wire.resendAvailableAt ?? 0) - Math.floor(Date.now() / 1000)),
             timer: null,
             abortController: null,
@@ -287,6 +302,34 @@ class extends Component
                 this.tick()
                 this.timer = setInterval(() => this.tick(), 1000)
                 this.listenForWebOtp()
+                this.registerOtpLockRelease()
+            },
+            registerOtpLockRelease() {
+                if (window.__noyanOtpHooked) {
+                    return
+                }
+
+                window.__noyanOtpHooked = true
+
+                const register = () => {
+                    Livewire.hook('commit', ({ succeed, fail }) => {
+                        succeed(() => {
+                            const token = window.__noyanOtpVerifyLock
+                            setTimeout(() => {
+                                if (window.__noyanOtpVerifyLock === token) {
+                                    window.__noyanOtpVerifyLock = false
+                                }
+                            }, 0)
+                        })
+                        fail(() => { window.__noyanOtpVerifyLock = false })
+                    })
+                }
+
+                if (window.Livewire) {
+                    register()
+                } else {
+                    document.addEventListener('livewire:init', register, { once: true })
+                }
             },
             tick() {
                 const availableAt = $wire.resendAvailableAt ?? 0
@@ -297,7 +340,17 @@ class extends Component
                 }
             },
             async applyCodeAndVerify(code) {
+                if (window.__noyanOtpVerifyLock) {
+                    return
+                }
+
                 await $wire.set('code', code)
+
+                if (window.__noyanOtpVerifyLock) {
+                    return
+                }
+
+                window.__noyanOtpVerifyLock = Date.now()
                 await $wire.verify()
             },
             listenForWebOtp() {
@@ -345,6 +398,7 @@ class extends Component
                             icon="pencil"
                             icon:variant="outline"
                             wire:click="backToMobile"
+                            x-on:click="window.__noyanOtpVerifyLock = false"
                         />
                     </flux:tooltip>
                 </div>
@@ -372,6 +426,7 @@ class extends Component
                     variant="ghost"
                     class="w-full"
                     wire:click="resendCode"
+                    x-on:click="window.__noyanOtpVerifyLock = false"
                     x-bind:disabled="remaining > 0"
                 >
                     <span x-show="remaining > 0" x-cloak x-text="remaining + 's'"></span>

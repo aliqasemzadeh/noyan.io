@@ -150,6 +150,22 @@ class MobileOtpLoginTest extends TestCase
         $this->assertNotNull($user->fresh()->remember_token);
     }
 
+    public function test_verify_when_already_authenticated_redirects_without_error(): void
+    {
+        $user = User::factory()->create([
+            'mobile' => '09123456789',
+        ]);
+
+        Livewire::actingAs($user)
+            ->test('pages::auth.login')
+            ->set('step', 'otp')
+            ->set('mobile', '09123456789')
+            ->set('code', '000000')
+            ->call('verify')
+            ->assertHasNoErrors()
+            ->assertRedirect(route('dashboard'));
+    }
+
     public function test_invalid_otp_does_not_log_user_in(): void
     {
         Queue::fake();
