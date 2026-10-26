@@ -30,6 +30,10 @@ return [
     | to expire immediately when the browser is closed then you may
     | indicate that via the expire_on_close configuration option.
     |
+    | 576000 minutes is 400 days, the longest a browser will keep a cookie.
+    | The session cookie and the remember-me cookie are renewed on every
+    | visit, so an active user stays signed in permanently.
+    |
     */
 
     'lifetime' => (int) env('SESSION_LIFETIME', 576000),

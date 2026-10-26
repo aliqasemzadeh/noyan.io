@@ -7,6 +7,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
 use Livewire\Livewire;
+use Symfony\Component\HttpFoundation\Cookie;
 use Tests\Concerns\GrantsAdministratorAccess;
 use Tests\TestCase;
 
@@ -181,6 +182,41 @@ class MobileOtpLoginTest extends TestCase
             ->assertRedirect('/user');
 
         $this->assertAuthenticatedAs($user);
+    }
+
+    public function test_each_visit_renews_the_permanent_login_cookie(): void
+    {
+        Queue::fake();
+
+        $component = Livewire::test('pages::auth.login')
+            ->set('mobile', '09123456789')
+            ->call('sendCode');
+
+        $user = User::query()->where('mobile', '09123456789')->firstOrFail();
+        $code = $user->oneTimePasswords()->firstOrFail()->password;
+
+        $component
+            ->set('code', $code)
+            ->call('verify')
+            ->assertHasNoErrors();
+
+        $recallerName = auth('web')->getRecallerName();
+        $recaller = cookie()->queued($recallerName);
+
+        $this->assertNotNull($recaller);
+
+        $this->travel(30)->days();
+
+        $response = $this->withCookie($recallerName, $recaller->getValue())
+            ->get(route('dashboard'));
+
+        $response->assertRedirect('/user');
+
+        $cookie = collect($response->headers->getCookies())
+            ->first(fn (Cookie $cookie): bool => $cookie->getName() === $recallerName);
+
+        $this->assertInstanceOf(Cookie::class, $cookie);
+        $this->assertGreaterThan(now()->addDays(399)->getTimestamp(), $cookie->getExpiresTime());
     }
 
     public function test_verify_when_already_authenticated_redirects_without_error(): void
