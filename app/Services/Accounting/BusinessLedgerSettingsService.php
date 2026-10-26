@@ -11,22 +11,22 @@ class BusinessLedgerSettingsService
     public function get(Business|int $business): BusinessLedgerSetting
     {
         $businessId = $business instanceof Business ? $business->id : $business;
+        $key = $this->cacheKey($businessId);
+        $cached = Cache::get($key);
 
-        return Cache::remember(
-            $this->cacheKey($businessId),
-            now()->addHour(),
-            function () use ($business, $businessId): BusinessLedgerSetting {
-                $model = $business instanceof Business
-                    ? $business
-                    : Business::query()->find($businessId);
+        if ($this->isCachePayload($cached)) {
+            return $this->hydrate($cached);
+        }
 
-                if ($model === null) {
-                    return new BusinessLedgerSetting(BusinessLedgerSetting::defaultAttributes());
-                }
+        if ($cached !== null) {
+            Cache::forget($key);
+        }
 
-                return BusinessLedgerSetting::forBusiness($model);
-            },
-        );
+        $settings = $this->resolve($business, $businessId);
+
+        Cache::put($key, $this->cachePayload($settings), now()->addHour());
+
+        return $settings;
     }
 
     /**
@@ -51,5 +51,51 @@ class BusinessLedgerSettingsService
     public function cacheKey(int $businessId): string
     {
         return "business:{$businessId}:ledger_settings";
+    }
+
+    protected function resolve(Business|int $business, int $businessId): BusinessLedgerSetting
+    {
+        $model = $business instanceof Business
+            ? $business
+            : Business::query()->find($businessId);
+
+        if ($model === null) {
+            return new BusinessLedgerSetting(BusinessLedgerSetting::defaultAttributes());
+        }
+
+        return BusinessLedgerSetting::forBusiness($model);
+    }
+
+    /**
+     * Cache a plain array. The cache store refuses to unserialize PHP objects.
+     *
+     * @return array{attributes: array<string, mixed>, exists: bool}
+     */
+    protected function cachePayload(BusinessLedgerSetting $settings): array
+    {
+        return [
+            'attributes' => $settings->getAttributes(),
+            'exists' => $settings->exists,
+        ];
+    }
+
+    /**
+     * @param  array{attributes: array<string, mixed>, exists: bool}  $payload
+     */
+    protected function hydrate(array $payload): BusinessLedgerSetting
+    {
+        $settings = new BusinessLedgerSetting;
+        $settings->setRawAttributes($payload['attributes'], true);
+        $settings->exists = $payload['exists'];
+
+        return $settings;
+    }
+
+    protected function isCachePayload(mixed $cached): bool
+    {
+        return is_array($cached)
+            && isset($cached['attributes'], $cached['exists'])
+            && is_array($cached['attributes'])
+            && is_bool($cached['exists']);
     }
 }
