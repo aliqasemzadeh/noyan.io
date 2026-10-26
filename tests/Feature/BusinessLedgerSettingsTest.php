@@ -58,6 +58,39 @@ class BusinessLedgerSettingsTest extends TestCase
         $this->assertSame($user->id, $business->owner_id);
     }
 
+    public function test_ledger_settings_round_trip_through_cache_as_attributes(): void
+    {
+        [, $business] = $this->actingBusinessUser();
+        $service = app(BusinessLedgerSettingsService::class);
+
+        $first = $service->get($business);
+        $cached = Cache::get($service->cacheKey($business->id));
+        $second = $service->get($business);
+
+        $this->assertIsArray($cached);
+        $this->assertInstanceOf(BusinessLedgerSetting::class, $second);
+        $this->assertSame($first->id, $second->id);
+        $this->assertSame($first->business_id, $second->business_id);
+        $this->assertSame($first->auto_post_mode, $second->auto_post_mode);
+        $this->assertSame($first->voucher_numbering_mode, $second->voucher_numbering_mode);
+        $this->assertTrue($second->exists);
+    }
+
+    public function test_ledger_settings_cache_rebuilds_when_payload_is_not_an_array(): void
+    {
+        [, $business] = $this->actingBusinessUser();
+        BusinessLedgerSetting::forBusiness($business);
+        $service = app(BusinessLedgerSettingsService::class);
+
+        Cache::put($service->cacheKey($business->id), new \stdClass, now()->addHour());
+
+        $settings = $service->get($business);
+
+        $this->assertInstanceOf(BusinessLedgerSetting::class, $settings);
+        $this->assertSame($business->id, $settings->business_id);
+        $this->assertIsArray(Cache::get($service->cacheKey($business->id)));
+    }
+
     public function test_user_can_update_ledger_settings_from_page(): void
     {
         [$user, $business] = $this->actingBusinessUser();
