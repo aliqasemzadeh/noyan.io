@@ -372,8 +372,6 @@ new class extends Component
         </div>
     </flux:card>
 
-    <livewire:accounting.ai-intro :key="'accounting-ai-intro'" />
-
     <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         @if ($this->allows(BusinessPermission::AccountView))
             <a href="{{ route('accounting.accounts.index') }}" wire:navigate class="block">
