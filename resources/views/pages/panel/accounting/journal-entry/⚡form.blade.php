@@ -321,73 +321,33 @@ new class extends Component
                                 <flux:error name="form.lines.{{ $index }}.category_id" />
                             </flux:field>
 
-                            <flux:field>
-                                <flux:label>{{ __('general.party') }}</flux:label>
-                                <flux:select
-                                    wire:model="form.lines.{{ $index }}.party_id"
-                                    searchable
-                                    variant="listbox"
-                                    placeholder="{{ __('general.optional') }}"
-                                    clearable
-                                >
-                                    @foreach ($this->parties as $party)
-                                        <flux:select.option value="{{ $party->id }}" wire:key="line-{{ $index }}-party-{{ $party->id }}">
-                                            {{ $party->displayName() }}
-                                        </flux:select.option>
-                                    @endforeach
-                                </flux:select>
-                            </flux:field>
-
-                            <flux:field>
-                                <flux:label>{{ __('general.cash_and_bank_accounts') }}</flux:label>
-                                <flux:select
-                                    wire:model="form.lines.{{ $index }}.account_id"
-                                    searchable
-                                    variant="listbox"
-                                    placeholder="{{ __('general.optional') }}"
-                                    clearable
-                                >
-                                    @foreach ($this->accounts as $account)
-                                        <flux:select.option value="{{ $account->id }}" wire:key="line-{{ $index }}-account-{{ $account->id }}">
-                                            {{ $account->name }}
-                                        </flux:select.option>
-                                    @endforeach
-                                </flux:select>
-                            </flux:field>
-
-                            <flux:field>
-                                <flux:label>{{ __('general.cost_center') }}</flux:label>
-                                <flux:select
-                                    wire:model="form.lines.{{ $index }}.cost_center_id"
-                                    searchable
-                                    variant="listbox"
-                                    placeholder="{{ __('general.optional') }}"
-                                    clearable
-                                >
-                                    @foreach ($this->costCenters as $costCenter)
-                                        <flux:select.option value="{{ $costCenter->id }}" wire:key="line-{{ $index }}-cc-{{ $costCenter->id }}">
-                                            {{ $costCenter->name }}
-                                        </flux:select.option>
-                                    @endforeach
-                                </flux:select>
-                            </flux:field>
-
-                            <flux:field>
-                                <flux:label>{{ __('general.project') }}</flux:label>
-                                <flux:select
-                                    wire:model="form.lines.{{ $index }}.project_id"
-                                    searchable
-                                    variant="listbox"
-                                    placeholder="{{ __('general.optional') }}"
-                                    clearable
-                                >
-                                    @foreach ($this->projects as $project)
-                                        <flux:select.option value="{{ $project->id }}" wire:key="line-{{ $index }}-project-{{ $project->id }}">
-                                            {{ $project->name }}
-                                        </flux:select.option>
-                                    @endforeach
-                                </flux:select>
-                            </flux:field>
+                            @php
+                                $lineAccountId = (int) ($line['gl_account_id'] ?? 0);
+                                $lineAccount = $lineAccountId > 0 ? $this->glAccounts->firstWhere('id', $lineAccountId) : null;
+                            @endphp
+                            @foreach ($lineAccount?->detailLevels ?? [] as $requirement)
+                                <flux:field wire:key="line-{{ $index }}-level-{{ $requirement->level }}">
+                                    <flux:label>
+                                        {{ __('general.detail_level_label', ['level' => $requirement->level]) }}
+                                        —
+                                        {{ $requirement->detail_type->label() }}
+                                    </flux:label>
+                                    <flux:select
+                                        wire:model="form.lines.{{ $index }}.details.{{ $requirement->level }}"
+                                        searchable
+                                        variant="listbox"
+                                        placeholder="{{ __('general.optional') }}"
+                                        clearable
+                                    >
+                                        @foreach ($this->glDetails->where('type', $requirement->detail_type) as $detail)
+                                            <flux:select.option value="{{ $detail->id }}" wire:key="line-{{ $index }}-detail-{{ $requirement->level }}-{{ $detail->id }}">
+                                                {{ $detail->name }}
+                                            </flux:select.option>
+                                        @endforeach
+                                    </flux:select>
+                                    <flux:error name="form.lines.{{ $index }}.details.{{ $requirement->level }}" />
+                                </flux:field>
+                            @endforeach
 
                             <flux:field>
                                 <flux:label>{{ __('general.debit') }}</flux:label>
