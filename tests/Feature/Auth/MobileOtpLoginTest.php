@@ -150,6 +150,39 @@ class MobileOtpLoginTest extends TestCase
         $this->assertNotNull($user->fresh()->remember_token);
     }
 
+    public function test_remember_cookie_keeps_user_authenticated_after_session_ends(): void
+    {
+        Queue::fake();
+
+        $component = Livewire::test('pages::auth.login')
+            ->set('mobile', '09123456789')
+            ->call('sendCode');
+
+        $user = User::query()->where('mobile', '09123456789')->firstOrFail();
+        $code = $user->oneTimePasswords()->firstOrFail()->password;
+
+        $component
+            ->set('code', $code)
+            ->call('verify')
+            ->assertHasNoErrors()
+            ->assertRedirect(route('dashboard'));
+
+        $recallerName = auth('web')->getRecallerName();
+        $recaller = cookie()->queued($recallerName);
+
+        $this->assertNotNull($recaller);
+
+        session()->forget(auth('web')->getName());
+        session()->save();
+        auth('web')->forgetUser();
+
+        $this->withCookie($recallerName, $recaller->getValue())
+            ->get(route('dashboard'))
+            ->assertRedirect('/user');
+
+        $this->assertAuthenticatedAs($user);
+    }
+
     public function test_verify_when_already_authenticated_redirects_without_error(): void
     {
         $user = User::factory()->create([

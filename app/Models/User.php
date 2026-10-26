@@ -47,6 +47,18 @@ class User extends Authenticatable implements HasMedia
         ];
     }
 
+    /**
+     * Remember-me cookies are only restored when the password is a string.
+     * OTP accounts have no password, so keep an empty string and let the
+     * remember token itself identify the user.
+     */
+    public function getAuthPassword(): string
+    {
+        $password = $this->password;
+
+        return is_string($password) ? $password : '';
+    }
+
     public function registerMediaCollections(): void
     {
         $this->addMediaCollection('avatar')
