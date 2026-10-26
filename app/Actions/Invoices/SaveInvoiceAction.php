@@ -7,6 +7,7 @@ use App\Enums\Accounting\InvoicePaymentStatus;
 use App\Enums\Accounting\InvoiceType;
 use App\Enums\Business\BusinessPermission;
 use App\Models\Accounting\Account;
+use App\Models\Accounting\BusinessCurrency;
 use App\Models\Accounting\Invoice;
 use App\Models\Accounting\InvoiceItem;
 use App\Models\User;
@@ -113,6 +114,8 @@ class SaveInvoiceAction
                 }
             }
 
+            $currencyAttributes = $this->currencyAttributes($businessId, $data, $invoice);
+
             $attributes = [
                 'party_id' => $partyId,
                 'party_name' => $partyName,
@@ -125,6 +128,7 @@ class SaveInvoiceAction
                 'global_discount' => $this->normalizeAmount((string) ($data['global_discount'] ?? '0')),
                 'global_tax' => $this->normalizeAmount((string) ($data['global_tax'] ?? '0')),
                 'total_amount' => $totalAmount,
+                ...$currencyAttributes,
                 'meta' => $data['meta'] ?? null,
                 'note' => $data['note'] ?? null,
             ];
@@ -187,6 +191,62 @@ class SaveInvoiceAction
 
             return $invoice->fresh(['items', 'party', 'accounts']);
         });
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    protected function currencyAttributes(int $businessId, array $data, ?Invoice $invoice): array
+    {
+        $shouldWrite = $invoice === null || array_key_exists('currency', $data) || array_key_exists('exchange_rate', $data);
+
+        if (! $shouldWrite) {
+            return [];
+        }
+
+        $baseCode = BusinessCurrency::query()
+            ->where('business_id', $businessId)
+            ->where('is_base', true)
+            ->with('currency:id,code')
+            ->first()
+            ?->currency
+            ?->code;
+
+        $baseCode = $baseCode !== null ? strtoupper((string) $baseCode) : null;
+        $currency = filled($data['currency'] ?? null)
+            ? strtoupper(trim((string) $data['currency']))
+            : ($invoice?->currency ?: $baseCode);
+
+        if ($currency !== null) {
+            $known = BusinessCurrency::query()
+                ->where('business_id', $businessId)
+                ->whereHas('currency', fn ($query) => $query->where('code', $currency))
+                ->exists();
+
+            if (! $known) {
+                throw ValidationException::withMessages([
+                    'currency' => [__('general.invoice_currency_invalid')],
+                ]);
+            }
+        }
+
+        $rate = $this->normalizeAmount((string) ($data['exchange_rate'] ?? $invoice?->exchange_rate ?? '1'));
+
+        if (bccomp($rate, '0', 8) !== 1) {
+            throw ValidationException::withMessages([
+                'exchange_rate' => [__('general.invoice_exchange_rate_invalid')],
+            ]);
+        }
+
+        if ($baseCode !== null && $currency === $baseCode) {
+            $rate = '1';
+        }
+
+        return [
+            'currency' => $currency,
+            'exchange_rate' => $rate,
+        ];
     }
 
     /**

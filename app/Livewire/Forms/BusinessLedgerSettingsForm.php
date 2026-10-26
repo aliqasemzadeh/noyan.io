@@ -3,6 +3,7 @@
 namespace App\Livewire\Forms;
 
 use App\Actions\Business\UpdateBusinessLedgerSettingsAction;
+use App\Enums\Accounting\AccountLevel;
 use App\Enums\Accounting\AutoPostMode;
 use App\Enums\Accounting\JournalEntryStatus;
 use App\Enums\Accounting\VoucherNumberingMode;
@@ -24,6 +25,12 @@ class BusinessLedgerSettingsForm extends Form
     public string $default_voucher_status = 'draft';
 
     public string $auto_post_mode = 'off';
+
+    public int $group_code_length = 1;
+
+    public int $control_code_length = 1;
+
+    public int $subsidiary_code_length = 2;
 
     public ?int $default_accounts_receivable_id = null;
 
@@ -60,6 +67,9 @@ class BusinessLedgerSettingsForm extends Form
             ?? JournalEntryStatus::Draft->value;
         $this->auto_post_mode = $settings->auto_post_mode?->value
             ?? AutoPostMode::Off->value;
+        $this->group_code_length = $settings->codeLength(AccountLevel::Group);
+        $this->control_code_length = $settings->codeLength(AccountLevel::Control);
+        $this->subsidiary_code_length = $settings->codeLength(AccountLevel::Subsidiary);
 
         foreach (BusinessLedgerSetting::defaultAccountColumns() as $column) {
             $this->{$column} = $settings->{$column} !== null ? (int) $settings->{$column} : null;
@@ -93,6 +103,9 @@ class BusinessLedgerSettingsForm extends Form
                 JournalEntryStatus::Posted->value,
             ])],
             'auto_post_mode' => ['required', Rule::enum(AutoPostMode::class)],
+            'group_code_length' => ['required', 'integer', 'min:1', 'max:8'],
+            'control_code_length' => ['required', 'integer', 'min:1', 'max:8'],
+            'subsidiary_code_length' => ['required', 'integer', 'min:1', 'max:8'],
             'default_accounts_receivable_id' => $accountRule,
             'default_accounts_payable_id' => $accountRule,
             'default_sales_id' => $accountRule,
@@ -121,6 +134,9 @@ class BusinessLedgerSettingsForm extends Form
             'voucher_number_pad' => $this->voucher_number_pad,
             'default_voucher_status' => $this->default_voucher_status,
             'auto_post_mode' => $this->auto_post_mode,
+            'group_code_length' => $this->group_code_length,
+            'control_code_length' => $this->control_code_length,
+            'subsidiary_code_length' => $this->subsidiary_code_length,
             'default_accounts_receivable_id' => $this->default_accounts_receivable_id,
             'default_accounts_payable_id' => $this->default_accounts_payable_id,
             'default_sales_id' => $this->default_sales_id,

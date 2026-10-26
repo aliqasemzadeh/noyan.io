@@ -39,6 +39,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'global_discount',
     'global_tax',
     'total_amount',
+    'currency',
+    'exchange_rate',
     'paid_amount',
     'meta',
     'payment_status',
@@ -66,6 +68,7 @@ class Invoice extends Model
             'global_discount' => 'decimal:18',
             'global_tax' => 'decimal:18',
             'total_amount' => 'decimal:18',
+            'exchange_rate' => 'decimal:8',
             'paid_amount' => 'decimal:18',
             'meta' => 'array',
         ];

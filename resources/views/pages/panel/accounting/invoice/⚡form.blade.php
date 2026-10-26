@@ -6,6 +6,7 @@ use App\Enums\Accounting\InvoiceType;
 use App\Enums\Business\BusinessPermission;
 use App\Livewire\Forms\Accounting\InvoiceForm;
 use App\Models\Accounting\Account;
+use App\Models\Accounting\BusinessCurrency;
 use App\Models\Accounting\Invoice;
 use App\Models\Accounting\Party;
 use App\Models\Accounting\SaleKind;
@@ -233,6 +234,26 @@ new class extends Component
     }
 
     /**
+     * @return Collection<int, BusinessCurrency>
+     */
+    #[Computed]
+    public function invoiceCurrencies(): Collection
+    {
+        $businessId = Auth::user()?->current_business_id;
+
+        if ($businessId === null) {
+            return collect();
+        }
+
+        return BusinessCurrency::query()
+            ->with('currency:id,code,name')
+            ->where('business_id', $businessId)
+            ->orderByDesc('is_base')
+            ->orderBy('id')
+            ->get();
+    }
+
+    /**
      * @return Collection<int, SettlementType>
      */
     #[Computed]
@@ -427,6 +448,26 @@ new class extends Component
                             @endforeach
                         </flux:select>
                         <flux:error name="form.settlement_type_id" />
+                    </flux:field>
+                @endif
+
+                @if ($this->invoiceCurrencies->isNotEmpty())
+                    <flux:field>
+                        <flux:label>{{ __('general.invoice_currency') }}</flux:label>
+                        <flux:select wire:model="form.currency" searchable variant="listbox">
+                            @foreach ($this->invoiceCurrencies as $businessCurrency)
+                                <flux:select.option :value="$businessCurrency->currency?->code" wire:key="invoice-currency-{{ $businessCurrency->id }}">
+                                    {{ $businessCurrency->currency?->code }}
+                                </flux:select.option>
+                            @endforeach
+                        </flux:select>
+                        <flux:error name="form.currency" />
+                    </flux:field>
+
+                    <flux:field>
+                        <flux:label>{{ __('general.invoice_exchange_rate') }}</flux:label>
+                        <flux:input wire:model="form.exchange_rate" dir="ltr" />
+                        <flux:error name="form.exchange_rate" />
                     </flux:field>
                 @endif
 

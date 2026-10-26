@@ -1,6 +1,7 @@
 <?php
 
 use App\Actions\Ledger\PostJournalEntryAction;
+use App\Enums\Business\BusinessPermission;
 use App\Models\Accounting\JournalEntry;
 use Flux\Flux;
 use Illuminate\Support\Facades\Auth;
@@ -19,7 +20,8 @@ new class extends Component
             403
         );
 
-        abort_unless($journalEntry->isDraft(), 403);
+        abort_unless(Auth::user()?->canInBusiness(BusinessPermission::JournalEntryPost), 403);
+        abort_unless($journalEntry->isOpen(), 403);
 
         $this->journalEntry = $journalEntry;
 

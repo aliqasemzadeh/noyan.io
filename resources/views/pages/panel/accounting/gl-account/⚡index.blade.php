@@ -3,7 +3,9 @@
 use App\Actions\Accounting\SeedBusinessChartOfAccountsAction;
 use App\Actions\Accounting\SyncBusinessLedgerDefaultAccountsAction;
 use App\Enums\Accounting\AccountLevel;
+use App\Enums\Accounting\ChartTemplate;
 use App\Models\Accounting\GlAccount;
+use App\Models\Accounting\JournalEntry;
 use App\Models\Business;
 use Flux\Flux;
 use Illuminate\Support\Collection;
@@ -54,12 +56,41 @@ new class extends Component
         abort_if($businessId === null, 403);
 
         $business = Business::query()->findOrFail($businessId);
-        $accounts = $action->handle($business);
+
+        if (JournalEntry::query()->where('business_id', $business->id)->exists()) {
+            Flux::toast(__('general.chart_template_locked'));
+
+            return;
+        }
+
+        $template = $business->category?->chartTemplate() ?? ChartTemplate::Trading;
+        $accounts = $action->handle($business, template: $template);
         $syncDefaults->handle($business, overwrite: true);
 
         unset($this->treeRows);
 
         Flux::toast(__('general.gl_account_seeded', ['count' => count($accounts)]));
+    }
+
+    #[Computed]
+    public function chartTemplateLocked(): bool
+    {
+        $businessId = Auth::user()?->current_business_id;
+
+        if ($businessId === null) {
+            return true;
+        }
+
+        return JournalEntry::query()->where('business_id', $businessId)->exists();
+    }
+
+    #[Computed]
+    public function chartTemplateLabel(): string
+    {
+        $businessId = Auth::user()?->current_business_id;
+        $business = $businessId !== null ? Business::query()->find($businessId) : null;
+
+        return ($business?->category?->chartTemplate() ?? ChartTemplate::Trading)->label();
     }
 
     /**
@@ -161,19 +192,21 @@ new class extends Component
         <div class="mt-4 flex flex-wrap items-center justify-between gap-4">
             <div>
                 <flux:heading size="xl">{{ __('general.chart_of_accounts') }}</flux:heading>
-                <flux:text class="mt-1">{{ __('general.chart_of_accounts_hint') }}</flux:text>
+                <flux:text class="mt-1">{{ __('general.chart_of_accounts_hint') }} {{ __('general.chart_template_active', ['template' => $this->chartTemplateLabel]) }}</flux:text>
             </div>
 
             <div class="flex flex-wrap gap-2">
-                <flux:button
-                    variant="primary"
-                    color="zinc"
-                    icon="refresh-cw"
-                    wire:click="seedStandardChart"
-                    wire:confirm="{{ __('general.gl_account_seed_confirm') }}"
-                >
-                    {{ __('general.seed_standard_coa') }}
-                </flux:button>
+                @unless ($this->chartTemplateLocked)
+                    <flux:button
+                        variant="primary"
+                        color="zinc"
+                        icon="refresh-cw"
+                        wire:click="seedStandardChart"
+                        wire:confirm="{{ __('general.gl_account_seed_confirm') }}"
+                    >
+                        {{ __('general.seed_industry_coa') }}
+                    </flux:button>
+                @endunless
 
                 <flux:button
                     variant="primary"

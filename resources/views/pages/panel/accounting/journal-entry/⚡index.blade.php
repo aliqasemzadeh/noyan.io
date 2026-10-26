@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\Accounting\JournalEntryStatus;
+use App\Enums\Business\BusinessPermission;
 use App\Models\Accounting\FiscalYear;
 use App\Models\Accounting\JournalEntry;
 use App\Support\LocaleDate;
@@ -212,28 +213,32 @@ new class extends Component
                         </flux:table.cell>
                         <flux:table.cell align="end">
                             <div class="flex justify-end gap-2">
-                                @if ($entry->isDraft())
-                                    <flux:tooltip content="{{ __('general.edit') }}">
-                                        <flux:button
-                                            size="xs"
-                                            variant="primary"
-                                            color="blue"
-                                            icon="pencil"
-                                            icon:variant="outline"
-                                            :href="route('accounting.journal-entries.edit', $entry)"
-                                            wire:navigate
-                                        />
-                                    </flux:tooltip>
-                                    <flux:tooltip content="{{ __('general.post_journal_entry') }}">
-                                        <flux:button
-                                            size="xs"
-                                            variant="primary"
-                                            color="teal"
-                                            icon="check"
-                                            icon:variant="outline"
-                                            wire:click="$dispatch('panels.accounting.journal-entry.post.assign-data', { journalEntry: {{ $entry->id }} })"
-                                        />
-                                    </flux:tooltip>
+                                @if ($entry->isOpen())
+                                    @unless ($entry->isSystemGenerated())
+                                        <flux:tooltip content="{{ __('general.edit') }}">
+                                            <flux:button
+                                                size="xs"
+                                                variant="primary"
+                                                color="blue"
+                                                icon="pencil"
+                                                icon:variant="outline"
+                                                :href="route('accounting.journal-entries.edit', $entry)"
+                                                wire:navigate
+                                            />
+                                        </flux:tooltip>
+                                    @endunless
+                                    @if (Auth::user()?->canInBusiness(BusinessPermission::JournalEntryPost))
+                                        <flux:tooltip content="{{ __('general.post_journal_entry') }}">
+                                            <flux:button
+                                                size="xs"
+                                                variant="primary"
+                                                color="teal"
+                                                icon="check"
+                                                icon:variant="outline"
+                                                wire:click="$dispatch('panels.accounting.journal-entry.post.assign-data', { journalEntry: {{ $entry->id }} })"
+                                            />
+                                        </flux:tooltip>
+                                    @endif
                                     <flux:tooltip content="{{ __('general.delete') }}">
                                         <flux:button
                                             size="xs"

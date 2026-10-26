@@ -42,6 +42,10 @@ class InvoiceForm extends Form
 
     public string $global_tax = '0';
 
+    public string $currency = '';
+
+    public string $exchange_rate = '1';
+
     public string $note = '';
 
     /**
@@ -69,6 +73,8 @@ class InvoiceForm extends Form
         $this->due_date = LocaleDate::formatInput($invoice->due_date);
         $this->global_discount = $this->formatAmount((string) $invoice->global_discount);
         $this->global_tax = $this->formatAmount((string) $invoice->global_tax);
+        $this->currency = (string) ($invoice->currency ?? '');
+        $this->exchange_rate = $this->formatAmount((string) ($invoice->exchange_rate ?: '1'));
         $this->note = (string) ($invoice->note ?? '');
         $invoice->loadMissing('accounts');
         $this->account_ids = $invoice->accounts->pluck('id')->map(fn ($id): int => (int) $id)->values()->all();
@@ -100,6 +106,9 @@ class InvoiceForm extends Form
         $this->due_date = '';
         $this->global_discount = '0';
         $this->global_tax = '0';
+        $baseCurrency = Auth::user()?->currentBusiness?->baseBusinessCurrency()?->currency;
+        $this->currency = (string) ($baseCurrency?->code ?? '');
+        $this->exchange_rate = '1';
         $this->note = '';
         $this->sale_kind_id = Auth::user()?->currentBusiness?->defaultSaleKind()?->id;
         $this->settlement_type_id = Auth::user()?->currentBusiness?->defaultSettlementType()?->id;
@@ -211,6 +220,8 @@ class InvoiceForm extends Form
             'due_date' => [...$this->localeDateRules(required: false), $this->localeDateAfterOrEqual('issue_date')],
             'global_discount' => $amount,
             'global_tax' => $amount,
+            'currency' => ['nullable', 'string', 'max:10'],
+            'exchange_rate' => ['nullable', 'numeric', 'gt:0'],
             'note' => ['nullable', 'string'],
             'account_ids' => ['nullable', 'array'],
             'account_ids.*' => [
@@ -261,6 +272,8 @@ class InvoiceForm extends Form
             'due_date' => __('general.due_date'),
             'global_discount' => __('general.global_discount'),
             'global_tax' => __('general.global_tax'),
+            'currency' => __('general.invoice_currency'),
+            'exchange_rate' => __('general.invoice_exchange_rate'),
             'account_ids' => __('general.invoice_payment_accounts'),
             'account_ids.*' => __('general.account'),
             'items' => __('general.invoice_items'),
@@ -291,6 +304,8 @@ class InvoiceForm extends Form
                 : null,
             'global_discount' => $this->normalizeAmount($this->global_discount),
             'global_tax' => $this->normalizeAmount($this->global_tax),
+            'currency' => $this->currency !== '' ? strtoupper($this->currency) : null,
+            'exchange_rate' => $this->normalizeAmount($this->exchange_rate !== '' ? $this->exchange_rate : '1'),
             'note' => $this->note !== '' ? $this->note : null,
             'account_ids' => collect($this->account_ids)
                 ->map(fn ($id): int => (int) $id)

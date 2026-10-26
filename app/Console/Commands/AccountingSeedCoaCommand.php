@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Actions\Accounting\SeedBusinessChartOfAccountsAction;
 use App\Actions\Accounting\SyncBusinessLedgerDefaultAccountsAction;
+use App\Enums\Accounting\ChartTemplate;
 use App\Models\Business;
 use Illuminate\Console\Command;
 
@@ -33,7 +34,7 @@ class AccountingSeedCoaCommand extends Command
             }
 
             foreach ($businesses as $business) {
-                $accounts = $action->handle($business);
+                $accounts = $action->handle($business, template: $business->category?->chartTemplate() ?? ChartTemplate::Trading);
                 $syncDefaults->handle($business, overwrite: $overwriteDefaults);
                 $this->info("Business #{$business->id} ({$business->name}): ".count($accounts).' system accounts upserted.');
             }
@@ -57,7 +58,7 @@ class AccountingSeedCoaCommand extends Command
             return self::FAILURE;
         }
 
-        $accounts = $action->handle($business);
+        $accounts = $action->handle($business, template: $business->category?->chartTemplate() ?? ChartTemplate::Trading);
         $syncDefaults->handle($business, overwrite: $overwriteDefaults);
         $this->info('Upserted '.count($accounts)." system GL accounts for business #{$business->id}.");
 

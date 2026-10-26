@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\Accounting\AccountLevel;
 use App\Enums\Accounting\AutoPostMode;
 use App\Enums\Accounting\JournalEntryStatus;
 use App\Enums\Accounting\VoucherNumberingMode;
@@ -17,6 +18,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'voucher_number_pad',
     'default_voucher_status',
     'auto_post_mode',
+    'group_code_length',
+    'control_code_length',
+    'subsidiary_code_length',
     'default_accounts_receivable_id',
     'default_accounts_payable_id',
     'default_sales_id',
@@ -41,6 +45,9 @@ class BusinessLedgerSetting extends Model
             'voucher_number_pad' => 'integer',
             'default_voucher_status' => JournalEntryStatus::class,
             'auto_post_mode' => AutoPostMode::class,
+            'group_code_length' => 'integer',
+            'control_code_length' => 'integer',
+            'subsidiary_code_length' => 'integer',
         ];
     }
 
@@ -115,6 +122,9 @@ class BusinessLedgerSetting extends Model
             'voucher_number_pad' => 4,
             'default_voucher_status' => JournalEntryStatus::Draft->value,
             'auto_post_mode' => AutoPostMode::Off->value,
+            'group_code_length' => 1,
+            'control_code_length' => 1,
+            'subsidiary_code_length' => 2,
         ];
     }
 
@@ -158,6 +168,31 @@ class BusinessLedgerSetting extends Model
     public function numberPad(): int
     {
         return max(1, min(10, (int) $this->voucher_number_pad));
+    }
+
+    public function codeLength(AccountLevel $level): int
+    {
+        $length = match ($level) {
+            AccountLevel::Group => (int) $this->group_code_length,
+            AccountLevel::Control => (int) $this->control_code_length,
+            AccountLevel::Subsidiary => (int) $this->subsidiary_code_length,
+        };
+
+        return max(1, min(8, $length > 0 ? $length : match ($level) {
+            AccountLevel::Group, AccountLevel::Control => 1,
+            AccountLevel::Subsidiary => 2,
+        }));
+    }
+
+    public function codeLengthsLocked(): bool
+    {
+        if ($this->business_id === null) {
+            return false;
+        }
+
+        return GlAccount::withTrashed()
+            ->where('business_id', $this->business_id)
+            ->exists();
     }
 
     public function requireDefaultAccount(string $column): GlAccount

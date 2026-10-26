@@ -44,7 +44,12 @@ class SyncBusinessLedgerDefaultAccountsAction
                 continue;
             }
 
-            $account = GlAccount::findBySystemKey($business, $systemKey);
+            if ($column === 'default_sales_id') {
+                $account = GlAccount::findBySystemKey($business, 'sales')
+                    ?? GlAccount::findBySystemKey($business, 'services');
+            } else {
+                $account = GlAccount::findBySystemKey($business, $systemKey);
+            }
 
             if ($account !== null) {
                 $payload[$column] = $account->id;

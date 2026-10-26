@@ -29,7 +29,7 @@ new class extends Component
 
         if ($journalEntry !== null) {
             abort_unless((int) $journalEntry->business_id === (int) Auth::user()?->current_business_id, 404);
-            abort_unless($journalEntry->isDraft(), 403);
+            abort_unless($journalEntry->isOpen(), 403);
             abort_if($journalEntry->isSystemGenerated(), 403, __('general.journal_system_generated_locked'));
 
             $journalEntry->load('lines');

@@ -7,6 +7,8 @@ use App\Enums\Accounting\AccountNature;
 use App\Enums\Accounting\DetailType;
 use App\Enums\Accounting\StatementType;
 use App\Models\Accounting\GlAccount;
+use App\Models\Business;
+use App\Models\BusinessLedgerSetting;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -136,6 +138,16 @@ class GlAccountForm extends Form
         }
 
         $code = strtoupper(trim((string) $validated['code']));
+        $expectedLength = BusinessLedgerSetting::forBusiness(
+            Business::query()->findOrFail($businessId),
+        )->codeLength($level);
+
+        if (strlen($code) !== $expectedLength) {
+            throw ValidationException::withMessages([
+                'code' => [__('general.gl_code_length_invalid', ['length' => $expectedLength])],
+            ]);
+        }
+
         $fullCode = $parent === null ? $code : $parent->full_code.$code;
 
         if (GlAccount::query()

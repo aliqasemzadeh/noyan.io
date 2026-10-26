@@ -62,6 +62,23 @@ new class extends Component
      * @return Collection<int, GlAccount>
      */
     #[Computed]
+    public function codeLengthsLocked(): bool
+    {
+        $businessId = Auth::user()?->current_business_id;
+
+        if ($businessId === null) {
+            return true;
+        }
+
+        return GlAccount::withTrashed()
+            ->where('business_id', $businessId)
+            ->exists();
+    }
+
+    /**
+     * @return Collection<int, GlAccount>
+     */
+    #[Computed]
     public function subsidiaryAccounts(): Collection
     {
         $businessId = Auth::user()?->current_business_id;
@@ -126,6 +143,12 @@ new class extends Component
                     <flux:input wire:model="form.voucher_prefix" :label="__('general.voucher_prefix')" :placeholder="__('general.voucher_prefix_placeholder')" />
 
                     <flux:input wire:model.number="form.voucher_number_pad" type="number" min="1" max="10" :label="__('general.voucher_number_pad')" />
+
+                    <flux:input wire:model.number="form.group_code_length" type="number" min="1" max="8" :label="__('general.gl_code_length_group')" :disabled="$this->codeLengthsLocked" />
+
+                    <flux:input wire:model.number="form.control_code_length" type="number" min="1" max="8" :label="__('general.gl_code_length_control')" :disabled="$this->codeLengthsLocked" />
+
+                    <flux:input wire:model.number="form.subsidiary_code_length" type="number" min="1" max="8" :label="__('general.gl_code_length_subsidiary')" :disabled="$this->codeLengthsLocked" />
 
                     <flux:select wire:model="form.default_voucher_status" :label="__('general.default_voucher_status')" variant="listbox">
                         <flux:select.option :value="JournalEntryStatus::Draft->value">{{ JournalEntryStatus::Draft->label() }}</flux:select.option>

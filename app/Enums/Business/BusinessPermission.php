@@ -33,6 +33,7 @@ enum BusinessPermission: string
     case JournalEntryView = 'journal_entry_view';
     case JournalEntryCreate = 'journal_entry_create';
     case JournalEntryEdit = 'journal_entry_edit';
+    case JournalEntryPost = 'journal_entry_post';
     case JournalEntryDelete = 'journal_entry_delete';
 
     case GlAccountView = 'gl_account_view';
@@ -111,7 +112,7 @@ enum BusinessPermission: string
             self::PartyView, self::PartyCreate, self::PartyEdit, self::PartyDelete => 'party',
             self::AccountView, self::AccountCreate, self::AccountEdit, self::AccountDelete => 'account',
             self::TransactionView, self::TransactionCreate, self::TransactionEdit, self::TransactionDelete => 'transaction',
-            self::JournalEntryView, self::JournalEntryCreate, self::JournalEntryEdit, self::JournalEntryDelete => 'journal_entry',
+            self::JournalEntryView, self::JournalEntryCreate, self::JournalEntryEdit, self::JournalEntryPost, self::JournalEntryDelete => 'journal_entry',
             self::GlAccountView, self::GlAccountCreate, self::GlAccountEdit, self::GlAccountDelete => 'gl_account',
             self::LoanView, self::LoanCreate, self::LoanEdit, self::LoanDelete => 'loan',
             self::ChequeView, self::ChequeCreate, self::ChequeEdit, self::ChequeDelete => 'cheque',

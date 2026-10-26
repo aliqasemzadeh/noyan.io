@@ -2,6 +2,8 @@
 
 namespace App\Enums\Business;
 
+use App\Enums\Accounting\ChartTemplate;
+
 enum BusinessCategory: string
 {
     case Computers = 'computers';
@@ -18,6 +20,15 @@ enum BusinessCategory: string
     case Healthcare = 'healthcare';
     case Freelance = 'freelance';
     case Other = 'other';
+
+    public function chartTemplate(): ChartTemplate
+    {
+        return match ($this) {
+            self::CyberCafe, self::Education, self::Healthcare, self::Freelance => ChartTemplate::Service,
+            self::Construction => ChartTemplate::Contracting,
+            default => ChartTemplate::Trading,
+        };
+    }
 
     public function label(): string
     {

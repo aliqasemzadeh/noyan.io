@@ -95,7 +95,7 @@ class TreasuryAutoPostTest extends TestCase
             ->first();
 
         $this->assertNotNull($entry);
-        $this->assertSame(JournalEntryStatus::Draft, $entry->status);
+        $this->assertSame(JournalEntryStatus::PendingReview, $entry->status);
     }
 
     public function test_transfer_auto_posts_source_and_destination_cash_details(): void

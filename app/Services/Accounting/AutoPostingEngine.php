@@ -5,10 +5,13 @@ namespace App\Services\Accounting;
 use App\Actions\Ledger\CreateJournalEntryAction;
 use App\Actions\Ledger\PostJournalEntryAction;
 use App\Enums\Accounting\AutoPostMode;
+use App\Enums\Accounting\AutoPostQueueStatus;
 use App\Enums\Accounting\InvoiceType;
 use App\Enums\Accounting\JournalEntryStatus;
 use App\Enums\Accounting\TransactionType;
 use App\Models\Accounting\Account;
+use App\Models\Accounting\AutoPostQueue;
+use App\Models\Accounting\BusinessCurrency;
 use App\Models\Accounting\FiscalYear;
 use App\Models\Accounting\Invoice;
 use App\Models\Accounting\JournalEntry;
@@ -23,6 +26,9 @@ use RuntimeException;
 
 class AutoPostingEngine
 {
+    /** @var array<int, string|null> */
+    protected array $baseCurrencyCodes = [];
+
     public function __construct(
         private BusinessLedgerSettingsService $ledgerSettings,
         private CreateJournalEntryAction $createJournalEntry,
@@ -32,11 +38,11 @@ class AutoPostingEngine
     /**
      * @param  bool  $forceDraft  When true, create a draft voucher even if auto-post is Off (backfill).
      */
-    public function postInvoice(Invoice $invoice, User $user, bool $forceDraft = false): ?JournalEntry
+    public function postInvoice(Invoice $invoice, User $user, bool $forceDraft = false, bool $forcePost = false): ?JournalEntry
     {
         $settings = $this->ledgerSettings->get((int) $invoice->business_id);
 
-        if (! $forceDraft && $settings->auto_post_mode === AutoPostMode::Off) {
+        if (! $forceDraft && ! $forcePost && $settings->auto_post_mode === AutoPostMode::Off) {
             return null;
         }
 
@@ -59,6 +65,12 @@ class AutoPostingEngine
 
         $entryDate = $invoice->issue_date?->toDateString() ?? now()->toDateString();
 
+        if (! $forceDraft && ! $forcePost && $settings->auto_post_mode === AutoPostMode::DailyBatch) {
+            $this->enqueue($invoice, $user, $entryDate);
+
+            return null;
+        }
+
         $lines = match ($invoice->type) {
             InvoiceType::Sale => $this->saleLines($invoice, $settings),
             InvoiceType::Purchase => $this->purchaseLines($invoice, $settings),
@@ -75,17 +87,18 @@ class AutoPostingEngine
             $settings,
             ['invoice_id' => $invoice->id],
             forceDraft: $forceDraft,
+            forcePost: $forcePost,
         );
     }
 
     /**
      * @param  bool  $forceDraft  When true, create a draft voucher even if auto-post is Off (backfill).
      */
-    public function postTransaction(Transaction $transaction, User $user, bool $forceDraft = false): ?JournalEntry
+    public function postTransaction(Transaction $transaction, User $user, bool $forceDraft = false, bool $forcePost = false): ?JournalEntry
     {
         $settings = $this->ledgerSettings->get((int) $transaction->business_id);
 
-        if (! $forceDraft && $settings->auto_post_mode === AutoPostMode::Off) {
+        if (! $forceDraft && ! $forcePost && $settings->auto_post_mode === AutoPostMode::Off) {
             return null;
         }
 
@@ -102,6 +115,12 @@ class AutoPostingEngine
         $this->ensureCashAccountDetail($transaction->destinationAccount);
 
         $entryDate = $transaction->transaction_date?->toDateString() ?? now()->toDateString();
+
+        if (! $forceDraft && ! $forcePost && $settings->auto_post_mode === AutoPostMode::DailyBatch) {
+            $this->enqueue($transaction, $user, $entryDate);
+
+            return null;
+        }
 
         $lines = match ($transaction->type) {
             TransactionType::Income => $this->incomeTransactionLines($transaction, $settings),
@@ -122,6 +141,7 @@ class AutoPostingEngine
             $settings,
             ['transaction_id' => $transaction->id],
             forceDraft: $forceDraft,
+            forcePost: $forcePost,
         );
     }
 
@@ -164,15 +184,18 @@ class AutoPostingEngine
                 throw new RuntimeException('Accounts receivable default GL account is not mapped.');
             }
 
+            [$counterparty, $fxLines] = $this->settlementFx($transaction, $settings, $amount, receipt: true);
+
             return [
                 $this->cashLine($cashId, $transaction->account_id, $amount, '0', $description),
                 [
                     'gl_account_id' => $ar,
                     'party_id' => $transaction->party_id,
                     'debit' => '0',
-                    'credit' => $amount,
+                    'credit' => $counterparty,
                     'description' => $description,
                 ],
+                ...$fxLines,
             ];
         }
 
@@ -207,14 +230,17 @@ class AutoPostingEngine
                 throw new RuntimeException('Accounts payable default GL account is not mapped.');
             }
 
+            [$counterparty, $fxLines] = $this->settlementFx($transaction, $settings, $amount, receipt: false);
+
             return [
                 [
                     'gl_account_id' => $ap,
                     'party_id' => $transaction->party_id,
-                    'debit' => $amount,
+                    'debit' => $counterparty,
                     'credit' => '0',
                     'description' => $description,
                 ],
+                ...$fxLines,
                 $this->cashLine($cashId, $transaction->account_id, '0', $amount, $description),
             ];
         }
@@ -366,6 +392,7 @@ class AutoPostingEngine
         BusinessLedgerSetting $settings,
         array $logContext = [],
         bool $forceDraft = false,
+        bool $forcePost = false,
     ): ?JournalEntry {
         if (count($lines) < 2) {
             Log::warning('Auto-post skipped: incomplete journal lines.', [
@@ -382,16 +409,22 @@ class AutoPostingEngine
         $user->forceFill(['current_business_id' => $businessId])->saveQuietly();
 
         try {
+            $status = JournalEntryStatus::Draft;
+
+            if (! $forceDraft && ! $forcePost && $settings->auto_post_mode === AutoPostMode::ManualReview) {
+                $status = JournalEntryStatus::PendingReview;
+            }
+
             $entry = $this->createJournalEntry->handle($user, [
                 'fiscal_year_id' => $fiscalYear->id,
                 'entry_date' => $entryDate,
                 'description' => $description,
-                'status' => JournalEntryStatus::Draft,
+                'status' => $status,
                 'referenceable_type' => $reference->getMorphClass(),
                 'referenceable_id' => $reference->getKey(),
             ], $lines);
 
-            if (! $forceDraft && $settings->auto_post_mode === AutoPostMode::Realtime) {
+            if ($forcePost || (! $forceDraft && $settings->auto_post_mode === AutoPostMode::Realtime)) {
                 $entry = $this->postJournalEntry->handle($user, $entry);
             }
 
@@ -426,6 +459,35 @@ class AutoPostingEngine
             $entry->lines()->each(fn ($line) => $line->delete());
             $entry->delete();
         }
+
+        $this->voidQueue($model);
+    }
+
+    protected function enqueue(Model $model, User $user, string $entryDate): void
+    {
+        AutoPostQueue::query()->updateOrCreate(
+            [
+                'business_id' => $model->getAttribute('business_id'),
+                'source_type' => $model->getMorphClass(),
+                'source_id' => $model->getKey(),
+            ],
+            [
+                'entry_date' => $entryDate,
+                'status' => AutoPostQueueStatus::Pending,
+                'requested_by' => $user->id,
+                'journal_entry_id' => null,
+            ],
+        );
+    }
+
+    protected function voidQueue(Model $model): void
+    {
+        AutoPostQueue::query()
+            ->where('business_id', $model->getAttribute('business_id'))
+            ->where('source_type', $model->getMorphClass())
+            ->where('source_id', $model->getKey())
+            ->where('status', AutoPostQueueStatus::Pending)
+            ->update(['status' => AutoPostQueueStatus::Voided->value]);
     }
 
     /**
@@ -573,7 +635,119 @@ class AutoPostingEngine
             $netSales = '0';
         }
 
+        $rate = $this->invoiceBaseRate($invoice);
+
+        if (bccomp($rate, '1', 8) !== 0) {
+            $itemTax = bcmul($itemTax, $rate, 4);
+            $netSales = bcmul($netSales, $rate, 4);
+            $globalDiscount = bcmul($globalDiscount, $rate, 4);
+            $globalTax = bcmul($globalTax, $rate, 4);
+            $total = bcmul($total, $rate, 4);
+        }
+
         return [$itemTax, $netSales, $globalDiscount, $globalTax, $total];
+    }
+
+    /**
+     * Book the receivable or payable at the invoice rate and park the rate
+     * difference on the mapped foreign-exchange gain or loss account.
+     *
+     * @return array{0: string, 1: list<array<string, mixed>>}
+     */
+    protected function settlementFx(
+        Transaction $transaction,
+        BusinessLedgerSetting $settings,
+        string $cashBase,
+        bool $receipt,
+    ): array {
+        $transaction->loadMissing('invoice');
+        $invoice = $transaction->invoice;
+
+        if (! $invoice instanceof Invoice) {
+            return [$cashBase, []];
+        }
+
+        $invoiceCurrency = strtoupper(trim((string) ($invoice->currency ?? '')));
+        $transactionCurrency = strtoupper(trim((string) ($transaction->currency ?? '')));
+        $baseCurrency = $this->baseCurrencyCode((int) $transaction->business_id);
+
+        if ($invoiceCurrency === '' || $baseCurrency === null || $invoiceCurrency === $baseCurrency || $invoiceCurrency !== $transactionCurrency) {
+            return [$cashBase, []];
+        }
+
+        $invoiceRate = (string) ($invoice->exchange_rate ?: '1');
+        $paymentRate = (string) ($transaction->exchange_rate ?: '1');
+
+        if (bccomp($invoiceRate, '0', 8) !== 1 || bccomp($invoiceRate, $paymentRate, 8) === 0) {
+            return [$cashBase, []];
+        }
+
+        $booked = bcmul((string) $transaction->amount, $invoiceRate, 4);
+        $difference = bcsub($cashBase, $booked, 4);
+
+        if (bccomp($difference, '0', 4) === 0) {
+            return [$booked, []];
+        }
+
+        $gainId = $settings->default_fx_gain_id;
+        $lossId = $settings->default_fx_loss_id;
+
+        if ($gainId === null || $lossId === null) {
+            throw new RuntimeException('Foreign exchange gain and loss accounts are not mapped.');
+        }
+
+        $description = $this->transactionDescription($transaction);
+        $absolute = ltrim($difference, '-');
+        $isGain = bccomp($difference, '0', 4) === 1;
+
+        if ($receipt) {
+            $line = $isGain
+                ? ['gl_account_id' => $gainId, 'debit' => '0', 'credit' => $absolute, 'description' => $description]
+                : ['gl_account_id' => $lossId, 'debit' => $absolute, 'credit' => '0', 'description' => $description];
+        } else {
+            $line = $isGain
+                ? ['gl_account_id' => $lossId, 'debit' => $absolute, 'credit' => '0', 'description' => $description]
+                : ['gl_account_id' => $gainId, 'debit' => '0', 'credit' => $absolute, 'description' => $description];
+        }
+
+        return [$booked, [$line]];
+    }
+
+    protected function invoiceBaseRate(Invoice $invoice): string
+    {
+        $currency = strtoupper(trim((string) ($invoice->currency ?? '')));
+        $rate = (string) ($invoice->exchange_rate ?: '1');
+
+        if ($currency === '' || bccomp($rate, '0', 8) !== 1) {
+            return '1';
+        }
+
+        $base = $this->baseCurrencyCode((int) $invoice->business_id);
+
+        if ($base !== null && $currency === $base) {
+            return '1';
+        }
+
+        return $rate;
+    }
+
+    protected function baseCurrencyCode(int $businessId): ?string
+    {
+        if (array_key_exists($businessId, $this->baseCurrencyCodes)) {
+            return $this->baseCurrencyCodes[$businessId];
+        }
+
+        $code = BusinessCurrency::query()
+            ->where('business_id', $businessId)
+            ->where('is_base', true)
+            ->with('currency:id,code')
+            ->first()
+            ?->currency
+            ?->code;
+
+        $this->baseCurrencyCodes[$businessId] = $code !== null ? strtoupper((string) $code) : null;
+
+        return $this->baseCurrencyCodes[$businessId];
     }
 
     /**

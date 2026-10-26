@@ -181,7 +181,7 @@ class LedgerDefaultAccountsAndAutoPostTest extends TestCase
             ->first();
 
         $this->assertNotNull($entry);
-        $this->assertSame(JournalEntryStatus::Draft, $entry->status);
+        $this->assertSame(JournalEntryStatus::PendingReview, $entry->status);
     }
 
     public function test_finalize_with_auto_post_off_creates_no_journal_entry(): void

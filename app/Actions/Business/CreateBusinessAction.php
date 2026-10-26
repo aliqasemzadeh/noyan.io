@@ -5,6 +5,7 @@ namespace App\Actions\Business;
 use App\Actions\Accounting\SeedBusinessChartOfAccountsAction;
 use App\Actions\Accounting\SyncBusinessLedgerDefaultAccountsAction;
 use App\Actions\Inventory\InitializeBusinessWarehousesAction;
+use App\Enums\Accounting\ChartTemplate;
 use App\Enums\AccountSubType;
 use App\Enums\AccountType;
 use App\Enums\Business\BusinessCategory;
@@ -120,7 +121,8 @@ class CreateBusinessAction
             BusinessInvoiceSetting::forBusiness($business);
             BusinessLedgerSetting::forBusiness($business);
 
-            app(SeedBusinessChartOfAccountsAction::class)->handle($business);
+            $template = $business->category?->chartTemplate() ?? ChartTemplate::Trading;
+            app(SeedBusinessChartOfAccountsAction::class)->handle($business, template: $template);
             app(SyncBusinessLedgerDefaultAccountsAction::class)->handle($business, overwrite: true);
 
             return $business->fresh();

@@ -33,7 +33,7 @@ class PostJournalEntryAction
                 throw new RuntimeException('Journal entry does not belong to the current business.');
             }
 
-            if (! $locked->isDraft()) {
+            if (! $locked->isOpen()) {
                 throw ValidationException::withMessages([
                     'entry' => [__('general.journal_only_draft_postable')],
                 ]);

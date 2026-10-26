@@ -19,7 +19,7 @@ new class extends Component
             403
         );
 
-        abort_unless($journalEntry->isDraft(), 403);
+        abort_unless($journalEntry->isOpen(), 403);
 
         $this->journalEntry = $journalEntry;
 

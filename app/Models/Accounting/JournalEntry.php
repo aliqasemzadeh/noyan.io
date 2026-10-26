@@ -95,6 +95,16 @@ class JournalEntry extends Model
         return $this->status === JournalEntryStatus::Draft;
     }
 
+    public function isPendingReview(): bool
+    {
+        return $this->status === JournalEntryStatus::PendingReview;
+    }
+
+    public function isOpen(): bool
+    {
+        return $this->isDraft() || $this->isPendingReview();
+    }
+
     public function isPosted(): bool
     {
         return $this->status === JournalEntryStatus::Posted;

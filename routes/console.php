@@ -1,5 +1,6 @@
 <?php
 
+use App\Jobs\Accounting\PostDailyGlBatchesJob;
 use App\Jobs\Notifications\SendInvoicePaymentRemindersJob;
 use App\Jobs\System\RunBackupJob;
 use Illuminate\Foundation\Inspiring;
@@ -15,6 +16,12 @@ Schedule::job(new RunBackupJob('database', 'local'))
     ->timezone('Asia/Tehran')
     ->withoutOverlapping()
     ->name('system-database-backup');
+
+Schedule::job(new PostDailyGlBatchesJob)
+    ->dailyAt('23:50')
+    ->timezone('Asia/Tehran')
+    ->withoutOverlapping()
+    ->name('daily-gl-auto-post');
 
 Schedule::job(new SendInvoicePaymentRemindersJob)
     ->dailyAt('09:00')

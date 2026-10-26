@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Actions\Accounting\SeedBusinessChartOfAccountsAction;
+use App\Actions\Accounting\SyncBusinessLedgerDefaultAccountsAction;
 use App\Enums\Accounting\AutoPostMode;
 use App\Enums\Accounting\JournalEntryStatus;
 use App\Enums\Accounting\VoucherNumberingMode;
@@ -95,6 +97,8 @@ class BusinessLedgerSettingsTest extends TestCase
     {
         [$user, $business] = $this->actingBusinessUser();
         BusinessLedgerSetting::forBusiness($business);
+        app(SeedBusinessChartOfAccountsAction::class)->handle($business);
+        app(SyncBusinessLedgerDefaultAccountsAction::class)->handle($business, overwrite: true);
 
         Livewire::actingAs($user)
             ->test('pages::panel.accounting.ledger-setting.index')
