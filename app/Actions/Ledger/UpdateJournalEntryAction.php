@@ -76,12 +76,11 @@ class UpdateJournalEntryAction
             ]);
 
             $locked->lines()->each(function (JournalLine $line): void {
+                $line->details()->delete();
                 $line->delete();
             });
 
-            foreach ($lines as $line) {
-                $locked->lines()->create($line);
-            }
+            $this->persistJournalLines($locked, $lines);
 
             return $locked->fresh(['lines', 'fiscalYear']);
         });

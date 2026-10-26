@@ -30,9 +30,6 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'is_postable',
     'is_system',
     'system_key',
-    'requires_detail_level_4_type',
-    'requires_detail_level_5_type',
-    'requires_detail_level_6_type',
     'sort_order',
     'is_active',
 ])]
@@ -52,9 +49,6 @@ class GlAccount extends Model
             'statement_type' => StatementType::class,
             'is_postable' => 'boolean',
             'is_system' => 'boolean',
-            'requires_detail_level_4_type' => DetailType::class,
-            'requires_detail_level_5_type' => DetailType::class,
-            'requires_detail_level_6_type' => DetailType::class,
             'sort_order' => 'integer',
             'is_active' => 'boolean',
         ];
@@ -76,6 +70,21 @@ class GlAccount extends Model
     public function children(): HasMany
     {
         return $this->hasMany(self::class, 'parent_id')->orderBy('sort_order')->orderBy('full_code');
+    }
+
+    /**
+     * @return HasMany<GlAccountDetailLevel, $this>
+     */
+    public function detailLevels(): HasMany
+    {
+        return $this->hasMany(GlAccountDetailLevel::class)->orderBy('level');
+    }
+
+    public function detailTypeForLevel(int $level): ?DetailType
+    {
+        $match = $this->detailLevels->firstWhere('level', $level);
+
+        return $match?->detail_type;
     }
 
     /**

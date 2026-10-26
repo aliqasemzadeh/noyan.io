@@ -7,6 +7,7 @@ use App\Enums\Accounting\AccountNature;
 use App\Enums\Accounting\DetailType;
 use App\Enums\Accounting\StatementType;
 use App\Models\Accounting\GlAccount;
+use App\Models\Accounting\GlAccountDetailLevel;
 use App\Models\Business;
 use App\Models\BusinessLedgerSetting;
 use Illuminate\Support\Facades\Auth;
@@ -28,11 +29,8 @@ class GlAccountForm extends Form
 
     public string $statement_type = 'balance_sheet';
 
-    public string $requires_detail_level_4_type = '';
-
-    public string $requires_detail_level_5_type = '';
-
-    public string $requires_detail_level_6_type = '';
+    /** @var list<array{level: int, detail_type: string}> */
+    public array $detailLevels = [];
 
     public bool $is_active = true;
 
@@ -44,9 +42,13 @@ class GlAccountForm extends Form
         $this->name = $glAccount->name;
         $this->nature = $glAccount->nature->value;
         $this->statement_type = $glAccount->statement_type->value;
-        $this->requires_detail_level_4_type = $glAccount->requires_detail_level_4_type?->value ?? '';
-        $this->requires_detail_level_5_type = $glAccount->requires_detail_level_5_type?->value ?? '';
-        $this->requires_detail_level_6_type = $glAccount->requires_detail_level_6_type?->value ?? '';
+        $this->detailLevels = $glAccount->detailLevels
+            ->map(fn (GlAccountDetailLevel $level): array => [
+                'level' => (int) $level->level,
+                'detail_type' => $level->detail_type->value,
+            ])
+            ->values()
+            ->all();
         $this->is_active = $glAccount->is_active;
     }
 
@@ -90,9 +92,9 @@ class GlAccountForm extends Form
             'name' => ['required', 'string', 'max:255'],
             'nature' => ['required', Rule::enum(AccountNature::class)],
             'statement_type' => ['required', Rule::enum(StatementType::class)],
-            'requires_detail_level_4_type' => ['nullable', Rule::enum(DetailType::class)],
-            'requires_detail_level_5_type' => ['nullable', Rule::enum(DetailType::class)],
-            'requires_detail_level_6_type' => ['nullable', Rule::enum(DetailType::class)],
+            'detailLevels' => ['array'],
+            'detailLevels.*.level' => ['required', 'integer', 'min:4'],
+            'detailLevels.*.detail_type' => ['required', Rule::enum(DetailType::class)],
             'is_active' => ['boolean'],
         ];
     }
@@ -108,16 +110,48 @@ class GlAccountForm extends Form
             'name' => __('general.name'),
             'nature' => __('general.account_nature'),
             'statement_type' => __('general.statement_type'),
-            'requires_detail_level_4_type' => __('general.requires_detail_level_4'),
-            'requires_detail_level_5_type' => __('general.requires_detail_level_5'),
-            'requires_detail_level_6_type' => __('general.requires_detail_level_6'),
+            'detailLevels.*.detail_type' => __('general.detail_level_type'),
             'is_active' => __('general.is_active'),
         ];
+    }
+
+    public function acceptsDetailLevels(): bool
+    {
+        if ($this->glAccount !== null) {
+            return $this->glAccount->isSubsidiary();
+        }
+
+        if ($this->parent_id === null) {
+            return false;
+        }
+
+        $parent = GlAccount::query()
+            ->where('business_id', Auth::user()?->current_business_id)
+            ->find($this->parent_id);
+
+        return $parent?->level === AccountLevel::Control;
+    }
+
+    public function addDetailLevel(): void
+    {
+        $this->detailLevels[] = [
+            'level' => 4,
+            'detail_type' => '',
+        ];
+        $this->reindexDetailLevels();
+    }
+
+    public function removeDetailLevel(int $index): void
+    {
+        unset($this->detailLevels[$index]);
+        $this->detailLevels = array_values($this->detailLevels);
+        $this->reindexDetailLevels();
     }
 
     public function store(): GlAccount
     {
         $businessId = $this->requireBusinessId();
+        $this->prepareDetailLevelsForSave();
         $validated = $this->validate();
 
         $parent = null;
@@ -171,18 +205,11 @@ class GlAccountForm extends Form
             'is_postable' => $level === AccountLevel::Subsidiary,
             'is_system' => false,
             'system_key' => null,
-            'requires_detail_level_4_type' => filled($validated['requires_detail_level_4_type'] ?? null)
-                ? $validated['requires_detail_level_4_type']
-                : null,
-            'requires_detail_level_5_type' => filled($validated['requires_detail_level_5_type'] ?? null)
-                ? $validated['requires_detail_level_5_type']
-                : null,
-            'requires_detail_level_6_type' => filled($validated['requires_detail_level_6_type'] ?? null)
-                ? $validated['requires_detail_level_6_type']
-                : null,
             'sort_order' => 0,
             'is_active' => (bool) ($validated['is_active'] ?? true),
         ]);
+
+        $this->syncDetailLevels($account);
 
         $this->resetFormState();
 
@@ -191,7 +218,8 @@ class GlAccountForm extends Form
 
     public function update(): void
     {
-        $businessId = $this->requireBusinessId();
+        $this->requireBusinessId();
+        $this->prepareDetailLevelsForSave();
         $validated = $this->validate();
 
         if ($this->glAccount === null) {
@@ -201,26 +229,26 @@ class GlAccountForm extends Form
         }
 
         if ($this->glAccount->is_system) {
-            throw ValidationException::withMessages([
-                'name' => [__('general.gl_account_system_locked')],
-            ]);
+            if (! $this->glAccount->isSubsidiary()) {
+                throw ValidationException::withMessages([
+                    'name' => [__('general.gl_account_system_locked')],
+                ]);
+            }
+
+            $this->syncDetailLevels($this->glAccount);
+            $this->resetFormState();
+
+            return;
         }
 
         $this->glAccount->update([
             'name' => $validated['name'],
             'nature' => $validated['nature'],
             'statement_type' => $validated['statement_type'],
-            'requires_detail_level_4_type' => filled($validated['requires_detail_level_4_type'] ?? null)
-                ? $validated['requires_detail_level_4_type']
-                : null,
-            'requires_detail_level_5_type' => filled($validated['requires_detail_level_5_type'] ?? null)
-                ? $validated['requires_detail_level_5_type']
-                : null,
-            'requires_detail_level_6_type' => filled($validated['requires_detail_level_6_type'] ?? null)
-                ? $validated['requires_detail_level_6_type']
-                : null,
             'is_active' => (bool) ($validated['is_active'] ?? true),
         ]);
+
+        $this->syncDetailLevels($this->glAccount);
 
         $this->resetFormState();
     }
@@ -249,6 +277,43 @@ class GlAccountForm extends Form
 
         $this->glAccount->delete();
         $this->resetFormState();
+    }
+
+    protected function prepareDetailLevelsForSave(): void
+    {
+        if (! $this->acceptsDetailLevels()) {
+            $this->detailLevels = [];
+
+            return;
+        }
+
+        $this->reindexDetailLevels();
+    }
+
+    protected function reindexDetailLevels(): void
+    {
+        foreach ($this->detailLevels as $index => $row) {
+            $this->detailLevels[$index] = [
+                'level' => 4 + $index,
+                'detail_type' => (string) ($row['detail_type'] ?? ''),
+            ];
+        }
+    }
+
+    protected function syncDetailLevels(GlAccount $account): void
+    {
+        $account->detailLevels()->delete();
+
+        if (! $account->isSubsidiary()) {
+            return;
+        }
+
+        foreach ($this->detailLevels as $row) {
+            $account->detailLevels()->create([
+                'level' => (int) $row['level'],
+                'detail_type' => $row['detail_type'],
+            ]);
+        }
     }
 
     protected function requireBusinessId(): int

@@ -8,6 +8,7 @@ use App\Enums\Accounting\ChartTemplate;
 use App\Enums\Accounting\DetailType;
 use App\Enums\Accounting\StatementType;
 use App\Models\Accounting\GlAccount;
+use App\Models\Accounting\GlAccountDetailLevel;
 use App\Models\Business;
 use Illuminate\Support\Facades\DB;
 
@@ -46,7 +47,7 @@ class SeedBusinessChartOfAccountsAction
      *     nature: AccountNature,
      *     statement_type: StatementType,
      *     system_key?: string|null,
-     *     requires_detail_level_4_type?: DetailType|null,
+     *     detail_levels?: array<int, DetailType|string|null>,
      *     children?: list<array<string, mixed>>
      * }  $node
      * @return list<GlAccount>
@@ -85,9 +86,6 @@ class SeedBusinessChartOfAccountsAction
             'is_postable' => $isSubsidiary,
             'is_system' => true,
             'system_key' => $systemKey,
-            'requires_detail_level_4_type' => $node['requires_detail_level_4_type'] ?? null,
-            'requires_detail_level_5_type' => $node['requires_detail_level_5_type'] ?? null,
-            'requires_detail_level_6_type' => $node['requires_detail_level_6_type'] ?? null,
             'sort_order' => $sortOrder,
             'is_active' => true,
         ]);
@@ -96,6 +94,10 @@ class SeedBusinessChartOfAccountsAction
             $account->restore();
         } else {
             $account->save();
+        }
+
+        if ($isSubsidiary) {
+            $this->syncDetailLevels($account, $node['detail_levels'] ?? []);
         }
 
         $created = [$account];
@@ -113,5 +115,36 @@ class SeedBusinessChartOfAccountsAction
         }
 
         return $created;
+    }
+
+    /**
+     * @param  array<int|string, DetailType|string|null>  $levels
+     */
+    protected function syncDetailLevels(GlAccount $account, array $levels): void
+    {
+        $keep = [];
+
+        foreach ($levels as $level => $type) {
+            if ($type === null || $type === '') {
+                continue;
+            }
+
+            $levelNumber = (int) $level;
+            $typeValue = $type instanceof DetailType ? $type->value : (string) $type;
+
+            GlAccountDetailLevel::query()->updateOrCreate(
+                [
+                    'gl_account_id' => $account->id,
+                    'level' => $levelNumber,
+                ],
+                [
+                    'detail_type' => $typeValue,
+                ],
+            );
+
+            $keep[] = $levelNumber;
+        }
+
+        $account->detailLevels()->whereNotIn('level', $keep === [] ? [0] : $keep)->delete();
     }
 }

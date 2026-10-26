@@ -32,7 +32,9 @@ final class TradingChart
                                 'nature' => AccountNature::Debit,
                                 'statement_type' => StatementType::BalanceSheet,
                                 'system_key' => 'cash_and_bank',
-                                'requires_detail_level_4_type' => DetailType::Account,
+                                'detail_levels' => [
+                                    4 => DetailType::Account,
+                                ],
                             ],
                             [
                                 'code' => '02',
@@ -40,7 +42,9 @@ final class TradingChart
                                 'nature' => AccountNature::Debit,
                                 'statement_type' => StatementType::BalanceSheet,
                                 'system_key' => 'accounts_receivable',
-                                'requires_detail_level_4_type' => DetailType::Party,
+                                'detail_levels' => [
+                                    4 => DetailType::Party,
+                                ],
                             ],
                             [
                                 'code' => '03',
@@ -93,7 +97,9 @@ final class TradingChart
                                 'nature' => AccountNature::Credit,
                                 'statement_type' => StatementType::BalanceSheet,
                                 'system_key' => 'accounts_payable',
-                                'requires_detail_level_4_type' => DetailType::Party,
+                                'detail_levels' => [
+                                    4 => DetailType::Party,
+                                ],
                             ],
                             [
                                 'code' => '02',

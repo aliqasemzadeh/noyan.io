@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 #[Fillable([
@@ -19,9 +20,6 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'account_id',
     'cost_center_id',
     'project_id',
-    'detail_level_4_id',
-    'detail_level_5_id',
-    'detail_level_6_id',
     'debit',
     'credit',
     'description',
@@ -62,19 +60,12 @@ class JournalLine extends Model
         return $this->belongsTo(GlAccount::class, 'gl_account_id');
     }
 
-    public function detailLevel4(): BelongsTo
+    /**
+     * @return HasMany<JournalLineDetail, $this>
+     */
+    public function details(): HasMany
     {
-        return $this->belongsTo(GlDetail::class, 'detail_level_4_id');
-    }
-
-    public function detailLevel5(): BelongsTo
-    {
-        return $this->belongsTo(GlDetail::class, 'detail_level_5_id');
-    }
-
-    public function detailLevel6(): BelongsTo
-    {
-        return $this->belongsTo(GlDetail::class, 'detail_level_6_id');
+        return $this->hasMany(JournalLineDetail::class)->orderBy('level');
     }
 
     public function party(): BelongsTo

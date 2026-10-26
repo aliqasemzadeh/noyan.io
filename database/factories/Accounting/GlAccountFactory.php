@@ -35,9 +35,6 @@ class GlAccountFactory extends Factory
             'is_postable' => false,
             'is_system' => false,
             'system_key' => null,
-            'requires_detail_level_4_type' => null,
-            'requires_detail_level_5_type' => null,
-            'requires_detail_level_6_type' => null,
             'sort_order' => 0,
             'is_active' => true,
         ];

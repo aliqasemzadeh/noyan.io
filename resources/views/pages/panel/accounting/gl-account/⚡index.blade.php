@@ -107,6 +107,7 @@ new class extends Component
 
         /** @var Collection<int, GlAccount> $accounts */
         $accounts = GlAccount::query()
+            ->with('detailLevels')
             ->where('business_id', $businessId)
             ->orderBy('full_code')
             ->get()
@@ -271,6 +272,13 @@ new class extends Component
                                 @if ($account->is_postable)
                                     <flux:badge size="sm" color="teal">{{ __('general.postable') }}</flux:badge>
                                 @endif
+                                @foreach ($account->detailLevels as $detailLevel)
+                                    <flux:badge size="sm" color="sky" wire:key="gl-detail-{{ $account->id }}-{{ $detailLevel->id }}">
+                                        {{ __('general.detail_level_label', ['level' => $detailLevel->level]) }}
+                                        —
+                                        {{ $detailLevel->detail_type->label() }}
+                                    </flux:badge>
+                                @endforeach
                             </div>
                         </flux:table.cell>
                         <flux:table.cell>{{ $account->level->label() }}</flux:table.cell>

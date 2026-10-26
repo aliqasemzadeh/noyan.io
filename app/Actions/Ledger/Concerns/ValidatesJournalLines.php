@@ -10,6 +10,7 @@ use App\Models\Accounting\CostCenter;
 use App\Models\Accounting\FiscalYear;
 use App\Models\Accounting\GlAccount;
 use App\Models\Accounting\GlDetail;
+use App\Models\Accounting\JournalEntry;
 use App\Models\Accounting\Party;
 use App\Models\Accounting\Project;
 use App\Models\Category;
@@ -27,9 +28,7 @@ trait ValidatesJournalLines
      *     account_id: int|null,
      *     cost_center_id: int|null,
      *     project_id: int|null,
-     *     detail_level_4_id: int|null,
-     *     detail_level_5_id: int|null,
-     *     detail_level_6_id: int|null,
+     *     details: list<array{level: int, gl_detail_id: int}>,
      *     debit: string,
      *     credit: string,
      *     description: string|null
@@ -78,10 +77,11 @@ trait ValidatesJournalLines
                 $this->assertCategoryBelongsToBusiness($businessId, $categoryId, $index);
                 $category = Category::query()->find($categoryId);
                 if ($category?->gl_account_id) {
-                    $glAccount = GlAccount::query()
-                        ->where('business_id', $businessId)
-                        ->whereKey($category->gl_account_id)
-                        ->first();
+                $glAccount = GlAccount::query()
+                    ->with('detailLevels')
+                    ->where('business_id', $businessId)
+                    ->whereKey($category->gl_account_id)
+                    ->first();
                     $glAccountId = $glAccount?->id;
                 }
             }
@@ -118,40 +118,15 @@ trait ValidatesJournalLines
                 __('general.journal_project_invalid'),
             );
 
-            $detail4 = $this->resolveDetailId(
+            $detailRows = $this->resolveLineDetails(
                 $businessId,
-                $line['detail_level_4_id'] ?? null,
+                $line,
+                $glAccount,
                 $partyId,
                 $accountId,
                 $costCenterId,
                 $projectId,
-                $glAccount?->requires_detail_level_4_type,
                 $index,
-                4,
-            );
-
-            $detail5 = $this->resolveDetailId(
-                $businessId,
-                $line['detail_level_5_id'] ?? null,
-                $partyId,
-                $accountId,
-                $costCenterId,
-                $projectId,
-                $glAccount?->requires_detail_level_5_type,
-                $index,
-                5,
-            );
-
-            $detail6 = $this->resolveDetailId(
-                $businessId,
-                $line['detail_level_6_id'] ?? null,
-                $partyId,
-                $accountId,
-                $costCenterId,
-                $projectId,
-                $glAccount?->requires_detail_level_6_type,
-                $index,
-                6,
             );
 
             [$partyId, $accountId, $costCenterId, $projectId] = $this->dualFillLegacyFksFromDetails(
@@ -160,14 +135,8 @@ trait ValidatesJournalLines
                 $accountId,
                 $costCenterId,
                 $projectId,
-                $detail4,
-                $detail5,
-                $detail6,
+                array_column($detailRows, 'gl_detail_id'),
             );
-
-            if ($glAccount !== null) {
-                $this->assertRequiredDetails($glAccount, $detail4, $detail5, $detail6, $index);
-            }
 
             $description = filled($line['description'] ?? null)
                 ? trim((string) $line['description'])
@@ -180,9 +149,7 @@ trait ValidatesJournalLines
                 'account_id' => $accountId,
                 'cost_center_id' => $costCenterId,
                 'project_id' => $projectId,
-                'detail_level_4_id' => $detail4,
-                'detail_level_5_id' => $detail5,
-                'detail_level_6_id' => $detail6,
+                'details' => $detailRows,
                 'debit' => $debitPositive ? $debit : '0',
                 'credit' => $creditPositive ? $credit : '0',
                 'description' => $description,
@@ -251,6 +218,7 @@ trait ValidatesJournalLines
     protected function assertGlAccountPostable(int $businessId, int $glAccountId, int $index): GlAccount
     {
         $account = GlAccount::query()
+            ->with('detailLevels')
             ->where('business_id', $businessId)
             ->whereKey($glAccountId)
             ->first();
@@ -296,53 +264,118 @@ trait ValidatesJournalLines
         }
     }
 
-    protected function resolveDetailId(
+    /**
+     * @param  array<string, mixed>  $line
+     * @return list<array{level: int, gl_detail_id: int}>
+     */
+    protected function resolveLineDetails(
         int $businessId,
-        mixed $explicitDetailId,
+        array $line,
+        ?GlAccount $glAccount,
         ?int $partyId,
         ?int $accountId,
         ?int $costCenterId,
         ?int $projectId,
-        ?DetailType $requiredType,
+        int $index,
+    ): array {
+        if ($glAccount === null) {
+            return [];
+        }
+
+        $rows = [];
+        $legacyConsumed = [];
+
+        foreach ($glAccount->detailLevels as $requirement) {
+            $level = (int) $requirement->level;
+            $type = $requirement->detail_type;
+            $explicit = $this->explicitDetailId($line, $level);
+
+            if ($explicit !== null && $explicit !== '' && $explicit !== false) {
+                $detailId = $this->assertExplicitDetail($businessId, $explicit, $type, $index, $level);
+                $legacyConsumed[$type->value] = true;
+            } elseif (! isset($legacyConsumed[$type->value])) {
+                $legacyConsumed[$type->value] = true;
+                $detailId = $this->detailIdFromLegacyFk(
+                    $businessId,
+                    $partyId,
+                    $accountId,
+                    $costCenterId,
+                    $projectId,
+                    $type,
+                );
+            } else {
+                $detailId = null;
+            }
+
+            if ($detailId === null) {
+                throw ValidationException::withMessages([
+                    "lines.{$index}.details.{$level}" => [__('general.journal_detail_level_required', [
+                        'level' => $level,
+                        'type' => $type->label(),
+                    ])],
+                ]);
+            }
+
+            $rows[] = [
+                'level' => $level,
+                'gl_detail_id' => $detailId,
+            ];
+        }
+
+        return $rows;
+    }
+
+    protected function explicitDetailId(array $line, int $level): mixed
+    {
+        $details = $line['details'] ?? null;
+
+        if (! is_array($details)) {
+            return null;
+        }
+
+        if (array_key_exists($level, $details) && ! is_array($details[$level])) {
+            return $details[$level];
+        }
+
+        foreach ($details as $row) {
+            if (! is_array($row)) {
+                continue;
+            }
+
+            if ((int) ($row['level'] ?? 0) === $level) {
+                return $row['gl_detail_id'] ?? null;
+            }
+        }
+
+        return null;
+    }
+
+    protected function assertExplicitDetail(
+        int $businessId,
+        mixed $explicitDetailId,
+        DetailType $requiredType,
         int $index,
         int $level,
-    ): ?int {
-        if ($explicitDetailId !== null && $explicitDetailId !== '' && $explicitDetailId !== false) {
-            $detailId = (int) $explicitDetailId;
-            $detail = GlDetail::query()
-                ->where('business_id', $businessId)
-                ->whereKey($detailId)
-                ->first();
+    ): int {
+        $detailId = (int) $explicitDetailId;
+        $detail = GlDetail::query()
+            ->where('business_id', $businessId)
+            ->whereKey($detailId)
+            ->first();
 
-            if ($detail === null) {
-                throw ValidationException::withMessages([
-                    "lines.{$index}.detail_level_{$level}_id" => [__('general.journal_detail_invalid')],
-                ]);
-            }
-
-            if ($requiredType !== null && $detail->type !== $requiredType) {
-                throw ValidationException::withMessages([
-                    "lines.{$index}.detail_level_{$level}_id" => [__('general.journal_detail_type_mismatch')],
-                ]);
-            }
-
-            return $detailId;
+        if ($detail === null) {
+            throw ValidationException::withMessages([
+                "lines.{$index}.details.{$level}" => [__('general.journal_detail_invalid')],
+            ]);
         }
 
-        if ($requiredType === null) {
-            return $this->detailIdFromLegacyFk($businessId, $partyId, $accountId, $costCenterId, $projectId, null);
+        if ($detail->type !== $requiredType) {
+            throw ValidationException::withMessages([
+                "lines.{$index}.details.{$level}" => [__('general.journal_detail_type_mismatch')],
+            ]);
         }
 
-        $fromLegacy = $this->detailIdFromLegacyFk(
-            $businessId,
-            $partyId,
-            $accountId,
-            $costCenterId,
-            $projectId,
-            $requiredType,
-        );
-
-        return $fromLegacy;
+        return $detailId;
     }
 
     protected function detailIdFromLegacyFk(
@@ -407,6 +440,7 @@ trait ValidatesJournalLines
     }
 
     /**
+     * @param  list<int>  $detailIds
      * @return array{0: int|null, 1: int|null, 2: int|null, 3: int|null}
      */
     protected function dualFillLegacyFksFromDetails(
@@ -415,12 +449,10 @@ trait ValidatesJournalLines
         ?int $accountId,
         ?int $costCenterId,
         ?int $projectId,
-        ?int $detail4,
-        ?int $detail5,
-        ?int $detail6,
+        array $detailIds,
     ): array {
-        foreach ([$detail4, $detail5, $detail6] as $detailId) {
-            if ($detailId === null) {
+        foreach ($detailIds as $detailId) {
+            if ($detailId === 0) {
                 continue;
             }
 
@@ -444,38 +476,23 @@ trait ValidatesJournalLines
         return [$partyId, $accountId, $costCenterId, $projectId];
     }
 
-    protected function assertRequiredDetails(
-        GlAccount $glAccount,
-        ?int $detail4,
-        ?int $detail5,
-        ?int $detail6,
-        int $index,
-    ): void {
-        if ($glAccount->requires_detail_level_4_type !== null && $detail4 === null) {
-            throw ValidationException::withMessages([
-                "lines.{$index}.detail_level_4_id" => [__('general.journal_detail_level_required', [
-                    'level' => 4,
-                    'type' => $glAccount->requires_detail_level_4_type->label(),
-                ])],
-            ]);
-        }
+    /**
+     * @param  list<array<string, mixed>>  $lines
+     */
+    protected function persistJournalLines(JournalEntry $entry, array $lines): void
+    {
+        foreach ($lines as $line) {
+            $details = $line['details'] ?? [];
+            unset($line['details']);
 
-        if ($glAccount->requires_detail_level_5_type !== null && $detail5 === null) {
-            throw ValidationException::withMessages([
-                "lines.{$index}.detail_level_5_id" => [__('general.journal_detail_level_required', [
-                    'level' => 5,
-                    'type' => $glAccount->requires_detail_level_5_type->label(),
-                ])],
-            ]);
-        }
+            $created = $entry->lines()->create($line);
 
-        if ($glAccount->requires_detail_level_6_type !== null && $detail6 === null) {
-            throw ValidationException::withMessages([
-                "lines.{$index}.detail_level_6_id" => [__('general.journal_detail_level_required', [
-                    'level' => 6,
-                    'type' => $glAccount->requires_detail_level_6_type->label(),
-                ])],
-            ]);
+            foreach ($details as $detail) {
+                $created->details()->create([
+                    'level' => $detail['level'],
+                    'gl_detail_id' => $detail['gl_detail_id'],
+                ]);
+            }
         }
     }
 

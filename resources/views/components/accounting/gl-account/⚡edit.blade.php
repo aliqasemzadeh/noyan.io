@@ -1,7 +1,6 @@
 <?php
 
 use App\Enums\Accounting\AccountNature;
-use App\Enums\Accounting\DetailType;
 use App\Enums\Accounting\StatementType;
 use App\Livewire\Forms\Accounting\GlAccountForm;
 use App\Models\Accounting\GlAccount;
@@ -38,6 +37,16 @@ new class extends Component
         Flux::modals()->close();
         Flux::toast(__('general.gl_account_updated'));
     }
+
+    public function addDetailLevel(): void
+    {
+        $this->form->addDetailLevel();
+    }
+
+    public function removeDetailLevel(int $index): void
+    {
+        $this->form->removeDetailLevel($index);
+    }
 };
 ?>
 
@@ -70,22 +79,17 @@ new class extends Component
             @endforeach
         </flux:select>
 
-        <flux:select wire:model="form.requires_detail_level_4_type" :label="__('general.requires_detail_level_4')" variant="listbox" searchable :disabled="$isSystem">
-            <flux:select.option value="">{{ __('general.none') }}</flux:select.option>
-            @foreach (DetailType::cases() as $type)
-                <flux:select.option :value="$type->value">{{ $type->label() }}</flux:select.option>
-            @endforeach
-        </flux:select>
+        @include('components.accounting.gl-account.partials.detail-levels')
 
         <flux:field variant="inline">
             <flux:label>{{ __('general.is_active') }}</flux:label>
             <flux:switch wire:model.live="form.is_active" :disabled="$isSystem" />
         </flux:field>
 
-        @unless ($isSystem)
+        @if (! $isSystem || $form->acceptsDetailLevels())
             <flux:button type="submit" variant="primary" color="orange" class="w-full">
                 {{ __('general.save') }}
             </flux:button>
-        @endunless
+        @endif
     </form>
 </flux:modal>

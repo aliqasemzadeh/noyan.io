@@ -37,18 +37,16 @@ class JournalEntryForm extends Form
         $this->fiscal_year_id = $entry->fiscal_year_id;
         $this->entry_date = LocaleDate::formatInput($entry->entry_date);
         $this->description = (string) $entry->description;
+        $entry->loadMissing('lines.details');
+
         $this->lines = $entry->lines
             ->map(fn ($line): array => [
                 'id' => (string) $line->id,
                 'category_id' => $line->category_id,
                 'gl_account_id' => $line->gl_account_id,
-                'party_id' => $line->party_id,
-                'account_id' => $line->account_id,
-                'cost_center_id' => $line->cost_center_id,
-                'project_id' => $line->project_id,
-                'detail_level_4_id' => $line->detail_level_4_id,
-                'detail_level_5_id' => $line->detail_level_5_id,
-                'detail_level_6_id' => $line->detail_level_6_id,
+                'details' => $line->details
+                    ->mapWithKeys(fn ($detail): array => [$detail->level => $detail->gl_detail_id])
+                    ->all(),
                 'debit' => $this->formatAmount((string) $line->debit),
                 'credit' => $this->formatAmount((string) $line->credit),
                 'description' => (string) ($line->description ?? ''),
@@ -79,13 +77,7 @@ class JournalEntryForm extends Form
             'id' => (string) Str::uuid(),
             'category_id' => null,
             'gl_account_id' => null,
-            'party_id' => null,
-            'account_id' => null,
-            'cost_center_id' => null,
-            'project_id' => null,
-            'detail_level_4_id' => null,
-            'detail_level_5_id' => null,
-            'detail_level_6_id' => null,
+            'details' => [],
             'debit' => '0',
             'credit' => '0',
             'description' => '',
@@ -153,13 +145,8 @@ class JournalEntryForm extends Form
             'lines' => ['required', 'array', 'min:2'],
             'lines.*.category_id' => ['nullable', 'integer'],
             'lines.*.gl_account_id' => ['nullable', 'integer'],
-            'lines.*.party_id' => ['nullable', 'integer'],
-            'lines.*.account_id' => ['nullable', 'integer'],
-            'lines.*.cost_center_id' => ['nullable', 'integer'],
-            'lines.*.project_id' => ['nullable', 'integer'],
-            'lines.*.detail_level_4_id' => ['nullable', 'integer'],
-            'lines.*.detail_level_5_id' => ['nullable', 'integer'],
-            'lines.*.detail_level_6_id' => ['nullable', 'integer'],
+            'lines.*.details' => ['nullable', 'array'],
+            'lines.*.details.*' => ['nullable', 'integer'],
             'lines.*.debit' => ['nullable', 'string'],
             'lines.*.credit' => ['nullable', 'string'],
             'lines.*.description' => ['nullable', 'string', 'max:255'],
@@ -245,13 +232,7 @@ class JournalEntryForm extends Form
         return array_map(fn (array $line): array => [
             'category_id' => $line['category_id'] ?? null,
             'gl_account_id' => $line['gl_account_id'] ?? null,
-            'party_id' => $line['party_id'] ?? null,
-            'account_id' => $line['account_id'] ?? null,
-            'cost_center_id' => $line['cost_center_id'] ?? null,
-            'project_id' => $line['project_id'] ?? null,
-            'detail_level_4_id' => $line['detail_level_4_id'] ?? null,
-            'detail_level_5_id' => $line['detail_level_5_id'] ?? null,
-            'detail_level_6_id' => $line['detail_level_6_id'] ?? null,
+            'details' => $line['details'] ?? [],
             'debit' => $line['debit'] ?? '0',
             'credit' => $line['credit'] ?? '0',
             'description' => $line['description'] ?? null,

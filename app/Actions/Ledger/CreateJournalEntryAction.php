@@ -83,9 +83,7 @@ class CreateJournalEntryAction
                 'created_by' => $user->id,
             ]);
 
-            foreach ($lines as $line) {
-                $entry->lines()->create($line);
-            }
+            $this->persistJournalLines($entry, $lines);
 
             return $entry->fresh(['lines', 'fiscalYear']);
         });

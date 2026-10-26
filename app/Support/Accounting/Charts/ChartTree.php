@@ -43,7 +43,9 @@ final class ChartTree
     {
         foreach ($nodes as &$node) {
             if (isset($node['system_key']) && in_array($node['system_key'], $keys, true)) {
-                $node['requires_detail_level_5_type'] = DetailType::Project;
+                $levels = is_array($node['detail_levels'] ?? null) ? $node['detail_levels'] : [];
+                $levels[5] = DetailType::Project;
+                $node['detail_levels'] = $levels;
             }
 
             if (isset($node['children']) && is_array($node['children'])) {
