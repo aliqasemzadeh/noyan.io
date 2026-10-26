@@ -19,9 +19,10 @@ use App\Models\Accounting\JournalEntry;
 use App\Models\Accounting\Transaction;
 use App\Models\Catalog\Product;
 use App\Models\Category;
-use Illuminate\Support\Carbon;
+use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Morilog\Jalali\Jalalian;
 
 class AccountingDashboardBuilder
@@ -1109,10 +1110,13 @@ class AccountingDashboardBuilder
 
         $this->constrainCurrency($query, 'currency', $context);
 
-        $rows = $query
-            ->toBase()
-            ->selectRaw("CASE WHEN moodian_status IS NULL OR moodian_status = '' THEN 'unsent' ELSE moodian_status END as status_key, COUNT(*) as aggregate")
-            ->groupByRaw("CASE WHEN moodian_status IS NULL OR moodian_status = '' THEN 'unsent' ELSE moodian_status END")
+        $rows = DB::query()
+            ->fromSub(
+                $query->selectRaw("COALESCE(NULLIF(moodian_status, ''), 'unsent') as status_key"),
+                'moodian_rows',
+            )
+            ->selectRaw('status_key, COUNT(*) as aggregate')
+            ->groupBy('status_key')
             ->get();
 
         return $rows->map(fn (object $row): array => [
