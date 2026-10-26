@@ -5,13 +5,10 @@ use App\Actions\Ledger\PostJournalEntryAction;
 use App\Actions\Ledger\UpdateJournalEntryAction;
 use App\Enums\CategoryType;
 use App\Livewire\Forms\Accounting\JournalEntryForm;
-use App\Models\Accounting\Account;
-use App\Models\Accounting\CostCenter;
 use App\Models\Accounting\FiscalYear;
 use App\Models\Accounting\GlAccount;
+use App\Models\Accounting\GlDetail;
 use App\Models\Accounting\JournalEntry;
-use App\Models\Accounting\Party;
-use App\Models\Accounting\Project;
 use App\Models\Category;
 use Flux\Flux;
 use Illuminate\Support\Collection;
@@ -132,6 +129,7 @@ new class extends Component
         }
 
         return GlAccount::query()
+            ->with('detailLevels')
             ->where('business_id', $businessId)
             ->postable()
             ->active()
@@ -140,10 +138,10 @@ new class extends Component
     }
 
     /**
-     * @return Collection<int, Party>
+     * @return Collection<int, GlDetail>
      */
     #[Computed]
-    public function parties(): Collection
+    public function glDetails(): Collection
     {
         $businessId = Auth::user()?->current_business_id;
 
@@ -151,56 +149,11 @@ new class extends Component
             return collect();
         }
 
-        return Party::query()
+        return GlDetail::query()
             ->where('business_id', $businessId)
-            ->where('is_active', true)
+            ->active()
             ->orderBy('name')
-            ->get(['id', 'name', 'legal_name']);
-    }
-
-    /**
-     * @return Collection<int, Account>
-     */
-    #[Computed]
-    public function accounts(): Collection
-    {
-        $businessId = Auth::user()?->current_business_id;
-
-        if ($businessId === null) {
-            return collect();
-        }
-
-        return Account::cachedOptionsForBusiness($businessId);
-    }
-
-    /**
-     * @return Collection<int, CostCenter>
-     */
-    #[Computed]
-    public function costCenters(): Collection
-    {
-        $businessId = Auth::user()?->current_business_id;
-
-        if ($businessId === null) {
-            return collect();
-        }
-
-        return CostCenter::cachedOptionsForBusiness($businessId);
-    }
-
-    /**
-     * @return Collection<int, Project>
-     */
-    #[Computed]
-    public function projects(): Collection
-    {
-        $businessId = Auth::user()?->current_business_id;
-
-        if ($businessId === null) {
-            return collect();
-        }
-
-        return Project::cachedOptionsForBusiness($businessId);
+            ->get(['id', 'type', 'name']);
     }
 
     public function formatAmount(string $amount): string
