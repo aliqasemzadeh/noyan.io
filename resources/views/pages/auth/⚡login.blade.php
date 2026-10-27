@@ -263,18 +263,16 @@ class extends Component
         <form wire:submit="sendCode" class="space-y-4">
             <flux:field>
                 <flux:label>{{ __('general.mobile') }}</flux:label>
-                <div dir="rtl">
-                    <flux:input
-                        wire:model="mobile"
-                        type="tel"
-                        inputmode="numeric"
-                        maxlength="11"
-                        placeholder="{{ __('general.mobile_placeholder') }}"
-                        clearable
-                        dir="ltr"
-                        autocomplete="tel"
-                    />
-                </div>
+                <flux:input
+                    wire:model="mobile"
+                    type="tel"
+                    inputmode="numeric"
+                    maxlength="11"
+                    placeholder="{{ __('general.mobile_placeholder') }}"
+                    clearable
+                    dir="ltr"
+                    autocomplete="tel"
+                />
                 <flux:error name="mobile" />
             </flux:field>
 

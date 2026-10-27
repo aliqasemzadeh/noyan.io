@@ -45,7 +45,7 @@ new class extends Component
     <flux:modal
         name="sidebar.menu-search"
         variant="bare"
-        class="w-full max-w-[30rem] my-[12vh] max-h-screen overflow-y-hidden"
+        class="my-[6vh] max-h-screen w-[calc(100vw-2rem)] max-w-[30rem] overflow-y-hidden sm:my-[12vh]"
     >
         <flux:command class="border-none shadow-lg inline-flex flex-col max-h-[76vh]">
             <flux:command.input :placeholder="__('general.search_menu')" closable />

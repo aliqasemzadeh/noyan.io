@@ -287,37 +287,37 @@ new class extends Component
     @endif
 
     <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        <a href="{{ route('user.businesses.index') }}" wire:navigate class="block">
+        <a href="{{ route('user.businesses.index') }}" wire:navigate class="block min-w-0">
             <flux:card class="h-full transition hover:border-teal-300 dark:hover:border-teal-700">
                 <div class="flex items-start justify-between gap-3">
                     <flux:text>{{ __('general.my_businesses') }}</flux:text>
                     <flux:badge size="sm" color="teal" icon="building" />
                 </div>
-                <flux:heading size="xl" class="mt-2 tabular-nums" dir="ltr">
+                <flux:heading size="xl" class="mt-2 break-all text-2xl tabular-nums sm:text-3xl" dir="ltr">
                     {{ $this->businesses->count() }}
                 </flux:heading>
             </flux:card>
         </a>
 
-        <a href="{{ route('user.support.tickets.index') }}" wire:navigate class="block">
+        <a href="{{ route('user.support.tickets.index') }}" wire:navigate class="block min-w-0">
             <flux:card class="h-full transition hover:border-sky-300 dark:hover:border-sky-700">
                 <div class="flex items-start justify-between gap-3">
                     <flux:text>{{ __('general.open_tickets') }}</flux:text>
                     <flux:badge size="sm" color="sky" icon="life-buoy" />
                 </div>
-                <flux:heading size="xl" class="mt-2 tabular-nums" dir="ltr">
+                <flux:heading size="xl" class="mt-2 break-all text-2xl tabular-nums sm:text-3xl" dir="ltr">
                     {{ $this->ticketSummary['open'] }}
                 </flux:heading>
             </flux:card>
         </a>
 
-        <a href="{{ route('user.support.tickets.index') }}" wire:navigate class="block">
+        <a href="{{ route('user.support.tickets.index') }}" wire:navigate class="block min-w-0">
             <flux:card class="h-full transition hover:border-violet-300 dark:hover:border-violet-700">
                 <div class="flex items-start justify-between gap-3">
                     <flux:text>{{ __('general.tickets_waiting_for_you') }}</flux:text>
                     <flux:badge size="sm" color="violet" icon="message-circle" />
                 </div>
-                <flux:heading size="xl" class="mt-2 tabular-nums" dir="ltr">
+                <flux:heading size="xl" class="mt-2 break-all text-2xl tabular-nums sm:text-3xl" dir="ltr">
                     {{ $this->ticketSummary['waiting'] }}
                 </flux:heading>
             </flux:card>
@@ -326,9 +326,9 @@ new class extends Component
 
     <div class="grid gap-6 xl:grid-cols-2">
         <flux:card>
-            <div class="mb-4 flex items-center justify-between gap-3">
+            <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
                 <flux:heading size="lg">{{ __('general.recent_tickets') }}</flux:heading>
-                <div class="flex items-center gap-2">
+                <div class="flex flex-wrap items-center gap-2">
                     <flux:button
                         size="sm"
                         variant="primary"
@@ -398,11 +398,12 @@ new class extends Component
         </flux:card>
 
         <flux:card>
-            <div class="mb-4 flex items-center justify-between gap-3">
+            <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
                 <flux:heading size="lg">{{ __('general.my_businesses') }}</flux:heading>
                 <flux:button
                     size="sm"
                     variant="ghost"
+                    class="shrink-0"
                     :href="route('user.businesses.index')"
                     wire:navigate
                 >

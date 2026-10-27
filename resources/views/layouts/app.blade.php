@@ -41,7 +41,7 @@
         <flux:sidebar
             sticky
             collapsible
-            class="bg-zinc-50 dark:bg-zinc-900 max-lg:border-e max-lg:border-zinc-200 dark:max-lg:border-zinc-700 data-flux-sidebar-on-mobile:data-flux-sidebar-collapsed-mobile:max-lg:hidden!"
+            class="bg-zinc-50 dark:bg-zinc-900 max-lg:border-e max-lg:border-zinc-200 dark:max-lg:border-zinc-700"
         >
             <flux:sidebar.header>
                 <flux:sidebar.brand
@@ -52,7 +52,7 @@
                     :alt="$brandName"
                 />
 
-                <flux:sidebar.collapse class="in-data-flux-sidebar-on-desktop:not-in-data-flux-sidebar-collapsed-desktop:-mr-2" />
+                <flux:sidebar.collapse class="in-data-flux-sidebar-on-desktop:not-in-data-flux-sidebar-collapsed-desktop:-me-2" />
             </flux:sidebar.header>
 
             <livewire:layout.app.sidebar :key="'layout-app-sidebar'" />
@@ -72,27 +72,33 @@
             <livewire:layout.app-shell variant="sidebar" :key="'layout-app-shell-sidebar'" />
         </flux:sidebar>
 
-        <flux:header class="lg:hidden flex items-center justify-between gap-2 border-b border-zinc-200 bg-white px-4! dark:border-zinc-700 dark:bg-zinc-800">
+        <flux:header class="lg:hidden sticky top-0 z-10 flex min-w-0 items-center justify-between gap-2 border-b border-zinc-200 bg-white px-4! dark:border-zinc-700 dark:bg-zinc-800">
             <flux:sidebar.toggle class="lg:hidden shrink-0" icon="bars-2" inset="left" />
 
             <livewire:layout.app-shell variant="mobile-brand" :key="'layout-app-shell-mobile-brand'" />
         </flux:header>
 
-        <flux:main inset class="lg:ms-0">
+        <flux:main
+            inset
+            @class([
+                'lg:ms-0 max-lg:p-4',
+                'max-lg:pb-24' => $showAiComposer,
+            ])
+        >
             <livewire:layout.impersonation-banner :key="'layout-impersonation-banner'" />
 
             {{ $slot }}
         </flux:main>
 
         @if ($showAiComposer)
-            <div class="fixed bottom-6 end-6 z-40">
+            <div class="fixed bottom-4 end-4 z-40 lg:bottom-6 lg:end-6">
                 <flux:modal.trigger name="ai.assistant">
                     <flux:tooltip content="{{ __('general.ai_assistant_open') }}">
                         <flux:button
                             variant="primary"
                             color="teal"
                             icon="sparkles"
-                            class="size-14! rounded-full! shadow-lg shadow-teal-500/30"
+                            class="size-12! rounded-full! shadow-lg shadow-teal-500/30 lg:size-14!"
                         />
                     </flux:tooltip>
                 </flux:modal.trigger>

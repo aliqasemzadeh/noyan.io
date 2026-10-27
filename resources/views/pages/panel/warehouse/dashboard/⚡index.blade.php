@@ -445,39 +445,39 @@ new class extends Component
             </div>
         @endif
 
-        <div class="flex flex-wrap gap-2">
+        <div class="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
             @if (auth()->user()?->canInBusiness(BusinessPermission::StockReceive))
-                <flux:button size="sm" variant="primary" color="teal" icon="arrow-down-to-line" wire:click="$dispatch('panels.warehouse.stock.operation.open', { mode: 'receive' })">{{ __('general.stock_receive') }}</flux:button>
+                <flux:button size="sm" variant="primary" color="teal" icon="arrow-down-to-line" class="w-full sm:w-auto" wire:click="$dispatch('panels.warehouse.stock.operation.open', { mode: 'receive' })">{{ __('general.stock_receive') }}</flux:button>
             @endif
             @if (auth()->user()?->canInBusiness(BusinessPermission::StockIssue))
-                <flux:button size="sm" variant="primary" color="rose" icon="arrow-up-from-line" wire:click="$dispatch('panels.warehouse.stock.operation.open', { mode: 'issue' })">{{ __('general.stock_issue') }}</flux:button>
+                <flux:button size="sm" variant="primary" color="rose" icon="arrow-up-from-line" class="w-full sm:w-auto" wire:click="$dispatch('panels.warehouse.stock.operation.open', { mode: 'issue' })">{{ __('general.stock_issue') }}</flux:button>
             @endif
             @if (auth()->user()?->canInBusiness(BusinessPermission::StockTransfer))
-                <flux:button size="sm" variant="primary" color="sky" icon="arrow-left-right" wire:click="$dispatch('panels.warehouse.stock.operation.open', { mode: 'transfer' })">{{ __('general.stock_transfer') }}</flux:button>
+                <flux:button size="sm" variant="primary" color="sky" icon="arrow-left-right" class="w-full sm:w-auto" wire:click="$dispatch('panels.warehouse.stock.operation.open', { mode: 'transfer' })">{{ __('general.stock_transfer') }}</flux:button>
             @endif
             @if (auth()->user()?->canInBusiness(BusinessPermission::StockAdjust))
-                <flux:button size="sm" variant="primary" color="amber" icon="sliders-horizontal" wire:click="$dispatch('panels.warehouse.stock.operation.open', { mode: 'adjust' })">{{ __('general.stock_adjust') }}</flux:button>
+                <flux:button size="sm" variant="primary" color="amber" icon="sliders-horizontal" class="w-full sm:w-auto" wire:click="$dispatch('panels.warehouse.stock.operation.open', { mode: 'adjust' })">{{ __('general.stock_adjust') }}</flux:button>
             @endif
             @if (auth()->user()?->canInBusiness(BusinessPermission::StockCount))
-                <flux:button size="sm" variant="primary" color="violet" icon="clipboard-list" wire:click="$dispatch('panels.warehouse.count.record.open')">{{ __('general.record_stock_count') }}</flux:button>
+                <flux:button size="sm" variant="primary" color="violet" icon="clipboard-list" class="w-full sm:w-auto" wire:click="$dispatch('panels.warehouse.count.record.open')">{{ __('general.record_stock_count') }}</flux:button>
             @endif
         </div>
     </flux:card>
 
     @php($kpis = $this->kpis)
-    <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-        <a href="{{ route('warehouse.dispatches.index') }}" wire:navigate class="block"><flux:card class="h-full"><flux:text>{{ __('general.pending_dispatches') }}</flux:text><flux:heading size="xl" class="mt-2">{{ $kpis['dispatches'] }}</flux:heading></flux:card></a>
-        <a href="{{ route('warehouse.receipts.index') }}" wire:navigate class="block"><flux:card class="h-full"><flux:text>{{ __('general.expected_receipts') }}</flux:text><flux:heading size="xl" class="mt-2">{{ $kpis['receipts'] }}</flux:heading></flux:card></a>
-        <a href="{{ route('warehouse.stocks.index') }}" wire:navigate class="block"><flux:card class="h-full"><flux:text>{{ __('general.low_stock_items') }}</flux:text><flux:heading size="xl" class="mt-2">{{ $kpis['low_stock'] }}</flux:heading></flux:card></a>
-        <a href="{{ route('warehouse.transfers.index') }}" wire:navigate class="block"><flux:card class="h-full"><flux:text>{{ __('general.pending_transfers') }}</flux:text><flux:heading size="xl" class="mt-2">{{ $kpis['transfers'] }}</flux:heading></flux:card></a>
-        <a href="{{ route('warehouse.counts.index') }}" wire:navigate class="block"><flux:card class="h-full"><flux:text>{{ __('general.stock_count_discrepancies') }}</flux:text><flux:heading size="xl" class="mt-2">{{ $kpis['discrepancies'] }}</flux:heading></flux:card></a>
+    <div class="grid gap-4 grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+        <a href="{{ route('warehouse.dispatches.index') }}" wire:navigate class="block min-w-0"><flux:card class="h-full"><flux:text>{{ __('general.pending_dispatches') }}</flux:text><flux:heading size="xl" class="mt-2 break-all text-2xl tabular-nums sm:text-3xl">{{ $kpis['dispatches'] }}</flux:heading></flux:card></a>
+        <a href="{{ route('warehouse.receipts.index') }}" wire:navigate class="block min-w-0"><flux:card class="h-full"><flux:text>{{ __('general.expected_receipts') }}</flux:text><flux:heading size="xl" class="mt-2 break-all text-2xl tabular-nums sm:text-3xl">{{ $kpis['receipts'] }}</flux:heading></flux:card></a>
+        <a href="{{ route('warehouse.stocks.index') }}" wire:navigate class="block min-w-0"><flux:card class="h-full"><flux:text>{{ __('general.low_stock_items') }}</flux:text><flux:heading size="xl" class="mt-2 break-all text-2xl tabular-nums sm:text-3xl">{{ $kpis['low_stock'] }}</flux:heading></flux:card></a>
+        <a href="{{ route('warehouse.transfers.index') }}" wire:navigate class="block min-w-0"><flux:card class="h-full"><flux:text>{{ __('general.pending_transfers') }}</flux:text><flux:heading size="xl" class="mt-2 break-all text-2xl tabular-nums sm:text-3xl">{{ $kpis['transfers'] }}</flux:heading></flux:card></a>
+        <a href="{{ route('warehouse.counts.index') }}" wire:navigate class="block min-w-0 col-span-2 lg:col-span-1"><flux:card class="h-full"><flux:text>{{ __('general.stock_count_discrepancies') }}</flux:text><flux:heading size="xl" class="mt-2 break-all text-2xl tabular-nums sm:text-3xl">{{ $kpis['discrepancies'] }}</flux:heading></flux:card></a>
     </div>
 
     <div class="grid gap-4 xl:grid-cols-2">
         <flux:card class="space-y-3">
             <div class="flex items-center justify-between gap-3">
                 <flux:heading size="lg">{{ __('general.outbound_queue') }}</flux:heading>
-                <a href="{{ route('warehouse.dispatches.index') }}" wire:navigate class="text-sm text-teal-700 dark:text-teal-400">{{ __('general.dispatches') }}</a>
+                <a href="{{ route('warehouse.dispatches.index') }}" wire:navigate class="shrink-0 whitespace-nowrap text-sm text-teal-700 dark:text-teal-400">{{ __('general.dispatches') }}</a>
             </div>
             <flux:table :paginate="$this->outboundQueue">
                 <flux:table.columns>
@@ -524,7 +524,7 @@ new class extends Component
         <flux:card class="space-y-3">
             <div class="flex items-center justify-between gap-3">
                 <flux:heading size="lg">{{ __('general.inbound_queue') }}</flux:heading>
-                <a href="{{ route('warehouse.receipts.index') }}" wire:navigate class="text-sm text-teal-700 dark:text-teal-400">{{ __('general.receipts') }}</a>
+                <a href="{{ route('warehouse.receipts.index') }}" wire:navigate class="shrink-0 whitespace-nowrap text-sm text-teal-700 dark:text-teal-400">{{ __('general.receipts') }}</a>
             </div>
             <flux:table :paginate="$this->inboundQueue">
                 <flux:table.columns>
@@ -643,8 +643,8 @@ new class extends Component
                 <flux:button size="sm" :variant="$trendDays === 30 ? 'primary' : 'outline'" color="teal" wire:click="setTrendDays(30)">{{ __('general.last_30_days') }}</flux:button>
             </div>
         </div>
-        <flux:chart wire:model="trendData" class="aspect-[3/1]">
-            <flux:chart.viewport class="aspect-[3/1]">
+        <flux:chart wire:model="trendData" class="aspect-[4/3] sm:aspect-[2/1] xl:aspect-[3/1]">
+            <flux:chart.viewport class="aspect-[4/3] sm:aspect-[2/1] xl:aspect-[3/1]">
                 <flux:chart.svg>
                     <flux:chart.group>
                         <flux:chart.bar field="inbound" class="text-teal-500" width="80%" />
@@ -661,7 +661,7 @@ new class extends Component
                     <flux:chart.cursor type="area" />
                 </flux:chart.svg>
             </flux:chart.viewport>
-            <div class="flex gap-4">
+            <div class="flex flex-wrap gap-4">
                 <flux:chart.legend :label="__('general.inbound_quantity')"><flux:chart.legend.indicator class="bg-teal-500" /></flux:chart.legend>
                 <flux:chart.legend :label="__('general.outbound_quantity')"><flux:chart.legend.indicator class="bg-rose-500" /></flux:chart.legend>
             </div>

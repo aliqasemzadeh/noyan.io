@@ -150,39 +150,39 @@ new class extends Component
     </div>
 
     <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        <a href="{{ route('system.users.index') }}" wire:navigate class="block">
+        <a href="{{ route('system.users.index') }}" wire:navigate class="block min-w-0">
             <flux:card class="h-full transition hover:border-sky-300 dark:hover:border-sky-700">
                 <div class="flex items-start justify-between gap-3">
-                    <div>
+                    <div class="min-w-0">
                         <flux:text class="text-sm">{{ __('general.total_members') }}</flux:text>
-                        <flux:heading size="xl" class="mt-2" dir="ltr">
+                        <flux:heading size="xl" class="mt-2 break-all text-2xl tabular-nums sm:text-3xl" dir="ltr">
                             {{ number_format($stats['members_count']) }}
                         </flux:heading>
                     </div>
-                    <flux:icon.users class="size-8 text-sky-600 dark:text-sky-400" />
+                    <flux:icon.users class="size-8 shrink-0 text-sky-600 dark:text-sky-400" />
                 </div>
             </flux:card>
         </a>
 
-        <a href="{{ route('system.businesses.index') }}" wire:navigate class="block">
+        <a href="{{ route('system.businesses.index') }}" wire:navigate class="block min-w-0">
             <flux:card class="h-full transition hover:border-teal-300 dark:hover:border-teal-700">
                 <div class="flex items-start justify-between gap-3">
-                    <div>
+                    <div class="min-w-0">
                         <flux:text class="text-sm">{{ __('general.total_businesses') }}</flux:text>
-                        <flux:heading size="xl" class="mt-2" dir="ltr">
+                        <flux:heading size="xl" class="mt-2 break-all text-2xl tabular-nums sm:text-3xl" dir="ltr">
                             {{ number_format($stats['businesses_count']) }}
                         </flux:heading>
                     </div>
-                    <flux:icon.building class="size-8 text-teal-600 dark:text-teal-400" />
+                    <flux:icon.building class="size-8 shrink-0 text-teal-600 dark:text-teal-400" />
                 </div>
             </flux:card>
         </a>
 
-        <flux:card class="h-full sm:col-span-2 xl:col-span-1">
+        <flux:card class="h-full min-w-0 sm:col-span-2 xl:col-span-1">
             <div class="flex items-start justify-between gap-3">
-                <div>
+                <div class="min-w-0">
                     <flux:text class="text-sm">{{ __('general.daily_transaction_volume') }}</flux:text>
-                    <flux:heading size="xl" class="mt-2" dir="ltr">
+                    <flux:heading size="xl" class="mt-2 break-all text-2xl tabular-nums sm:text-3xl" dir="ltr">
                         {{ $this->formatAmount($stats['daily_volume']) }}
                     </flux:heading>
                     <flux:text class="mt-1 text-xs">
@@ -232,13 +232,13 @@ new class extends Component
             </div>
         </flux:card>
 
-        <a href="{{ route('system.support.tickets.index') }}" wire:navigate class="block">
+        <a href="{{ route('system.support.tickets.index') }}" wire:navigate class="block min-w-0">
             <flux:card class="h-full transition hover:border-rose-300 dark:hover:border-rose-700">
                 <div class="flex items-center gap-3">
-                    <flux:icon.ticket class="size-5 text-rose-600 dark:text-rose-400" />
-                    <div>
+                    <flux:icon.ticket class="size-5 shrink-0 text-rose-600 dark:text-rose-400" />
+                    <div class="min-w-0">
                         <flux:text class="text-xs">{{ __('general.open_tickets') }}</flux:text>
-                        <flux:heading size="lg" class="mt-1" dir="ltr">
+                        <flux:heading size="lg" class="mt-1 break-all tabular-nums" dir="ltr">
                             {{ number_format($stats['open_tickets_count']) }}
                         </flux:heading>
                     </div>
@@ -275,9 +275,9 @@ new class extends Component
 
     <div class="grid gap-4 lg:grid-cols-2">
         <flux:card>
-            <div class="mb-3 flex items-center justify-between gap-3">
+            <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
                 <flux:heading size="lg">{{ __('general.recent_businesses') }}</flux:heading>
-                <a href="{{ route('system.businesses.index') }}" wire:navigate class="text-sm text-teal-700 hover:underline dark:text-teal-400">
+                <a href="{{ route('system.businesses.index') }}" wire:navigate class="shrink-0 whitespace-nowrap text-sm text-teal-700 hover:underline dark:text-teal-400">
                     {{ __('general.businesses') }}
                 </a>
             </div>
@@ -315,9 +315,9 @@ new class extends Component
         </flux:card>
 
         <flux:card>
-            <div class="mb-3 flex items-center justify-between gap-3">
+            <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
                 <flux:heading size="lg">{{ __('general.recent_members') }}</flux:heading>
-                <a href="{{ route('system.users.index') }}" wire:navigate class="text-sm text-sky-700 hover:underline dark:text-sky-400">
+                <a href="{{ route('system.users.index') }}" wire:navigate class="shrink-0 whitespace-nowrap text-sm text-sky-700 hover:underline dark:text-sky-400">
                     {{ __('general.users') }}
                 </a>
             </div>
@@ -352,44 +352,44 @@ new class extends Component
         <flux:heading size="lg" class="mb-3">{{ __('general.quick_links') }}</flux:heading>
 
         <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <a href="{{ route('system.users.index') }}" wire:navigate class="block">
+            <a href="{{ route('system.users.index') }}" wire:navigate class="block min-w-0">
                 <flux:card class="h-full transition hover:border-sky-300 dark:hover:border-sky-700">
                     <div class="flex items-start gap-3">
-                        <flux:icon.users class="size-6 text-sky-600 dark:text-sky-400" />
-                        <div>
+                        <flux:icon.users class="size-6 shrink-0 text-sky-600 dark:text-sky-400" />
+                        <div class="min-w-0">
                             <flux:heading size="lg">{{ __('general.users') }}</flux:heading>
                         </div>
                     </div>
                 </flux:card>
             </a>
 
-            <a href="{{ route('system.businesses.index') }}" wire:navigate class="block">
+            <a href="{{ route('system.businesses.index') }}" wire:navigate class="block min-w-0">
                 <flux:card class="h-full transition hover:border-teal-300 dark:hover:border-teal-700">
                     <div class="flex items-start gap-3">
-                        <flux:icon.building class="size-6 text-teal-600 dark:text-teal-400" />
-                        <div>
+                        <flux:icon.building class="size-6 shrink-0 text-teal-600 dark:text-teal-400" />
+                        <div class="min-w-0">
                             <flux:heading size="lg">{{ __('general.businesses') }}</flux:heading>
                         </div>
                     </div>
                 </flux:card>
             </a>
 
-            <a href="{{ route('system.support.tickets.index') }}" wire:navigate class="block">
+            <a href="{{ route('system.support.tickets.index') }}" wire:navigate class="block min-w-0">
                 <flux:card class="h-full transition hover:border-rose-300 dark:hover:border-rose-700">
                     <div class="flex items-start gap-3">
-                        <flux:icon.ticket class="size-6 text-rose-600 dark:text-rose-400" />
-                        <div>
+                        <flux:icon.ticket class="size-6 shrink-0 text-rose-600 dark:text-rose-400" />
+                        <div class="min-w-0">
                             <flux:heading size="lg">{{ __('general.tickets') }}</flux:heading>
                         </div>
                     </div>
                 </flux:card>
             </a>
 
-            <a href="{{ route('system.settings.index') }}" wire:navigate class="block">
+            <a href="{{ route('system.settings.index') }}" wire:navigate class="block min-w-0">
                 <flux:card class="h-full transition hover:border-zinc-300 dark:hover:border-zinc-600">
                     <div class="flex items-start gap-3">
-                        <flux:icon.settings class="size-6 text-zinc-600 dark:text-zinc-300" />
-                        <div>
+                        <flux:icon.settings class="size-6 shrink-0 text-zinc-600 dark:text-zinc-300" />
+                        <div class="min-w-0">
                             <flux:heading size="lg">{{ __('general.system_settings') }}</flux:heading>
                         </div>
                     </div>

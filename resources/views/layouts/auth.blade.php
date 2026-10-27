@@ -23,10 +23,16 @@
         @fluxAppearance
     </head>
     <body>
-        <div class="flex min-h-screen">
-            <div class="flex flex-1 items-center justify-center px-4 py-12">
-                <div class="w-full max-w-80 space-y-6">
+        <div class="flex min-h-dvh">
+            <div class="flex flex-1 items-center justify-center px-4 py-8 sm:py-12">
+                <div class="w-full max-w-sm space-y-6">
                     {{ $slot }}
+
+                    <div class="flex justify-center lg:hidden">
+                        <span class="rounded-full bg-zinc-900/70 px-3 py-1 font-mono text-[11px] text-zinc-300 backdrop-blur" dir="ltr">
+                            {{ __('general.app_version_label', ['version' => \App\Support\System\AppVersion::current()]) }}
+                        </span>
+                    </div>
                 </div>
             </div>
 
@@ -39,12 +45,6 @@
                     </flux:text>
                 </div>
             </div>
-        </div>
-
-        <div class="pointer-events-none fixed inset-x-0 bottom-3 z-10 flex justify-center lg:hidden">
-            <span class="rounded-full bg-zinc-900/70 px-3 py-1 font-mono text-[11px] text-zinc-300 backdrop-blur" dir="ltr">
-                {{ __('general.app_version_label', ['version' => \App\Support\System\AppVersion::current()]) }}
-            </span>
         </div>
 
         @persist('toast')

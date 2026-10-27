@@ -59,7 +59,7 @@
             }
         </style>
     </head>
-    <body class="min-h-dvh bg-zinc-100 antialiased dark:bg-zinc-950">
+    <body class="min-h-dvh overflow-x-hidden bg-zinc-100 antialiased dark:bg-zinc-950">
         {{ $slot }}
 
         @persist('toast')

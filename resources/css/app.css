@@ -16,3 +16,17 @@
 [x-cloak] {
     display: none !important;
 }
+
+@layer components {
+    [data-flux-card] {
+        min-width: 0;
+    }
+
+    [data-flux-main] > * {
+        min-width: 0;
+    }
+
+    [data-flux-sidebar] {
+        max-width: 100vw;
+    }
+}

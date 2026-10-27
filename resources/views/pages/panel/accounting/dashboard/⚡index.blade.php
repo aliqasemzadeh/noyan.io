@@ -317,24 +317,24 @@ new class extends Component
                 <flux:text class="mt-2 text-base">{{ __('general.accounting_dashboard_placeholder') }}</flux:text>
             </div>
 
-            <div class="flex flex-wrap gap-2">
+            <div class="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
                 @if ($this->allows(BusinessPermission::JournalEntryCreate))
-                    <flux:button variant="primary" color="indigo" icon="file-pen-line" :href="route('accounting.journal-entries.create')" wire:navigate>
+                    <flux:button variant="primary" color="indigo" icon="file-pen-line" class="w-full sm:w-auto" :href="route('accounting.journal-entries.create')" wire:navigate>
                         {{ __('general.create_journal_entry') }}
                     </flux:button>
                 @endif
 
                 @if ($this->allows(BusinessPermission::InvoiceCreate))
-                    <flux:button variant="primary" color="teal" icon="trending-up" :href="route('accounting.invoices.create', ['type' => 'sale'])" wire:navigate>
+                    <flux:button variant="primary" color="teal" icon="trending-up" class="w-full sm:w-auto" :href="route('accounting.invoices.create', ['type' => 'sale'])" wire:navigate>
                         {{ __('general.new_sale_invoice') }}
                     </flux:button>
                 @endif
 
                 @if ($this->allows(BusinessPermission::TransactionCreate))
-                    <flux:button variant="primary" color="sky" icon="banknote" wire:click="$dispatch('panels.accounting.transaction.create.open', { type: 'income' })">
+                    <flux:button variant="primary" color="sky" icon="banknote" class="w-full sm:w-auto" wire:click="$dispatch('panels.accounting.transaction.create.open', { type: 'income' })">
                         {{ __('general.dashboard_record_receipt') }}
                     </flux:button>
-                    <flux:button variant="primary" color="rose" icon="receipt" wire:click="$dispatch('panels.accounting.transaction.create.open', { type: 'expense' })">
+                    <flux:button variant="primary" color="rose" icon="receipt" class="w-full sm:w-auto" wire:click="$dispatch('panels.accounting.transaction.create.open', { type: 'expense' })">
                         {{ __('general.dashboard_record_expense') }}
                     </flux:button>
                 @endif
@@ -374,13 +374,13 @@ new class extends Component
 
     <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         @if ($this->allows(BusinessPermission::AccountView))
-            <a href="{{ route('accounting.accounts.index') }}" wire:navigate class="block">
+            <a href="{{ route('accounting.accounts.index') }}" wire:navigate class="block min-w-0">
                 <flux:card class="h-full transition hover:border-sky-300 dark:hover:border-sky-700">
                     <div class="flex items-start justify-between gap-3">
                         <flux:text>{{ __('general.dashboard_cash_balance') }}</flux:text>
                         <flux:badge size="sm" color="sky" icon="wallet" />
                     </div>
-                    <flux:heading size="xl" class="mt-2 tabular-nums" dir="ltr">
+                    <flux:heading size="xl" class="mt-2 break-all text-2xl tabular-nums sm:text-3xl" dir="ltr">
                         {{ $this->formatAmount($board['kpis']['cash_balance'] ?? '0') }}
                         <span class="text-sm font-medium text-zinc-500">{{ $board['currency_code'] ?? '' }}</span>
                     </flux:heading>
@@ -398,13 +398,13 @@ new class extends Component
         @endif
 
         @if ($this->allows(BusinessPermission::InvoiceView))
-            <a href="{{ route('accounting.invoices.index', ['typeFilter' => InvoiceType::Sale->value]) }}" wire:navigate class="block">
+            <a href="{{ route('accounting.invoices.index', ['typeFilter' => InvoiceType::Sale->value]) }}" wire:navigate class="block min-w-0">
                 <flux:card class="h-full transition hover:border-teal-300 dark:hover:border-teal-700">
                     <div class="flex items-start justify-between gap-3">
                         <flux:text>{{ __('general.dashboard_total_revenue') }}</flux:text>
                         <flux:badge size="sm" color="teal" icon="trending-up" />
                     </div>
-                    <flux:heading size="xl" class="mt-2 tabular-nums" dir="ltr">
+                    <flux:heading size="xl" class="mt-2 break-all text-2xl tabular-nums sm:text-3xl" dir="ltr">
                         {{ $this->formatAmount($board['kpis']['revenue'] ?? '0') }}
                     </flux:heading>
                     <div class="mt-2">
@@ -417,13 +417,13 @@ new class extends Component
         @endif
 
         @if ($this->allows(BusinessPermission::TransactionView))
-            <a href="{{ route('accounting.transactions.index', ['typeFilter' => 'expense']) }}" wire:navigate class="block">
+            <a href="{{ route('accounting.transactions.index', ['typeFilter' => 'expense']) }}" wire:navigate class="block min-w-0">
                 <flux:card class="h-full transition hover:border-rose-300 dark:hover:border-rose-700">
                     <div class="flex items-start justify-between gap-3">
                         <flux:text>{{ __('general.dashboard_total_expenses') }}</flux:text>
                         <flux:badge size="sm" color="rose" icon="trending-down" />
                     </div>
-                    <flux:heading size="xl" class="mt-2 tabular-nums" dir="ltr">
+                    <flux:heading size="xl" class="mt-2 break-all text-2xl tabular-nums sm:text-3xl" dir="ltr">
                         {{ $this->formatAmount($board['kpis']['expenses'] ?? '0') }}
                     </flux:heading>
                     <div class="mt-2">
@@ -441,7 +441,7 @@ new class extends Component
                     <flux:text>{{ __('general.dashboard_net_profit') }}</flux:text>
                     <flux:badge size="sm" color="emerald" icon="banknote" />
                 </div>
-                <flux:heading size="xl" class="mt-2 tabular-nums" dir="ltr">
+                <flux:heading size="xl" class="mt-2 break-all text-2xl tabular-nums sm:text-3xl" dir="ltr">
                     {{ $this->formatAmount($board['kpis']['profit'] ?? '0') }}
                 </flux:heading>
                 <flux:text class="mt-2">
@@ -457,26 +457,26 @@ new class extends Component
         @endif
 
         @if ($this->allows(BusinessPermission::InvoiceView))
-            <a href="{{ route('accounting.invoices.index', ['typeFilter' => InvoiceType::Sale->value]) }}" wire:navigate class="block">
+            <a href="{{ route('accounting.invoices.index', ['typeFilter' => InvoiceType::Sale->value]) }}" wire:navigate class="block min-w-0">
                 <flux:card class="h-full transition hover:border-amber-300 dark:hover:border-amber-700">
                     <div class="flex items-start justify-between gap-3">
                         <flux:text>{{ __('general.dashboard_receivables') }}</flux:text>
                         <flux:badge size="sm" color="amber" icon="hand-coins" />
                     </div>
-                    <flux:heading size="xl" class="mt-2 tabular-nums" dir="ltr">
+                    <flux:heading size="xl" class="mt-2 break-all text-2xl tabular-nums sm:text-3xl" dir="ltr">
                         {{ $this->formatAmount($board['kpis']['receivables'] ?? '0') }}
                     </flux:heading>
                     <flux:text class="mt-2">{{ __('general.dashboard_as_of_today') }}</flux:text>
                 </flux:card>
             </a>
 
-            <a href="{{ route('accounting.invoices.index', ['typeFilter' => InvoiceType::Purchase->value]) }}" wire:navigate class="block">
+            <a href="{{ route('accounting.invoices.index', ['typeFilter' => InvoiceType::Purchase->value]) }}" wire:navigate class="block min-w-0">
                 <flux:card class="h-full transition hover:border-orange-300 dark:hover:border-orange-700">
                     <div class="flex items-start justify-between gap-3">
                         <flux:text>{{ __('general.dashboard_payables') }}</flux:text>
                         <flux:badge size="sm" color="orange" icon="receipt" />
                     </div>
-                    <flux:heading size="xl" class="mt-2 tabular-nums" dir="ltr">
+                    <flux:heading size="xl" class="mt-2 break-all text-2xl tabular-nums sm:text-3xl" dir="ltr">
                         {{ $this->formatAmount($board['kpis']['payables'] ?? '0') }}
                     </flux:heading>
                     <flux:text class="mt-2">{{ __('general.dashboard_as_of_today') }}</flux:text>
@@ -505,7 +505,7 @@ new class extends Component
                                 "
                             >
                                 <flux:chart wire:model="cashFlow" wire:key="cash-flow-{{ $period }}-{{ $currency }}-{{ $bucket }}">
-                                    <flux:chart.viewport class="aspect-[3/1]">
+                                    <flux:chart.viewport class="aspect-[4/3] sm:aspect-[2/1] xl:aspect-[3/1]">
                                         <flux:chart.svg>
                                             <flux:chart.group>
                                                 <flux:chart.bar field="inflow" class="text-teal-500" radius="4 0" width="80%" />
@@ -568,7 +568,7 @@ new class extends Component
                                 "
                             >
                                 <flux:chart wire:model="profitTrend" wire:key="profit-trend-{{ $period }}-{{ $currency }}-{{ $bucket }}">
-                                    <flux:chart.viewport class="aspect-[3/1]">
+                                    <flux:chart.viewport class="aspect-[4/3] sm:aspect-[2/1] xl:aspect-[3/1]">
                                         <flux:chart.svg>
                                             <flux:chart.group>
                                                 <flux:chart.bar field="revenue" class="text-teal-500" radius="4 0" width="70%" />
@@ -649,7 +649,7 @@ new class extends Component
                             <flux:heading size="lg">{{ __('general.dashboard_aging') }}</flux:heading>
                             <div class="mt-4">
                                 <flux:chart wire:model="agingChart" horizontal wire:key="aging-chart-{{ $currency }}">
-                                    <flux:chart.viewport class="aspect-[2/1]">
+                                    <flux:chart.viewport class="aspect-square sm:aspect-[2/1]">
                                         <flux:chart.svg>
                                             <flux:chart.group>
                                                 <flux:chart.bar field="receivables" class="text-amber-500" radius="4 0" width="70%" />
@@ -710,14 +710,14 @@ new class extends Component
                     <flux:card>
                         <div class="mb-3 flex items-center justify-between gap-3">
                             <flux:heading size="lg">{{ __('general.cheque_alerts') }}</flux:heading>
-                            <a href="{{ route('accounting.cheques.index') }}" wire:navigate class="text-sm text-teal-700 hover:underline dark:text-teal-400">
+                            <a href="{{ route('accounting.cheques.index') }}" wire:navigate class="shrink-0 whitespace-nowrap text-sm text-teal-700 hover:underline dark:text-teal-400">
                                 {{ __('general.view_all_cheques') }}
                             </a>
                         </div>
                         <div class="space-y-3">
                             @foreach ($board['cheques']['items'] as $cheque)
                                 <div class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-zinc-200 px-3 py-2 dark:border-zinc-700" wire:key="dashboard-cheque-{{ $cheque['id'] }}">
-                                    <div>
+                                    <div class="min-w-0">
                                         <div class="font-medium">{{ $cheque['party'] }} — <span dir="ltr">{{ $cheque['number'] }}</span></div>
                                         <div class="mt-1 flex flex-wrap items-center gap-2 text-sm text-zinc-600 dark:text-zinc-300">
                                             <flux:badge size="sm" :color="$cheque['type'] === 'received' ? 'teal' : 'amber'">{{ $this->chequeTypeLabel($cheque['type']) }}</flux:badge>
@@ -738,7 +738,7 @@ new class extends Component
                     <flux:card>
                         <div class="mb-3 flex items-center justify-between gap-3">
                             <flux:heading size="lg">{{ __('general.dashboard_overdue_invoices') }}</flux:heading>
-                            <a href="{{ route('accounting.invoices.index', ['typeFilter' => InvoiceType::Sale->value, 'aging' => InvoiceAging::Days1To30->value]) }}" wire:navigate class="text-sm text-teal-700 hover:underline dark:text-teal-400">
+                            <a href="{{ route('accounting.invoices.index', ['typeFilter' => InvoiceType::Sale->value, 'aging' => InvoiceAging::Days1To30->value]) }}" wire:navigate class="shrink-0 whitespace-nowrap text-sm text-teal-700 hover:underline dark:text-teal-400">
                                 {{ __('general.invoices') }}
                             </a>
                         </div>
@@ -748,7 +748,7 @@ new class extends Component
                             <div class="space-y-3">
                                 @foreach ($board['overdue_invoices'] as $invoice)
                                     <div class="flex flex-wrap items-center justify-between gap-3" wire:key="overdue-invoice-{{ $invoice['id'] }}">
-                                        <div>
+                                        <div class="min-w-0">
                                             <div class="font-medium">{{ $invoice['party'] }} — <span dir="ltr">{{ $invoice['number'] }}</span></div>
                                             <div class="mt-1 text-sm text-zinc-500">{{ $this->formatDate($invoice['due_date']) }}</div>
                                         </div>
@@ -769,7 +769,7 @@ new class extends Component
                     <flux:card>
                         <div class="mb-3 flex items-center justify-between gap-3">
                             <flux:heading size="lg">{{ __('general.dashboard_bank_balances') }}</flux:heading>
-                            <a href="{{ route('accounting.accounts.index') }}" wire:navigate class="text-sm text-teal-700 hover:underline dark:text-teal-400">
+                            <a href="{{ route('accounting.accounts.index') }}" wire:navigate class="shrink-0 whitespace-nowrap text-sm text-teal-700 hover:underline dark:text-teal-400">
                                 {{ __('general.accounts') }}
                             </a>
                         </div>
@@ -812,7 +812,7 @@ new class extends Component
                         <flux:card>
                             <div class="mb-3 flex items-center justify-between gap-3">
                                 <flux:heading size="lg">{{ __('general.dashboard_low_stock') }}</flux:heading>
-                                <a href="{{ route('accounting.catalog.products.index') }}" wire:navigate class="text-sm text-teal-700 hover:underline dark:text-teal-400">
+                                <a href="{{ route('accounting.catalog.products.index') }}" wire:navigate class="shrink-0 whitespace-nowrap text-sm text-teal-700 hover:underline dark:text-teal-400">
                                     {{ __('general.products') }}
                                 </a>
                             </div>

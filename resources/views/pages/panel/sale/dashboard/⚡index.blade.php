@@ -287,7 +287,7 @@ new class extends Component
                     <flux:text class="mt-1">{{ __('general.monthly_report_click_hint') }}</flux:text>
                 </div>
 
-                <div class="flex items-center gap-2">
+                <div class="flex items-center justify-between gap-2 sm:justify-start">
                     <flux:tooltip content="{{ __('general.previous_year') }}">
                         <flux:button
                             size="sm"
@@ -327,15 +327,15 @@ new class extends Component
                 "
                 class="cursor-pointer"
             >
-                <flux:chart wire:model="data" class="aspect-[3/1]">
-                    <flux:chart.viewport class="aspect-[3/1]">
+                <flux:chart wire:model="data" class="aspect-[4/3] sm:aspect-[2/1] xl:aspect-[3/1]">
+                    <flux:chart.viewport class="aspect-[4/3] sm:aspect-[2/1] xl:aspect-[3/1]">
                         <flux:chart.svg>
                             <flux:chart.group>
                                 <flux:chart.bar field="sales" class="text-teal-500" radius="4 0" width="80%" />
                                 <flux:chart.bar field="purchases" class="text-amber-500" radius="4 0" width="80%" />
                             </flux:chart.group>
 
-                            <flux:chart.axis axis="x" field="date" tick-count="12">
+                            <flux:chart.axis axis="x" field="date">
                                 <flux:chart.axis.tick />
                                 <flux:chart.axis.line />
                             </flux:chart.axis>

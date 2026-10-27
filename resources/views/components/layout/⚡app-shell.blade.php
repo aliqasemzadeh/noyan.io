@@ -101,10 +101,10 @@ new class extends Component
 
     @if ($variant === 'mobile-brand')
         @if ($canSwitchBusiness)
-            <flux:dropdown position="bottom" align="start" class="max-w-full">
+            <flux:dropdown position="bottom" align="start" class="min-w-0 max-w-full">
                 <button
                     type="button"
-                    class="group flex max-w-full min-w-0 items-center gap-1 rounded-lg px-1.5 py-1 text-start hover:bg-zinc-800/5 dark:hover:bg-white/10"
+                    class="group flex max-w-[60vw] min-w-0 items-center gap-1 rounded-lg px-1.5 py-1 text-start hover:bg-zinc-800/5 dark:hover:bg-white/10"
                 >
                     <span class="truncate text-sm font-medium text-zinc-800 dark:text-zinc-100">
                         {{ $brandName }}
@@ -131,7 +131,7 @@ new class extends Component
                 </flux:menu>
             </flux:dropdown>
         @else
-            <span class="block truncate px-1.5 text-sm font-medium text-zinc-800 dark:text-zinc-100">
+            <span class="block max-w-[60vw] truncate px-1.5 text-sm font-medium text-zinc-800 dark:text-zinc-100">
                 {{ $brandName }}
             </span>
         @endif
