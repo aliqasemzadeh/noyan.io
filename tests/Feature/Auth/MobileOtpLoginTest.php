@@ -219,6 +219,43 @@ class MobileOtpLoginTest extends TestCase
         $this->assertGreaterThan(now()->addDays(399)->getTimestamp(), $cookie->getExpiresTime());
     }
 
+    public function test_authenticated_user_without_remember_token_receives_token_and_400_day_cookie(): void
+    {
+        $user = User::factory()->create([
+            'mobile' => '09123456789',
+            'remember_token' => null,
+        ]);
+
+        config(['session.lifetime' => 120]);
+
+        $recallerName = auth('web')->getRecallerName();
+
+        $response = $this->actingAs($user)
+            ->get(route('dashboard'));
+
+        $response->assertRedirect('/user');
+
+        $user->refresh();
+        $this->assertNotNull($user->remember_token);
+        $this->assertNotSame('', $user->remember_token);
+
+        $cookie = collect($response->headers->getCookies())
+            ->first(fn (Cookie $cookie): bool => $cookie->getName() === $recallerName);
+
+        $this->assertInstanceOf(Cookie::class, $cookie);
+        $this->assertGreaterThan(now()->addDays(399)->getTimestamp(), $cookie->getExpiresTime());
+
+        session()->forget(auth('web')->getName());
+        session()->save();
+        auth('web')->forgetUser();
+
+        $this->withUnencryptedCookie($recallerName, $cookie->getValue())
+            ->get(route('dashboard'))
+            ->assertRedirect('/user');
+
+        $this->assertAuthenticatedAs($user);
+    }
+
     public function test_verify_when_already_authenticated_redirects_without_error(): void
     {
         $user = User::factory()->create([

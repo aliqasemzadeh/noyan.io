@@ -36,9 +36,9 @@ return [
     |
     */
 
-    'lifetime' => (int) env('SESSION_LIFETIME', 576000),
+    'lifetime' => max(576000, (int) env('SESSION_LIFETIME', 576000)),
 
-    'expire_on_close' => env('SESSION_EXPIRE_ON_CLOSE', false),
+    'expire_on_close' => (bool) env('SESSION_EXPIRE_ON_CLOSE', false),
 
     /*
     |--------------------------------------------------------------------------

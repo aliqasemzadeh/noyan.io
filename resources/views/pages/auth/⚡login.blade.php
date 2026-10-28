@@ -150,8 +150,6 @@ class extends Component
             return null;
         }
 
-        session()->regenerate();
-
         $redirect = $this->acceptPendingInvitation($user);
 
         if ($redirect !== null) {
