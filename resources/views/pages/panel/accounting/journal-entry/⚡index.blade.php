@@ -61,7 +61,7 @@ new class extends Component
         $businessId = Auth::user()?->current_business_id;
 
         return JournalEntry::query()
-            ->with(['fiscalYear:id,name'])
+            ->with(['fiscalYear:id,name', 'referenceable'])
             ->withSum('lines as total_debit', 'debit')
             ->withSum('lines as total_credit', 'credit')
             ->when($businessId === null, fn ($query) => $query->whereRaw('1 = 0'))
@@ -239,7 +239,9 @@ new class extends Component
                                             />
                                         </flux:tooltip>
                                     @endif
-                                    <flux:tooltip content="{{ __('general.delete') }}">
+                                @endif
+                                @if ($entry->isOpen() || $entry->referenceable instanceof \App\Models\Accounting\Transaction)
+                                    <flux:tooltip content="{{ $entry->referenceable instanceof \App\Models\Accounting\Transaction ? __('general.journal_delete_cascades_transaction') : __('general.delete') }}">
                                         <flux:button
                                             size="xs"
                                             variant="danger"

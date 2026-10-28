@@ -2,6 +2,9 @@
 
 use App\Actions\Accounting\SyncBusinessLedgerDefaultAccountsAction;
 use App\Actions\Business\UpdateBusinessLedgerSettingsAction;
+use App\Actions\Ledger\BackfillBusinessGlAction;
+use App\Actions\Ledger\ConvertManualSettlementJournalsAction;
+use App\Actions\Ledger\SyncBusinessGlAction;
 use App\Enums\Accounting\AutoPostMode;
 use App\Enums\Accounting\JournalEntryStatus;
 use App\Enums\Accounting\VoucherNumberingMode;
@@ -56,6 +59,62 @@ new class extends Component
         $this->form->setModel($business->fresh() ?? $business);
 
         Flux::toast(__('general.ledger_defaults_synced'));
+    }
+
+    public function backfillMissingJournals(BackfillBusinessGlAction $action): void
+    {
+        [$business, $user] = $this->requireBusinessContext();
+
+        $forcePost = $this->form->auto_post_mode === AutoPostMode::Realtime->value;
+        $stats = $action->handle($business, $user, forcePost: $forcePost);
+
+        Flux::toast(__('general.ledger_backfill_done', [
+            'invoices' => $stats['invoices']['posted'],
+            'transactions' => $stats['transactions']['posted'],
+            'failed' => $stats['invoices']['failed'] + $stats['transactions']['failed'],
+        ]));
+    }
+
+    public function convertManualJournals(ConvertManualSettlementJournalsAction $action): void
+    {
+        [$business, $user] = $this->requireBusinessContext();
+
+        $stats = $action->handle($business, $user);
+
+        Flux::toast(__('general.ledger_convert_journals_done', [
+            'converted' => $stats['converted'],
+            'skipped' => $stats['skipped'],
+            'failed' => $stats['failed'],
+        ]));
+    }
+
+    public function syncGlDocuments(SyncBusinessGlAction $action): void
+    {
+        [$business, $user] = $this->requireBusinessContext();
+
+        $forcePost = $this->form->auto_post_mode === AutoPostMode::Realtime->value;
+        $stats = $action->handle($business, $user, forcePost: $forcePost);
+
+        Flux::toast(__('general.ledger_sync_gl_done', [
+            'invoices' => $stats['resynced']['invoices'] + $stats['backfill']['invoices']['posted'],
+            'transactions' => $stats['resynced']['transactions'] + $stats['backfill']['transactions']['posted'],
+            'failed' => $stats['resynced']['failed']
+                + $stats['backfill']['invoices']['failed']
+                + $stats['backfill']['transactions']['failed'],
+        ]));
+    }
+
+    /**
+     * @return array{0: Business, 1: \App\Models\User}
+     */
+    protected function requireBusinessContext(): array
+    {
+        $user = Auth::user();
+        $business = $this->form->business;
+
+        abort_if($user === null || $business === null, 403);
+
+        return [$business, $user];
     }
 
     /**
@@ -168,6 +227,48 @@ new class extends Component
                         <flux:select.option :value="$mode->value">{{ $mode->label() }}</flux:select.option>
                     @endforeach
                 </flux:select>
+
+                <div class="space-y-3 rounded-lg border border-zinc-200 p-4 dark:border-zinc-700">
+                    <div>
+                        <flux:heading size="md">{{ __('general.ledger_gl_maintenance') }}</flux:heading>
+                        <flux:text class="mt-1">{{ __('general.ledger_gl_maintenance_hint') }}</flux:text>
+                    </div>
+
+                    <div class="flex flex-wrap gap-2">
+                        <flux:button
+                            type="button"
+                            variant="primary"
+                            color="teal"
+                            icon="plus"
+                            wire:click="backfillMissingJournals"
+                            wire:confirm="{{ __('general.ledger_backfill_confirm') }}"
+                        >
+                            {{ __('general.ledger_backfill_missing') }}
+                        </flux:button>
+
+                        <flux:button
+                            type="button"
+                            variant="primary"
+                            color="cyan"
+                            icon="arrow-left-right"
+                            wire:click="convertManualJournals"
+                            wire:confirm="{{ __('general.ledger_convert_journals_confirm') }}"
+                        >
+                            {{ __('general.ledger_convert_manual_journals') }}
+                        </flux:button>
+
+                        <flux:button
+                            type="button"
+                            variant="primary"
+                            color="zinc"
+                            icon="refresh-cw"
+                            wire:click="syncGlDocuments"
+                            wire:confirm="{{ __('general.ledger_sync_gl_confirm') }}"
+                        >
+                            {{ __('general.ledger_sync_gl') }}
+                        </flux:button>
+                    </div>
+                </div>
             @endif
 
             @if ($tab === 'defaults')

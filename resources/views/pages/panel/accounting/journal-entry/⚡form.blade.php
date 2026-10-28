@@ -303,23 +303,43 @@ new class extends Component
                                 <flux:error name="form.lines.{{ $index }}.gl_account_id" />
                             </flux:field>
 
-                            <flux:field class="md:col-span-2 xl:col-span-3">
-                                <flux:label>{{ __('general.category') }} ({{ __('general.legacy') }})</flux:label>
-                                <flux:select
-                                    wire:model="form.lines.{{ $index }}.category_id"
-                                    searchable
-                                    variant="listbox"
-                                    placeholder="{{ __('general.select_category') }}"
-                                    clearable
-                                >
-                                    @foreach ($this->categoryOptions as $option)
-                                        <flux:select.option value="{{ $option['id'] }}" wire:key="line-{{ $index }}-cat-{{ $option['id'] }}">
-                                            {{ $option['path'] }}
-                                        </flux:select.option>
-                                    @endforeach
-                                </flux:select>
-                                <flux:error name="form.lines.{{ $index }}.category_id" />
-                            </flux:field>
+                            <div
+                                class="md:col-span-2 xl:col-span-3 space-y-2"
+                                x-data="{ open: {{ filled($line['category_id'] ?? null) ? 'true' : 'false' }} }"
+                                wire:key="line-{{ $index }}-traditional-category"
+                            >
+                                <div x-show="!open" x-cloak>
+                                    <flux:button
+                                        type="button"
+                                        size="xs"
+                                        variant="ghost"
+                                        icon="chevrons-up-down"
+                                        x-on:click="open = true"
+                                    >
+                                        {{ __('general.show_traditional_category') }}
+                                    </flux:button>
+                                </div>
+
+                                <div x-show="open" x-cloak>
+                                    <flux:field>
+                                        <flux:label>{{ __('general.traditional_category') }}</flux:label>
+                                        <flux:select
+                                            wire:model="form.lines.{{ $index }}.category_id"
+                                            searchable
+                                            variant="listbox"
+                                            placeholder="{{ __('general.select_category') }}"
+                                            clearable
+                                        >
+                                            @foreach ($this->categoryOptions as $option)
+                                                <flux:select.option value="{{ $option['id'] }}" wire:key="line-{{ $index }}-cat-{{ $option['id'] }}">
+                                                    {{ $option['path'] }}
+                                                </flux:select.option>
+                                            @endforeach
+                                        </flux:select>
+                                        <flux:error name="form.lines.{{ $index }}.category_id" />
+                                    </flux:field>
+                                </div>
+                            </div>
 
                             @php
                                 $lineAccountId = (int) ($line['gl_account_id'] ?? 0);

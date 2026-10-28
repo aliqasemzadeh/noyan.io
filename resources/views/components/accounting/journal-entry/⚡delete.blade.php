@@ -2,6 +2,7 @@
 
 use App\Actions\Ledger\DeleteJournalEntryAction;
 use App\Models\Accounting\JournalEntry;
+use App\Models\Accounting\Transaction;
 use Flux\Flux;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\On;
@@ -19,7 +20,12 @@ new class extends Component
             403
         );
 
-        abort_unless($journalEntry->isOpen(), 403);
+        $journalEntry->loadMissing('referenceable');
+
+        $canDelete = $journalEntry->isOpen()
+            || $journalEntry->referenceable instanceof Transaction;
+
+        abort_unless($canDelete, 403);
 
         $this->journalEntry = $journalEntry;
 
@@ -50,7 +56,12 @@ new class extends Component
             <flux:heading size="lg">{{ __('general.delete_confirmation') }}</flux:heading>
 
             <flux:text class="mt-2">
-                {{ __('general.delete_journal_entry_warning') }}<br>
+                @if ($journalEntry?->referenceable instanceof Transaction)
+                    {{ __('general.journal_delete_cascades_transaction') }}
+                @else
+                    {{ __('general.delete_journal_entry_warning') }}
+                @endif
+                <br>
                 {{ __('general.action_cannot_be_reversed') }}
             </flux:text>
         </div>
@@ -63,12 +74,12 @@ new class extends Component
 
         <div class="flex gap-2">
             <flux:spacer />
-
             <flux:modal.close>
-                <flux:button variant="ghost">{{ __('general.cancel') }}</flux:button>
+                <flux:button type="button" variant="ghost">{{ __('general.cancel') }}</flux:button>
             </flux:modal.close>
-
-            <flux:button type="submit" variant="danger">{{ __('general.delete') }}</flux:button>
+            <flux:button type="submit" variant="danger" class="w-full sm:w-auto">
+                {{ __('general.delete') }}
+            </flux:button>
         </div>
     </form>
 </flux:modal>

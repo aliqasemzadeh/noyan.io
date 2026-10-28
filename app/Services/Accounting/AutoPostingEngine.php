@@ -148,11 +148,11 @@ class AutoPostingEngine
     /**
      * Replace any linked voucher then create a fresh auto-post for the transaction.
      */
-    public function syncTransaction(Transaction $transaction, User $user): ?JournalEntry
+    public function syncTransaction(Transaction $transaction, User $user, bool $forcePost = false): ?JournalEntry
     {
         $settings = $this->ledgerSettings->get((int) $transaction->business_id);
 
-        if ($settings->auto_post_mode === AutoPostMode::Off) {
+        if (! $forcePost && $settings->auto_post_mode === AutoPostMode::Off) {
             $this->voidLinkedEntries($transaction);
 
             return null;
@@ -160,7 +160,35 @@ class AutoPostingEngine
 
         $this->voidLinkedEntries($transaction);
 
-        return $this->postTransaction($transaction, $user);
+        return $this->postTransaction(
+            $transaction,
+            $user,
+            forceDraft: ! $forcePost && $settings->auto_post_mode === AutoPostMode::Off,
+            forcePost: $forcePost,
+        );
+    }
+
+    /**
+     * Replace any linked voucher then create a fresh auto-post for the invoice.
+     */
+    public function syncInvoice(Invoice $invoice, User $user, bool $forcePost = false): ?JournalEntry
+    {
+        $settings = $this->ledgerSettings->get((int) $invoice->business_id);
+
+        if (! $forcePost && $settings->auto_post_mode === AutoPostMode::Off) {
+            $this->voidLinkedEntries($invoice);
+
+            return null;
+        }
+
+        $this->voidLinkedEntries($invoice);
+
+        return $this->postInvoice(
+            $invoice,
+            $user,
+            forceDraft: ! $forcePost && $settings->auto_post_mode === AutoPostMode::Off,
+            forcePost: $forcePost,
+        );
     }
 
     public function voidTransaction(Transaction $transaction): void

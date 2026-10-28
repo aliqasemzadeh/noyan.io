@@ -21,13 +21,13 @@ class SystemVersionUpdateTest extends TestCase
     public function test_pending_releases_include_initial_beta_when_not_installed(): void
     {
         $this->assertSame('0.0.0', AppVersion::installed());
-        $this->assertSame('0.1.0-beta.7', AppVersion::current());
+        $this->assertSame('0.1.0-beta.8', AppVersion::current());
 
         $pending = app(VersionUpdateRegistry::class)->pending();
 
         $this->assertNotEmpty($pending);
         $this->assertSame('0.1.0-beta.1', $pending[0]::version());
-        $this->assertSame('0.1.0-beta.7', $pending[array_key_last($pending)]::version());
+        $this->assertSame('0.1.0-beta.8', $pending[array_key_last($pending)]::version());
     }
 
     public function test_second_update_skips_already_applied_version_commands(): void
@@ -39,7 +39,7 @@ class SystemVersionUpdateTest extends TestCase
         $updater = app(ProjectUpdater::class);
 
         $this->assertSame(0, $updater->run(UpdateMode::Quick, fn () => null));
-        $this->assertSame('0.1.0-beta.7', AppVersion::installed());
+        $this->assertSame('0.1.0-beta.8', AppVersion::installed());
         $this->assertSame([], app(VersionUpdateRegistry::class)->pending());
 
         $versionCommands = [];
@@ -47,7 +47,13 @@ class SystemVersionUpdateTest extends TestCase
         Process::fake(function (object $process) use (&$versionCommands) {
             $command = collect($process->command);
 
-            foreach (['accounting:seed-coa', 'accounting:backfill-gl', 'business:grant-warehouse-permissions', 'migrate'] as $name) {
+            foreach ([
+                'accounting:seed-coa',
+                'accounting:backfill-gl',
+                'accounting:convert-manual-settlements',
+                'business:grant-warehouse-permissions',
+                'migrate',
+            ] as $name) {
                 if ($command->contains($name)) {
                     $versionCommands[] = $name;
                 }
@@ -60,6 +66,7 @@ class SystemVersionUpdateTest extends TestCase
 
         $this->assertNotContains('accounting:seed-coa', $versionCommands);
         $this->assertNotContains('accounting:backfill-gl', $versionCommands);
+        $this->assertNotContains('accounting:convert-manual-settlements', $versionCommands);
         $this->assertNotContains('business:grant-warehouse-permissions', $versionCommands);
         $this->assertContains('migrate', $versionCommands);
     }
@@ -68,7 +75,7 @@ class SystemVersionUpdateTest extends TestCase
     {
         $this->get('/')
             ->assertOk()
-            ->assertSee('0.1.0-beta.7', false);
+            ->assertSee('0.1.0-beta.8', false);
     }
 
     public function test_standard_coa_uses_persian_account_names(): void
