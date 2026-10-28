@@ -20,6 +20,8 @@ new class extends Component
 {
     public JournalEntryForm $form;
 
+    public ?int $activeLineIndex = null;
+
     public function mount(?JournalEntry $journalEntry = null): void
     {
         Auth::user()?->ensureCurrentBusiness();
@@ -49,6 +51,13 @@ new class extends Component
         $this->form->initializeDefaults($defaultFiscalYearId !== null ? (int) $defaultFiscalYearId : null);
     }
 
+    public function updatedFormLines(mixed $value, string $key): void
+    {
+        if (preg_match('/^(\d+)\.(debit|credit)$/', $key, $matches) === 1) {
+            $this->form->clearOppositeSide((int) $matches[1], $matches[2]);
+        }
+    }
+
     public function addLine(): void
     {
         $this->form->addLine();
@@ -56,7 +65,41 @@ new class extends Component
 
     public function removeLine(int $index): void
     {
+        if ($this->activeLineIndex === $index) {
+            $this->activeLineIndex = null;
+        }
+
         $this->form->removeLine($index);
+    }
+
+    public function duplicateLine(int $index): void
+    {
+        $this->form->duplicateLine($index);
+    }
+
+    public function swapLineAmounts(int $index): void
+    {
+        $this->form->swapLineAmounts($index);
+    }
+
+    public function balanceLine(int $index): void
+    {
+        $this->form->balanceLine($index);
+    }
+
+    public function openLineSettings(int $index): void
+    {
+        if (! isset($this->form->lines[$index])) {
+            return;
+        }
+
+        $this->activeLineIndex = $index;
+        Flux::modal('journal-line-settings')->show();
+    }
+
+    public function closeLineSettings(): void
+    {
+        Flux::modal('journal-line-settings')->close();
     }
 
     public function saveAsDraft(CreateJournalEntryAction $createAction, UpdateJournalEntryAction $updateAction): void
@@ -197,15 +240,33 @@ new class extends Component
             </flux:breadcrumbs.item>
         </flux:breadcrumbs>
 
-        <div class="mt-4 flex items-center justify-between gap-4">
-            <div>
-                <flux:heading size="xl">{{ $this->heading() }}</flux:heading>
+        <div class="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div class="min-w-0">
+                <div class="flex flex-wrap items-center gap-2.5">
+                    <flux:heading size="xl">{{ $this->heading() }}</flux:heading>
+
+                    @if ($form->journalEntry !== null)
+                        <flux:badge size="sm" :color="$form->journalEntry->status->badgeColor()">
+                            {{ $form->journalEntry->status->label() }}
+                        </flux:badge>
+                    @endif
+
+                    <flux:badge size="sm" :color="$form->isBalanced() ? 'green' : 'rose'" :icon="$form->isBalanced() ? 'circle-check' : 'scale'">
+                        {{ $form->isBalanced() ? __('general.journal_balanced_badge') : __('general.journal_unbalanced_badge') }}
+                    </flux:badge>
+
+                    <flux:badge size="sm" color="zinc" icon="layers">
+                        {{ __('general.journal_lines_count', ['count' => count($form->lines)]) }}
+                    </flux:badge>
+                </div>
                 <flux:text class="mt-1">{{ __('general.journal_entry_form_hint') }}</flux:text>
             </div>
 
-            <flux:button variant="ghost" :href="route('accounting.journal-entries.index')" wire:navigate icon="arrow-left">
-                {{ __('general.back') }}
-            </flux:button>
+            <div class="flex items-center gap-2 self-start sm:self-auto">
+                <flux:button variant="ghost" :href="route('accounting.journal-entries.index')" wire:navigate icon="arrow-left">
+                    {{ __('general.back') }}
+                </flux:button>
+            </div>
         </div>
     </div>
 
@@ -221,45 +282,61 @@ new class extends Component
     @endif
 
     <form wire:submit="saveAsDraft" class="space-y-6">
-        <flux:card class="space-y-4">
-            <div class="grid gap-4 md:grid-cols-3">
-                <flux:field>
-                    <flux:label>{{ __('general.fiscal_year') }}</flux:label>
-                    <flux:select wire:model="form.fiscal_year_id" searchable variant="listbox" placeholder="{{ __('general.select_fiscal_year') }}">
-                        @foreach ($this->fiscalYears as $fiscalYear)
-                            <flux:select.option value="{{ $fiscalYear->id }}" wire:key="form-fy-{{ $fiscalYear->id }}">
-                                {{ $fiscalYear->name }}
-                                @if ($fiscalYear->is_closed)
-                                    ({{ __('general.fiscal_year_closed_badge') }})
-                                @endif
-                            </flux:select.option>
-                        @endforeach
-                    </flux:select>
-                    <flux:error name="form.fiscal_year_id" />
-                </flux:field>
-
-                @if (\App\Support\LocaleDate::usesJalali())
-                    <x-date-picker wire:model="form.entry_date" name="form.entry_date" :label="__('general.journal_entry_date')" required />
-                @else
+        {{-- Header Card: 12-Column Responsive Layout without Overflow --}}
+        <flux:card>
+            <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-12 lg:items-start">
+                <div class="min-w-0 lg:col-span-3">
                     <flux:field>
-                        <flux:label>{{ __('general.journal_entry_date') }}</flux:label>
-                        <flux:input type="date" wire:model="form.entry_date" />
-                        <flux:error name="form.entry_date" />
+                        <flux:label>{{ __('general.fiscal_year') }}</flux:label>
+                        <flux:select wire:model="form.fiscal_year_id" searchable variant="listbox" placeholder="{{ __('general.select_fiscal_year') }}">
+                            @foreach ($this->fiscalYears as $fiscalYear)
+                                <flux:select.option value="{{ $fiscalYear->id }}" wire:key="form-fy-{{ $fiscalYear->id }}">
+                                    {{ $fiscalYear->name }}
+                                    @if ($fiscalYear->is_closed)
+                                        ({{ __('general.fiscal_year_closed_badge') }})
+                                    @endif
+                                </flux:select.option>
+                            @endforeach
+                        </flux:select>
+                        <flux:error name="form.fiscal_year_id" />
                     </flux:field>
-                @endif
+                </div>
 
-                <flux:field class="md:col-span-3">
-                    <flux:label>{{ __('general.description') }}</flux:label>
-                    <flux:textarea wire:model="form.description" rows="2" />
-                    <flux:error name="form.description" />
-                </flux:field>
+                <div class="min-w-0 lg:col-span-3">
+                    @if (\App\Support\LocaleDate::usesJalali())
+                        <x-date-picker wire:model="form.entry_date" name="form.entry_date" :label="__('general.journal_entry_date')" required />
+                    @else
+                        <flux:field>
+                            <flux:label>{{ __('general.journal_entry_date') }}</flux:label>
+                            <flux:input type="date" wire:model="form.entry_date" />
+                            <flux:error name="form.entry_date" />
+                        </flux:field>
+                    @endif
+                </div>
+
+                <div class="min-w-0 md:col-span-2 lg:col-span-6">
+                    <flux:field>
+                        <flux:label>{{ __('general.description') }}</flux:label>
+                        <flux:input
+                            wire:model="form.description"
+                            placeholder="{{ __('general.journal_description_placeholder') }}"
+                            clearable
+                        />
+                        <flux:error name="form.description" />
+                    </flux:field>
+                </div>
             </div>
         </flux:card>
 
+        {{-- Journal Lines Card: Multi-column Grid without Horizontal Scroll --}}
         <flux:card class="space-y-4">
-            <div class="flex items-center justify-between">
-                <flux:heading size="lg">{{ __('general.journal_lines') }}</flux:heading>
-                <flux:button type="button" size="sm" variant="primary" color="zinc" icon="plus" wire:click="addLine">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+                <div class="flex items-center gap-2">
+                    <flux:heading size="lg">{{ __('general.journal_lines') }}</flux:heading>
+                    <flux:badge size="sm" color="zinc">{{ count($form->lines) }}</flux:badge>
+                </div>
+
+                <flux:button type="button" size="sm" variant="primary" color="indigo" icon="plus" wire:click="addLine">
                     {{ __('general.add_journal_line') }}
                 </flux:button>
             </div>
@@ -267,140 +344,348 @@ new class extends Component
             <flux:error name="form.lines" />
             <flux:error name="lines" />
 
-            <div class="space-y-4">
+            {{-- Desktop Column Headers --}}
+            <div class="hidden rounded-lg bg-zinc-100/80 px-3 py-2.5 text-xs font-semibold text-zinc-600 dark:bg-zinc-800/80 dark:text-zinc-300 xl:grid xl:grid-cols-12 xl:items-center xl:gap-3">
+                <div class="col-span-4 flex items-center gap-2 min-w-0">
+                    <span class="w-6 text-center">#</span>
+                    <span>{{ __('general.gl_account') }}</span>
+                </div>
+                <div class="col-span-3 min-w-0">{{ __('general.line_description') }}</div>
+                <div class="col-span-2 min-w-0">{{ __('general.debit') }}</div>
+                <div class="col-span-2 min-w-0">{{ __('general.credit') }}</div>
+                <div class="col-span-1 text-end">{{ __('general.actions') }}</div>
+            </div>
+
+            <div class="divide-y divide-zinc-200/80 rounded-xl border border-zinc-200 dark:divide-zinc-700/80 dark:border-zinc-700">
                 @foreach ($form->lines as $index => $line)
-                    <div class="rounded-xl border border-zinc-200 p-4 dark:border-zinc-700" wire:key="journal-line-{{ $line['id'] }}">
-                        <div class="mb-3 flex items-center justify-between">
-                            <flux:text class="font-medium">{{ __('general.journal_line') }} #{{ $index + 1 }}</flux:text>
-                            @if (count($form->lines) > 2)
-                                <flux:button
-                                    type="button"
-                                    size="xs"
-                                    variant="danger"
-                                    icon="trash"
-                                    icon:variant="outline"
-                                    wire:click="removeLine({{ $index }})"
-                                />
-                            @endif
-                        </div>
+                    @php
+                        $lineAccountId = (int) ($line['gl_account_id'] ?? 0);
+                        $lineAccount = $lineAccountId > 0 ? $this->glAccounts->firstWhere('id', $lineAccountId) : null;
+                        $detailLevels = $lineAccount?->detailLevels ?? collect();
+                        $selectedCategoryId = (int) ($line['category_id'] ?? 0);
+                        $selectedCategory = $selectedCategoryId > 0 ? $this->categoryOptions->firstWhere('id', $selectedCategoryId) : null;
+                    @endphp
 
-                        <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                            <flux:field class="md:col-span-2 xl:col-span-3">
-                                <flux:label>{{ __('general.gl_account') }}</flux:label>
-                                <flux:select
-                                    wire:model.live="form.lines.{{ $index }}.gl_account_id"
-                                    searchable
-                                    variant="listbox"
-                                    placeholder="{{ __('general.select_gl_account') }}"
-                                    clearable
-                                >
-                                    @foreach ($this->glAccounts as $glAccount)
-                                        <flux:select.option value="{{ $glAccount->id }}" wire:key="line-{{ $index }}-gl-{{ $glAccount->id }}">
-                                            <span dir="ltr">{{ $glAccount->full_code }}</span> — {{ $glAccount->name }}
-                                        </flux:select.option>
-                                    @endforeach
-                                </flux:select>
-                                <flux:error name="form.lines.{{ $index }}.gl_account_id" />
-                            </flux:field>
+                    <div
+                        class="p-3 transition-colors hover:bg-zinc-50/60 dark:hover:bg-zinc-800/30 sm:p-4"
+                        wire:key="journal-line-{{ $line['id'] }}"
+                    >
+                        {{-- Mobile Header --}}
+                        <div class="mb-3 flex items-center justify-between xl:hidden">
+                            <div class="flex items-center gap-2">
+                                <span class="inline-flex size-6 items-center justify-center rounded-full bg-zinc-100 text-xs font-semibold text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
+                                    {{ $index + 1 }}
+                                </span>
+                                <flux:text class="text-sm font-medium">{{ __('general.journal_line') }} #{{ $index + 1 }}</flux:text>
+                            </div>
 
-                            <div
-                                class="md:col-span-2 xl:col-span-3 space-y-2"
-                                x-data="{ open: {{ filled($line['category_id'] ?? null) ? 'true' : 'false' }} }"
-                                wire:key="line-{{ $index }}-traditional-category"
-                            >
-                                <div x-show="!open" x-cloak>
+                            <div class="flex items-center gap-1">
+                                <flux:tooltip content="{{ __('general.journal_line_settings') }}">
                                     <flux:button
                                         type="button"
                                         size="xs"
-                                        variant="ghost"
-                                        icon="chevrons-up-down"
-                                        x-on:click="open = true"
-                                    >
-                                        {{ __('general.show_traditional_category') }}
-                                    </flux:button>
-                                </div>
+                                        variant="primary"
+                                        color="violet"
+                                        icon="sliders-horizontal"
+                                        icon:variant="outline"
+                                        wire:click="openLineSettings({{ $index }})"
+                                    />
+                                </flux:tooltip>
 
-                                <div x-show="open" x-cloak>
-                                    <flux:field>
-                                        <flux:label>{{ __('general.traditional_category') }}</flux:label>
-                                        <flux:select
-                                            wire:model="form.lines.{{ $index }}.category_id"
-                                            searchable
-                                            variant="listbox"
-                                            placeholder="{{ __('general.select_category') }}"
-                                            clearable
-                                        >
-                                            @foreach ($this->categoryOptions as $option)
-                                                <flux:select.option value="{{ $option['id'] }}" wire:key="line-{{ $index }}-cat-{{ $option['id'] }}">
-                                                    {{ $option['path'] }}
-                                                </flux:select.option>
-                                            @endforeach
-                                        </flux:select>
-                                        <flux:error name="form.lines.{{ $index }}.category_id" />
-                                    </flux:field>
+                                <flux:tooltip content="{{ __('general.journal_balance_line') }}">
+                                    <flux:button
+                                        type="button"
+                                        size="xs"
+                                        variant="primary"
+                                        color="amber"
+                                        icon="scale"
+                                        icon:variant="outline"
+                                        wire:click="balanceLine({{ $index }})"
+                                    />
+                                </flux:tooltip>
+
+                                <flux:tooltip content="{{ __('general.journal_swap_amounts') }}">
+                                    <flux:button
+                                        type="button"
+                                        size="xs"
+                                        variant="primary"
+                                        color="sky"
+                                        icon="arrow-left-right"
+                                        icon:variant="outline"
+                                        wire:click="swapLineAmounts({{ $index }})"
+                                    />
+                                </flux:tooltip>
+
+                                <flux:tooltip content="{{ __('general.journal_duplicate_line') }}">
+                                    <flux:button
+                                        type="button"
+                                        size="xs"
+                                        variant="primary"
+                                        color="zinc"
+                                        icon="copy"
+                                        icon:variant="outline"
+                                        wire:click="duplicateLine({{ $index }})"
+                                    />
+                                </flux:tooltip>
+
+                                @if (count($form->lines) > 2)
+                                    <flux:tooltip content="{{ __('general.delete') }}">
+                                        <flux:button
+                                            type="button"
+                                            size="xs"
+                                            variant="primary"
+                                            color="red"
+                                            icon="trash"
+                                            icon:variant="outline"
+                                            wire:click="removeLine({{ $index }})"
+                                        />
+                                    </flux:tooltip>
+                                @endif
+                            </div>
+                        </div>
+
+                        {{-- Primary Row Columns --}}
+                        <div class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-12 xl:items-start">
+                            {{-- Account Column --}}
+                            <div class="min-w-0 md:col-span-2 xl:col-span-4">
+                                <div class="flex items-start gap-2">
+                                    <span class="mt-2 hidden size-6 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-xs font-semibold text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 xl:inline-flex">
+                                        {{ $index + 1 }}
+                                    </span>
+
+                                    <div class="min-w-0 flex-1">
+                                        <flux:field>
+                                            <flux:label class="xl:sr-only">{{ __('general.gl_account') }}</flux:label>
+                                            <flux:select
+                                                wire:model.live="form.lines.{{ $index }}.gl_account_id"
+                                                searchable
+                                                variant="listbox"
+                                                placeholder="{{ __('general.select_gl_account') }}"
+                                                clearable
+                                            >
+                                                @foreach ($this->glAccounts as $glAccount)
+                                                    <flux:select.option value="{{ $glAccount->id }}" wire:key="line-{{ $index }}-gl-{{ $glAccount->id }}">
+                                                        <span dir="ltr">{{ $glAccount->full_code }}</span> — {{ $glAccount->name }}
+                                                    </flux:select.option>
+                                                @endforeach
+                                            </flux:select>
+                                            <flux:error name="form.lines.{{ $index }}.gl_account_id" />
+                                        </flux:field>
+                                    </div>
                                 </div>
                             </div>
 
-                            @php
-                                $lineAccountId = (int) ($line['gl_account_id'] ?? 0);
-                                $lineAccount = $lineAccountId > 0 ? $this->glAccounts->firstWhere('id', $lineAccountId) : null;
-                            @endphp
-                            @foreach ($lineAccount?->detailLevels ?? [] as $requirement)
-                                <flux:field wire:key="line-{{ $index }}-level-{{ $requirement->level }}">
-                                    <flux:label>
-                                        {{ __('general.detail_level_label', ['level' => $requirement->level]) }}
-                                        —
-                                        {{ $requirement->detail_type->label() }}
-                                    </flux:label>
-                                    <flux:select
-                                        wire:model="form.lines.{{ $index }}.details.{{ $requirement->level }}"
-                                        searchable
-                                        variant="listbox"
-                                        placeholder="{{ __('general.optional') }}"
+                            {{-- Description Column --}}
+                            <div class="min-w-0 md:col-span-2 xl:col-span-3">
+                                <flux:field>
+                                    <flux:label class="xl:sr-only">{{ __('general.line_description') }}</flux:label>
+                                    <flux:input
+                                        wire:model="form.lines.{{ $index }}.description"
+                                        placeholder="{{ __('general.journal_line_description_placeholder') }}"
                                         clearable
-                                    >
-                                        @foreach ($this->glDetails->where('type', $requirement->detail_type) as $detail)
-                                            <flux:select.option value="{{ $detail->id }}" wire:key="line-{{ $index }}-detail-{{ $requirement->level }}-{{ $detail->id }}">
-                                                {{ $detail->name }}
-                                            </flux:select.option>
-                                        @endforeach
-                                    </flux:select>
-                                    <flux:error name="form.lines.{{ $index }}.details.{{ $requirement->level }}" />
+                                    />
+                                    <flux:error name="form.lines.{{ $index }}.description" />
                                 </flux:field>
-                            @endforeach
+                            </div>
 
-                            <flux:field>
-                                <flux:label>{{ __('general.debit') }}</flux:label>
-                                <flux:input wire:model.live.debounce.200ms="form.lines.{{ $index }}.debit" mask:dynamic="$money($input)" dir="ltr" />
-                            </flux:field>
+                            {{-- Debit Column --}}
+                            <div class="min-w-0 xl:col-span-2">
+                                <flux:field>
+                                    <flux:label class="xl:sr-only">{{ __('general.debit') }}</flux:label>
+                                    <flux:input
+                                        wire:model.live.debounce.250ms="form.lines.{{ $index }}.debit"
+                                        mask:dynamic="$money($input)"
+                                        dir="ltr"
+                                        placeholder="0"
+                                    />
+                                    <flux:error name="form.lines.{{ $index }}.debit" />
+                                </flux:field>
+                            </div>
 
-                            <flux:field>
-                                <flux:label>{{ __('general.credit') }}</flux:label>
-                                <flux:input wire:model.live.debounce.200ms="form.lines.{{ $index }}.credit" mask:dynamic="$money($input)" dir="ltr" />
-                            </flux:field>
+                            {{-- Credit Column --}}
+                            <div class="min-w-0 xl:col-span-2">
+                                <flux:field>
+                                    <flux:label class="xl:sr-only">{{ __('general.credit') }}</flux:label>
+                                    <flux:input
+                                        wire:model.live.debounce.250ms="form.lines.{{ $index }}.credit"
+                                        mask:dynamic="$money($input)"
+                                        dir="ltr"
+                                        placeholder="0"
+                                    />
+                                    <flux:error name="form.lines.{{ $index }}.credit" />
+                                </flux:field>
+                            </div>
 
-                            <flux:field class="md:col-span-2 xl:col-span-3">
-                                <flux:label>{{ __('general.line_description') }}</flux:label>
-                                <flux:input wire:model="form.lines.{{ $index }}.description" clearable />
-                            </flux:field>
+                            {{-- Desktop Row Actions --}}
+                            <div class="hidden items-center justify-end gap-1 pt-1 xl:col-span-1 xl:flex">
+                                <flux:tooltip content="{{ __('general.journal_line_settings') }}">
+                                    <flux:button
+                                        type="button"
+                                        size="xs"
+                                        variant="primary"
+                                        color="violet"
+                                        icon="sliders-horizontal"
+                                        icon:variant="outline"
+                                        wire:click="openLineSettings({{ $index }})"
+                                    />
+                                </flux:tooltip>
+
+                                <flux:tooltip content="{{ __('general.journal_balance_line') }}">
+                                    <flux:button
+                                        type="button"
+                                        size="xs"
+                                        variant="primary"
+                                        color="amber"
+                                        icon="scale"
+                                        icon:variant="outline"
+                                        wire:click="balanceLine({{ $index }})"
+                                    />
+                                </flux:tooltip>
+
+                                <flux:tooltip content="{{ __('general.journal_swap_amounts') }}">
+                                    <flux:button
+                                        type="button"
+                                        size="xs"
+                                        variant="primary"
+                                        color="sky"
+                                        icon="arrow-left-right"
+                                        icon:variant="outline"
+                                        wire:click="swapLineAmounts({{ $index }})"
+                                    />
+                                </flux:tooltip>
+
+                                <flux:tooltip content="{{ __('general.journal_duplicate_line') }}">
+                                    <flux:button
+                                        type="button"
+                                        size="xs"
+                                        variant="primary"
+                                        color="zinc"
+                                        icon="copy"
+                                        icon:variant="outline"
+                                        wire:click="duplicateLine({{ $index }})"
+                                    />
+                                </flux:tooltip>
+
+                                @if (count($form->lines) > 2)
+                                    <flux:tooltip content="{{ __('general.delete') }}">
+                                        <flux:button
+                                            type="button"
+                                            size="xs"
+                                            variant="primary"
+                                            color="red"
+                                            icon="trash"
+                                            icon:variant="outline"
+                                            wire:click="removeLine({{ $index }})"
+                                        />
+                                    </flux:tooltip>
+                                @endif
+                            </div>
                         </div>
+
+                        {{-- Multi-column Sub-row for Required Floating Details & Personal Category Summary (No Horizontal Overflow) --}}
+                        @if ($detailLevels->isNotEmpty() || $selectedCategory !== null || $errors->has("lines.{$index}*") || $errors->has("form.lines.{$index}*"))
+                            <div class="mt-3 rounded-lg bg-zinc-50/90 p-3 dark:bg-zinc-800/50 xl:ms-8">
+                                @if ($detailLevels->isNotEmpty())
+                                    <div class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+                                        @foreach ($detailLevels as $requirement)
+                                            <div class="min-w-0" wire:key="line-{{ $index }}-level-{{ $requirement->level }}">
+                                                <flux:field>
+                                                    <flux:label>
+                                                        {{ __('general.detail_level_label', ['level' => $requirement->level]) }}
+                                                        —
+                                                        {{ $requirement->detail_type->label() }}
+                                                    </flux:label>
+                                                    <flux:select
+                                                        wire:model="form.lines.{{ $index }}.details.{{ $requirement->level }}"
+                                                        searchable
+                                                        variant="listbox"
+                                                        placeholder="{{ __('general.select') }}..."
+                                                        clearable
+                                                    >
+                                                        @foreach ($this->glDetails->where('type', $requirement->detail_type) as $detail)
+                                                            <flux:select.option value="{{ $detail->id }}" wire:key="line-{{ $index }}-detail-{{ $requirement->level }}-{{ $detail->id }}">
+                                                                {{ $detail->name }}
+                                                            </flux:select.option>
+                                                        @endforeach
+                                                    </flux:select>
+                                                    <flux:error name="form.lines.{{ $index }}.details.{{ $requirement->level }}" />
+                                                    <flux:error name="lines.{{ $index }}.details.{{ $requirement->level }}" />
+                                                </flux:field>
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                @endif
+
+                                @if ($selectedCategory !== null)
+                                    <div class="{{ $detailLevels->isNotEmpty() ? 'mt-2.5 pt-2.5 border-t border-zinc-200/70 dark:border-zinc-700/70' : '' }} flex flex-wrap items-center justify-between gap-2">
+                                        <div class="flex flex-wrap items-center gap-2 min-w-0">
+                                            <flux:badge size="sm" color="violet" icon="tag">
+                                                {{ __('general.traditional_category') }}: {{ $selectedCategory['path'] }}
+                                            </flux:badge>
+                                        </div>
+                                        <flux:button
+                                            type="button"
+                                            size="xs"
+                                            variant="ghost"
+                                            icon="pencil"
+                                            wire:click="openLineSettings({{ $index }})"
+                                        >
+                                            {{ __('general.edit') }}
+                                        </flux:button>
+                                    </div>
+                                @endif
+
+                                <flux:error name="lines.{{ $index }}" />
+                                <flux:error name="form.lines.{{ $index }}" />
+                            </div>
+                        @else
+                            <div class="mt-2 flex flex-wrap items-center gap-2 xl:ms-8">
+                                <flux:button
+                                    type="button"
+                                    size="xs"
+                                    variant="ghost"
+                                    icon="tag"
+                                    wire:click="openLineSettings({{ $index }})"
+                                >
+                                    {{ __('general.show_traditional_category') }}
+                                </flux:button>
+                            </div>
+                        @endif
                     </div>
                 @endforeach
             </div>
 
-            <div class="grid gap-3 rounded-xl bg-zinc-50 p-4 dark:bg-zinc-800/50 md:grid-cols-3">
-                <div>
-                    <flux:text class="text-sm">{{ __('general.total_debit') }}</flux:text>
-                    <div class="mt-1 text-lg font-semibold" dir="ltr">{{ $this->formatAmount($form->totalDebit()) }}</div>
+            {{-- Summary Totals Cards --}}
+            <div class="grid grid-cols-1 gap-3 pt-2 md:grid-cols-3">
+                <div class="rounded-xl border border-zinc-200 bg-zinc-50/70 p-4 dark:border-zinc-700 dark:bg-zinc-800/40">
+                    <div class="flex items-center justify-between">
+                        <flux:text class="text-sm font-medium">{{ __('general.total_debit') }}</flux:text>
+                        <flux:badge size="sm" color="sky">{{ __('general.debit') }}</flux:badge>
+                    </div>
+                    <div class="mt-2 text-xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100" dir="ltr">
+                        {{ $this->formatAmount($form->totalDebit()) }}
+                    </div>
                 </div>
-                <div>
-                    <flux:text class="text-sm">{{ __('general.total_credit') }}</flux:text>
-                    <div class="mt-1 text-lg font-semibold" dir="ltr">{{ $this->formatAmount($form->totalCredit()) }}</div>
+
+                <div class="rounded-xl border border-zinc-200 bg-zinc-50/70 p-4 dark:border-zinc-700 dark:bg-zinc-800/40">
+                    <div class="flex items-center justify-between">
+                        <flux:text class="text-sm font-medium">{{ __('general.total_credit') }}</flux:text>
+                        <flux:badge size="sm" color="indigo">{{ __('general.credit') }}</flux:badge>
+                    </div>
+                    <div class="mt-2 text-xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100" dir="ltr">
+                        {{ $this->formatAmount($form->totalCredit()) }}
+                    </div>
                 </div>
-                <div>
-                    <flux:text class="text-sm">{{ __('general.difference') }}</flux:text>
+
+                <div class="rounded-xl border p-4 {{ $form->isBalanced() ? 'border-emerald-200 bg-emerald-50/60 dark:border-emerald-800/60 dark:bg-emerald-950/30' : 'border-rose-200 bg-rose-50/60 dark:border-rose-800/60 dark:bg-rose-950/30' }}">
+                    <div class="flex items-center justify-between">
+                        <flux:text class="text-sm font-medium">{{ __('general.difference') }}</flux:text>
+                        <flux:badge size="sm" :color="$form->isBalanced() ? 'green' : 'rose'" :icon="$form->isBalanced() ? 'circle-check' : 'circle-alert'">
+                            {{ $form->isBalanced() ? __('general.journal_balanced_badge') : __('general.journal_unbalanced_badge') }}
+                        </flux:badge>
+                    </div>
                     <div
-                        class="mt-1 text-lg font-semibold {{ $form->isBalanced() ? 'text-green-600' : 'text-rose-600' }}"
+                        class="mt-2 text-xl font-bold tracking-tight {{ $form->isBalanced() ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400' }}"
                         dir="ltr"
                     >
                         {{ $this->formatAmount($form->difference()) }}
@@ -409,27 +694,144 @@ new class extends Component
             </div>
         </flux:card>
 
-        <div class="flex flex-col gap-3 sm:flex-row">
-            <flux:button
-                type="submit"
-                variant="primary"
-                color="zinc"
-                class="w-full sm:w-auto"
-                :disabled="! $form->isBalanced() || $this->fiscalYears->isEmpty()"
-            >
-                {{ __('general.save_as_draft') }}
-            </flux:button>
+        {{-- Sticky Action Bar --}}
+        <div class="sticky bottom-0 z-10 -mx-1 border-t border-zinc-200 bg-white/95 px-2 py-3 backdrop-blur dark:border-zinc-700 dark:bg-zinc-900/95 sm:static sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none dark:sm:bg-transparent">
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div class="flex flex-col gap-3 sm:flex-row">
+                    <flux:button
+                        type="submit"
+                        variant="primary"
+                        color="orange"
+                        icon="save"
+                        class="w-full sm:w-auto"
+                        :disabled="! $form->isBalanced() || $this->fiscalYears->isEmpty()"
+                    >
+                        {{ __('general.save_as_draft') }}
+                    </flux:button>
 
-            <flux:button
-                type="button"
-                variant="primary"
-                color="teal"
-                class="w-full sm:w-auto"
-                wire:click="saveAndPost"
-                :disabled="! $form->isBalanced() || $this->fiscalYears->isEmpty()"
-            >
-                {{ __('general.save_and_post') }}
-            </flux:button>
+                    <flux:button
+                        type="button"
+                        variant="primary"
+                        color="teal"
+                        icon="circle-check"
+                        class="w-full sm:w-auto"
+                        wire:click="saveAndPost"
+                        :disabled="! $form->isBalanced() || $this->fiscalYears->isEmpty()"
+                    >
+                        {{ __('general.save_and_post') }}
+                    </flux:button>
+                </div>
+
+                <flux:button
+                    type="button"
+                    variant="primary"
+                    color="indigo"
+                    icon="plus"
+                    class="w-full sm:w-auto"
+                    wire:click="addLine"
+                >
+                    {{ __('general.add_journal_line') }}
+                </flux:button>
+            </div>
         </div>
     </form>
+
+    {{-- Flyout Modal for Line Settings (Personal Category & All Floating Detail Levels) --}}
+    <flux:modal name="journal-line-settings" flyout position="right" class="md:w-96">
+        @if ($activeLineIndex !== null && isset($form->lines[$activeLineIndex]))
+            @php
+                $modalLine = $form->lines[$activeLineIndex];
+                $modalAccountId = (int) ($modalLine['gl_account_id'] ?? 0);
+                $modalAccount = $modalAccountId > 0 ? $this->glAccounts->firstWhere('id', $modalAccountId) : null;
+                $modalDetailLevels = $modalAccount?->detailLevels ?? collect();
+            @endphp
+
+            <div class="space-y-6">
+                <div>
+                    <flux:heading size="lg">{{ __('general.journal_line_settings') }}</flux:heading>
+                    <flux:text class="mt-1">
+                        {{ __('general.journal_line_settings_hint', ['number' => $activeLineIndex + 1]) }}
+                    </flux:text>
+                </div>
+
+                <flux:field>
+                    <flux:label>{{ __('general.gl_account') }}</flux:label>
+                    <flux:select
+                        wire:model.live="form.lines.{{ $activeLineIndex }}.gl_account_id"
+                        searchable
+                        variant="listbox"
+                        placeholder="{{ __('general.select_gl_account') }}"
+                        clearable
+                    >
+                        @foreach ($this->glAccounts as $glAccount)
+                            <flux:select.option value="{{ $glAccount->id }}" wire:key="flyout-gl-{{ $glAccount->id }}">
+                                <span dir="ltr">{{ $glAccount->full_code }}</span> — {{ $glAccount->name }}
+                            </flux:select.option>
+                        @endforeach
+                    </flux:select>
+                    <flux:error name="form.lines.{{ $activeLineIndex }}.gl_account_id" />
+                </flux:field>
+
+                @if ($modalDetailLevels->isNotEmpty())
+                    <div class="space-y-4">
+                        @foreach ($modalDetailLevels as $requirement)
+                            <flux:field wire:key="flyout-line-{{ $activeLineIndex }}-level-{{ $requirement->level }}">
+                                <flux:label>
+                                    {{ __('general.detail_level_label', ['level' => $requirement->level]) }}
+                                    —
+                                    {{ $requirement->detail_type->label() }}
+                                </flux:label>
+                                <flux:select
+                                    wire:model="form.lines.{{ $activeLineIndex }}.details.{{ $requirement->level }}"
+                                    searchable
+                                    variant="listbox"
+                                    placeholder="{{ __('general.select') }}..."
+                                    clearable
+                                >
+                                    @foreach ($this->glDetails->where('type', $requirement->detail_type) as $detail)
+                                        <flux:select.option value="{{ $detail->id }}" wire:key="flyout-detail-{{ $requirement->level }}-{{ $detail->id }}">
+                                            {{ $detail->name }}
+                                        </flux:select.option>
+                                    @endforeach
+                                </flux:select>
+                                <flux:error name="form.lines.{{ $activeLineIndex }}.details.{{ $requirement->level }}" />
+                            </flux:field>
+                        @endforeach
+                    </div>
+                @else
+                    <flux:callout icon="layers" variant="secondary">
+                        {{ __('general.journal_no_detail_required') }}
+                    </flux:callout>
+                @endif
+
+                <flux:field>
+                    <flux:label>{{ __('general.traditional_category') }}</flux:label>
+                    <flux:select
+                        wire:model="form.lines.{{ $activeLineIndex }}.category_id"
+                        searchable
+                        variant="listbox"
+                        placeholder="{{ __('general.select_category') }}"
+                        clearable
+                    >
+                        @foreach ($this->categoryOptions as $option)
+                            <flux:select.option value="{{ $option['id'] }}" wire:key="flyout-cat-{{ $option['id'] }}">
+                                {{ $option['path'] }}
+                            </flux:select.option>
+                        @endforeach
+                    </flux:select>
+                    <flux:error name="form.lines.{{ $activeLineIndex }}.category_id" />
+                </flux:field>
+
+                <flux:button
+                    type="button"
+                    variant="primary"
+                    color="orange"
+                    class="w-full"
+                    wire:click="closeLineSettings"
+                >
+                    {{ __('general.save') }}
+                </flux:button>
+            </div>
+        @endif
+    </flux:modal>
 </div>

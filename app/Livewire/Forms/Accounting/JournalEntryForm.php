@@ -94,6 +94,88 @@ class JournalEntryForm extends Form
         $this->lines = array_values($this->lines);
     }
 
+    public function duplicateLine(int $index): void
+    {
+        if (! isset($this->lines[$index])) {
+            return;
+        }
+
+        $source = $this->lines[$index];
+        $copy = [
+            'id' => (string) Str::uuid(),
+            'category_id' => $source['category_id'] ?? null,
+            'gl_account_id' => $source['gl_account_id'] ?? null,
+            'details' => is_array($source['details'] ?? null) ? $source['details'] : [],
+            'debit' => (string) ($source['debit'] ?? '0'),
+            'credit' => (string) ($source['credit'] ?? '0'),
+            'description' => (string) ($source['description'] ?? ''),
+        ];
+
+        array_splice($this->lines, $index + 1, 0, [$copy]);
+        $this->lines = array_values($this->lines);
+    }
+
+    public function swapLineAmounts(int $index): void
+    {
+        if (! isset($this->lines[$index])) {
+            return;
+        }
+
+        $debit = (string) ($this->lines[$index]['debit'] ?? '0');
+        $credit = (string) ($this->lines[$index]['credit'] ?? '0');
+
+        $this->lines[$index]['debit'] = $credit;
+        $this->lines[$index]['credit'] = $debit;
+    }
+
+    public function balanceLine(int $index): void
+    {
+        if (! isset($this->lines[$index])) {
+            return;
+        }
+
+        $otherDebit = '0';
+        $otherCredit = '0';
+
+        foreach ($this->lines as $i => $line) {
+            if ($i === $index) {
+                continue;
+            }
+
+            $otherDebit = bcadd($otherDebit, $this->normalizeAmount((string) ($line['debit'] ?? '0')), 4);
+            $otherCredit = bcadd($otherCredit, $this->normalizeAmount((string) ($line['credit'] ?? '0')), 4);
+        }
+
+        $diff = bcsub($otherDebit, $otherCredit, 4);
+        $cmp = bccomp($diff, '0', 4);
+
+        if ($cmp === 1) {
+            $this->lines[$index]['debit'] = '0';
+            $this->lines[$index]['credit'] = $this->formatAmount($diff);
+        } elseif ($cmp === -1) {
+            $absDiff = ltrim($diff, '-');
+            $this->lines[$index]['debit'] = $this->formatAmount($absDiff);
+            $this->lines[$index]['credit'] = '0';
+        } else {
+            $this->lines[$index]['debit'] = '0';
+            $this->lines[$index]['credit'] = '0';
+        }
+    }
+
+    public function clearOppositeSide(int $index, string $changedSide): void
+    {
+        if (! isset($this->lines[$index])) {
+            return;
+        }
+
+        $value = $this->normalizeAmount((string) ($this->lines[$index][$changedSide] ?? '0'));
+
+        if (bccomp($value, '0', 4) === 1) {
+            $opposite = $changedSide === 'debit' ? 'credit' : 'debit';
+            $this->lines[$index][$opposite] = '0';
+        }
+    }
+
     public function totalDebit(): string
     {
         $total = '0';

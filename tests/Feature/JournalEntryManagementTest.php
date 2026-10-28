@@ -51,6 +51,24 @@ class JournalEntryManagementTest extends TestCase
         ]);
     }
 
+    public function test_line_helper_actions_balance_swap_and_duplicate(): void
+    {
+        [$user] = $this->seedContext();
+
+        Livewire::actingAs($user)
+            ->test('pages::panel.accounting.journal-entry.form')
+            ->set('form.lines.0.debit', '350000')
+            ->assertSet('form.lines.0.credit', '0')
+            ->call('balanceLine', 1)
+            ->assertSet('form.lines.1.credit', '350000')
+            ->assertSet('form.lines.1.debit', '0')
+            ->call('swapLineAmounts', 1)
+            ->assertSet('form.lines.1.debit', '350000')
+            ->assertSet('form.lines.1.credit', '0')
+            ->call('duplicateLine', 0)
+            ->assertCount('form.lines', 3);
+    }
+
     public function test_user_can_post_draft_from_modal(): void
     {
         [$user, , $fiscalYear, $debitCategory, $creditCategory] = $this->seedContext();
