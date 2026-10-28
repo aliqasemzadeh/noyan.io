@@ -9,6 +9,32 @@
 @theme {
     --font-sans: Vazirmatn, 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
     'Segoe UI Symbol', 'Noto Color Emoji';
+
+    /* Brand base gray → navy family (#071F43) */
+    --color-zinc-50: #f4f7fb;
+    --color-zinc-100: #e8eef6;
+    --color-zinc-200: #cfdced;
+    --color-zinc-300: #a8bdd8;
+    --color-zinc-400: #7494b8;
+    --color-zinc-500: #4d6f98;
+    --color-zinc-600: #35557a;
+    --color-zinc-700: #243f5f;
+    --color-zinc-800: #152b47;
+    --color-zinc-900: #071F43;
+    --color-zinc-950: #041228;
+
+    /* Brand accent (#16719D) */
+    --color-accent: #16719D;
+    --color-accent-content: #125d82;
+    --color-accent-foreground: #ffffff;
+}
+
+@layer theme {
+    .dark {
+        --color-accent: #16719D;
+        --color-accent-content: #2DE1C2;
+        --color-accent-foreground: #ffffff;
+    }
 }
 
 @custom-variant dark (&:where(.dark, .dark *));

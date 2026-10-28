@@ -3,7 +3,9 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use App\Settings\GeneralSettings;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class WelcomePageTest extends TestCase
@@ -16,6 +18,52 @@ class WelcomePageTest extends TestCase
             ->get('/')
             ->assertOk()
             ->assertSee(__('general.welcome_headline'), false);
+    }
+
+    public function test_welcome_page_uses_general_settings_branding(): void
+    {
+        Storage::fake('public');
+
+        $logoPath = 'settings/logo.png';
+        $faviconPath = 'settings/favicon.ico';
+        Storage::disk('public')->put($logoPath, 'logo');
+        Storage::disk('public')->put($faviconPath, 'favicon');
+
+        $settings = app(GeneralSettings::class);
+        $settings->site_name = 'Noyan Brand';
+        $settings->site_short_name = 'Noyan';
+        $settings->site_description = 'Smart financial system for businesses';
+        $settings->site_logo = $logoPath;
+        $settings->site_favicon = $faviconPath;
+        $settings->save();
+
+        $this->withSession(['locale' => 'en'])
+            ->get('/')
+            ->assertOk()
+            ->assertSee('<title>Noyan Brand</title>', false)
+            ->assertSee('Smart financial system for businesses', false)
+            ->assertSee('Noyan', false)
+            ->assertSee(Storage::disk('public')->url($logoPath), false)
+            ->assertSee(Storage::disk('public')->url($faviconPath), false)
+            ->assertSee('$flux.dark = ! $flux.dark', false);
+    }
+
+    public function test_welcome_page_falls_back_when_optional_settings_are_empty(): void
+    {
+        $settings = app(GeneralSettings::class);
+        $settings->site_name = 'Noyan';
+        $settings->site_short_name = 'Noyan';
+        $settings->site_description = '';
+        $settings->site_logo = null;
+        $settings->site_favicon = null;
+        $settings->save();
+
+        $this->withSession(['locale' => 'en'])
+            ->get('/')
+            ->assertOk()
+            ->assertSee('<title>Noyan</title>', false)
+            ->assertSee(__('general.welcome_subheadline', [], 'en'), false)
+            ->assertDontSee('rel="icon"', false);
     }
 
     public function test_welcome_page_shows_accounting_ai_intro(): void
