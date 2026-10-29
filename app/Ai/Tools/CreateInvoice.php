@@ -27,7 +27,7 @@ class CreateInvoice implements Tool
      */
     public function description(): Stringable|string
     {
-        return 'ثبت فاکتور فروش یا خرید از متن کاربر (بدون فایل اکسل). اقلام، طرف‌حساب، نوع (sale/purchase)، تاریخ و مبالغ را استخراج کن. ابتدا با confirmed=false پیش‌نمایش بگیر؛ فقط بعد از تأیید صریح کاربر با confirmed=true پیش‌نویس را ثبت کن. برای فایل اکسل رسمی از import_invoice استفاده کن.';
+        return 'ثبت فاکتور فروش یا خرید از متن کاربر (بدون فایل اکسل). type الزامی است: sale یا purchase. اگر از متن مشخص نیست که فروش است یا خرید، این ابزار را صدا نزن؛ اول از کاربر بپرس. اقلام، طرف‌حساب، تاریخ و مبالغ را استخراج کن. ابتدا با confirmed=false پیش‌نمایش بگیر؛ فقط بعد از تأیید صریح کاربر با confirmed=true پیش‌نویس را ثبت کن. برای فایل اکسل رسمی از import_invoice استفاده کن.';
     }
 
     /**
@@ -48,6 +48,11 @@ class CreateInvoice implements Tool
 
         $confirmed = $request->boolean('confirmed');
         $typeValue = strtolower(trim((string) $request->string('type')));
+
+        if ($typeValue === '') {
+            return __('general.ai_invoice_type_required');
+        }
+
         $type = InvoiceType::tryFrom($typeValue);
 
         if ($type === null || ! in_array($type, InvoiceType::creatable(), true)) {
@@ -197,7 +202,7 @@ class CreateInvoice implements Tool
 
         return [
             'type' => $schema->string()
-                ->description('sale برای فاکتور فروش، purchase برای فاکتور خرید')
+                ->description('sale = فروش به مشتری؛ purchase = خرید از تأمین‌کننده. اگر از متن کاربر مشخص نیست خالی نگذار و حدس نزن — اول بپرس «فروش است یا خرید؟» سپس این ابزار را صدا بزن')
                 ->required(),
             'party_name' => $schema->string()
                 ->description('نام طرف‌حساب (مشتری برای فروش، تأمین‌کننده برای خرید)؛ عین متن کاربر')

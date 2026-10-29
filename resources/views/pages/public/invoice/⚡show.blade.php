@@ -80,6 +80,7 @@ new #[Layout('layouts::invoice')] class extends Component
     :party-name="$invoice->displayPartyName()"
     :sale-kind-name="$invoice->saleKind?->name"
     :settlement-type-name="$invoice->settlementType?->name"
+    :is-purchase="$invoice->type === \App\Enums\Accounting\InvoiceType::Purchase"
     :buyer-legal-name="$invoice->buyer_legal_name ?? $invoice->party?->legal_name"
     :buyer-national-id="$invoice->buyer_national_id ?? $invoice->party?->national_id"
     :buyer-economic-code="$invoice->buyer_economic_code ?? $invoice->party?->economic_code"

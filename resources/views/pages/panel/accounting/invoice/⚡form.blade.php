@@ -415,12 +415,12 @@ new class extends Component
             <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
                 @if ($this->saleKinds->isNotEmpty())
                     <flux:field>
-                        <flux:label>{{ __('general.sale_kind') }}</flux:label>
+                        <flux:label>{{ $form->type === InvoiceType::Purchase->value ? __('general.purchase_kind') : __('general.sale_kind') }}</flux:label>
                         <flux:select
                             wire:model="form.sale_kind_id"
                             searchable
                             clearable
-                            placeholder="{{ __('general.select_sale_kind') }}"
+                            placeholder="{{ $form->type === InvoiceType::Purchase->value ? __('general.select_purchase_kind') : __('general.select_sale_kind') }}"
                         >
                             @foreach ($this->saleKinds as $saleKind)
                                 <flux:select.option value="{{ $saleKind->id }}" wire:key="invoice-sale-kind-{{ $saleKind->id }}">

@@ -5,9 +5,11 @@ namespace Tests\Feature;
 use App\Enums\Accounting\InvoiceType;
 use App\Models\Accounting\Invoice;
 use App\Models\Accounting\Party;
+use App\Models\Accounting\SaleKind;
 use App\Models\Business;
 use App\Models\Catalog\Product;
 use App\Models\User;
+use Database\Seeders\SaleKindSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Tests\TestCase;
@@ -28,12 +30,17 @@ class InvoiceManagementTest extends TestCase
 
     public function test_purchase_invoice_form_page_loads(): void
     {
-        [$user] = $this->actingBusinessUser();
+        [$user, $business] = $this->actingBusinessUser();
+        $this->seed(SaleKindSeeder::class);
+        $saleKind = SaleKind::query()->system()->where('code', 'formal')->firstOrFail();
+        $business->activateSaleKind($saleKind);
 
         $this->actingAs($user)
             ->get(route('accounting.invoices.create', ['type' => 'purchase']))
             ->assertOk()
-            ->assertSee(__('general.new_purchase_invoice'));
+            ->assertSee(__('general.new_purchase_invoice'))
+            ->assertSee(__('general.purchase_kind'))
+            ->assertDontSee(__('general.sale_kind'), false);
     }
 
     public function test_user_can_save_invoice_draft_from_form(): void

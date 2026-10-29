@@ -266,7 +266,9 @@ class InvoiceForm extends Form
         return [
             'party_id' => __('general.party'),
             'party_name' => __('general.party_name'),
-            'sale_kind_id' => __('general.sale_kind'),
+            'sale_kind_id' => $this->type === InvoiceType::Purchase->value
+                ? __('general.purchase_kind')
+                : __('general.sale_kind'),
             'settlement_type_id' => __('general.settlement_type'),
             'issue_date' => __('general.issue_date'),
             'due_date' => __('general.due_date'),

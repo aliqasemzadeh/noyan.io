@@ -14,6 +14,7 @@
     'accounts' => [],
     'saleKindName' => null,
     'settlementTypeName' => null,
+    'isPurchase' => false,
     'buyerLegalName' => null,
     'buyerNationalId' => null,
     'buyerEconomicCode' => null,
@@ -349,12 +350,12 @@
             </div>
         </div>
 
-        {{-- Sale kind + settlement + note | accounts --}}
+        {{-- Sale/purchase kind + settlement + note | accounts --}}
         <div class="grid grid-cols-1 border sm:grid-cols-2" style="border-color: {{ $borderColor }};">
             <div class="border-b p-1.5 sm:border-b-0 sm:border-e" style="border-color: {{ $borderColor }};">
-                <p class="mb-1 font-bold text-black">{{ __('general.sale_terms_and_notes') }}</p>
+                <p class="mb-1 font-bold text-black">{{ $isPurchase ? __('general.purchase_terms_and_notes') : __('general.sale_terms_and_notes') }}</p>
                 <p class="text-black">
-                    <span class="font-semibold">{{ __('general.sale_kind') }}:</span>
+                    <span class="font-semibold">{{ $isPurchase ? __('general.purchase_kind') : __('general.sale_kind') }}:</span>
                     {{ filled($saleKindName) ? $saleKindName : '—' }}
                 </p>
                 <p class="mt-1 text-black">

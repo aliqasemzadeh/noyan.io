@@ -168,6 +168,26 @@ class AccountingAiCreateInvoiceTest extends TestCase
         $this->assertSame($user->id, auth()->id());
     }
 
+    public function test_missing_type_asks_sale_or_purchase(): void
+    {
+        $this->actingBusinessOwner();
+
+        $result = (string) (new CreateInvoice)->handle(new Request([
+            'confirmed' => false,
+            'party_name' => 'مدرسه حضرت زینب (س)',
+            'items' => [
+                [
+                    'title' => 'کالا',
+                    'quantity' => '1',
+                    'unit_price' => '1000',
+                ],
+            ],
+        ]));
+
+        $this->assertSame(__('general.ai_invoice_type_required'), $result);
+        $this->assertDatabaseCount('invoices', 0);
+    }
+
     public function test_accounting_assistant_instructions_mention_create_invoice(): void
     {
         $this->actingBusinessOwner();
@@ -177,6 +197,8 @@ class AccountingAiCreateInvoiceTest extends TestCase
         $this->assertStringContainsString('create_invoice', $instructions);
         $this->assertStringContainsString('import_invoice', $instructions);
         $this->assertStringContainsString('متنِ فاکتور', $instructions);
+        $this->assertStringContainsString('فروش است یا خرید', $instructions);
+        $this->assertStringContainsString('نوع را هرگز حدس نزن', $instructions);
     }
 
     /**
