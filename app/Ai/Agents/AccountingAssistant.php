@@ -3,6 +3,7 @@
 namespace App\Ai\Agents;
 
 use App\Ai\Tools\CreateBankAccount;
+use App\Ai\Tools\CreateInvoice;
 use App\Ai\Tools\CreateParty;
 use App\Ai\Tools\CreateTransaction;
 use App\Ai\Tools\GetDailyExpenses;
@@ -87,7 +88,18 @@ class AccountingAssistant implements Agent, HasTools, RemembersConversationsCont
 - مبلغ برداشت/واریز را نادیده بگیر؛ تراکنش نساز.
 - مانده = opening/current balance.
 
-        5) وارد کردن پیش‌فاکتور / استعلام قیمت / فاکتور از اکسل (import_quote یا import_invoice):
+        5) ثبت فاکتور فروش/خرید از متن (create_invoice) — وقتی:
+- کاربر متن فاکتور، لیست اقلام، یا دستور «فاکتور فروش/خرید بساز/ثبت کن» داده و فایل اکسل آپلود نشده.
+جریان:
+- type را مشخص کن: فروش = sale، خرید = purchase.
+- party_name و items (title، quantity، unit_price) را از متن استخراج کن؛ مبلغ را حدس نزن.
+- ابتدا create_invoice را با confirmed=false صدا بزن؛ خروجی را عیناً بده و صبر کن.
+- فقط بعد از تأیید صریح («آره»، «بله»، «ثبت کن»، «تأیید») همان داده را با confirmed=true بفرست.
+- بدون تأیید هرگز confirmed=true نگذار.
+- اگر طرف‌حساب نبود، create_party را صدا بزن (برای فروش is_customer=true؛ برای خرید is_supplier=true)؛ بعد دوباره create_invoice.
+- برای فایل اکسل رسمی از این ابزار استفاده نکن.
+
+6) وارد کردن پیش‌فاکتور / استعلام قیمت / فاکتور از اکسل (import_quote یا import_invoice):
 - وقتی کاربر فایل اکسل آپلود کرده و در پیام داخلی `file_path=` آمده، یا گفته فایل را وارد/ایمپورت کن:
 الف) اگر نام فایل یا متن کاربر شامل «فاکتور» است و «پیش فاکتور/پیش‌فاکتور/استعلام/پیشنهاد» نیست → import_invoice با همان file_path و confirmed=false.
 ب) اگر شامل «پیش فاکتور»، «پیش‌فاکتور»، «استعلام»، «پیشنهاد قیمت» است، یا نام فایل پیش‌فروش است → import_quote با confirmed=false.
@@ -97,14 +109,16 @@ class AccountingAssistant implements Agent, HasTools, RemembersConversationsCont
 - بعد از تأیید، ابزار ثبت را در صف می‌گذارد و پیام صف را برمی‌گرداند؛ همان را عیناً بده و منتظر نتیجهٔ ثبت نمان.
 - بدون تأیید هرگز confirmed=true نگذار.
 - خودت اکسل را پارس نکن و اقلام را حدس نزن؛ فقط ابزار را صدا بزن.
+- متنِ فاکتور بدون فایل اکسل را با import_invoice ثبت نکن؛ از create_invoice استفاده کن.
 - اگر ابزار گفت طرف‌حساب یافت نشد، create_party را با عین نام و فیلدهای گزارش‌شده صدا بزن (حدس نزن)؛ بعد از ساخت موفق دوباره ایمپورت را پیشنهاد بده.
 
-6) ساخت طرف‌حساب (create_party) — وقتی:
-- کاربر صریحاً طرف‌حساب/مشتری/خریدار بساز خواسته، یا
-- ایمپورت به‌خاطر نبود طرف‌حساب خطا داده است.
+7) ساخت طرف‌حساب (create_party) — وقتی:
+- کاربر صریحاً طرف‌حساب/مشتری/خریدار/تأمین‌کننده بساز خواسته، یا
+- ایمپورت یا create_invoice به‌خاطر نبود طرف‌حساب خطا داده است.
 قواعد:
-- name الزامی است؛ عین نام خریدار فایل یا متن کاربر را بفرست؛ هرگز کوتاه/حدس نکن.
-- اگر در پیام یا خطای ایمپورت کد ملی، کد اقتصادی، تلفن، آدرس یا کد پستی آمده، همان‌ها را هم بفرست.
+- name الزامی است؛ عین نام خریدار/فروشنده فایل یا متن کاربر را بفرست؛ هرگز کوتاه/حدس نکن.
+- اگر در پیام یا خطای ابزار کد ملی، کد اقتصادی، تلفن، آدرس یا کد پستی آمده، همان‌ها را هم بفرست.
+- برای فاکتور فروش is_customer=true؛ برای فاکتور خرید is_supplier=true.
 - اگر طرف‌حساب با همان نام یا نام حقوقی از قبل باشد، ابزار خطا می‌دهد؛ دوباره نساز.
 - بعد از موفقیت، پیام ابزار را عیناً بده.
 
@@ -144,6 +158,7 @@ PROMPT;
         }
 
         if ($user->canInBusiness(BusinessPermission::InvoiceCreate)) {
+            $tools[] = new CreateInvoice;
             $tools[] = new ImportInvoice;
         }
 

@@ -13,6 +13,6 @@ return [
     |
     */
 
-    'version' => '0.1.0-beta.10',
+    'version' => '0.1.0-beta.11',
 
 ];

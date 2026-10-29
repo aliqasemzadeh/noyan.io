@@ -322,6 +322,7 @@ class AccountingAiImportDocumentTest extends TestCase
 
         $this->assertStringContainsString('import_quote', $instructions);
         $this->assertStringContainsString('import_invoice', $instructions);
+        $this->assertStringContainsString('create_invoice', $instructions);
         $this->assertStringContainsString('create_party', $instructions);
         $this->assertStringContainsString('file_path', $instructions);
         $this->assertStringContainsString('صف', $instructions);

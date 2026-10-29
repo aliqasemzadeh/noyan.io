@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Ai\Agents\AccountingAssistant;
 use App\Ai\Tools\CreateBankAccount;
+use App\Ai\Tools\CreateInvoice;
 use App\Ai\Tools\CreateParty;
 use App\Ai\Tools\CreateTransaction;
 use App\Ai\Tools\GetDailyExpenses;
@@ -260,17 +261,20 @@ class AccountingAiBankAccountTest extends TestCase
 
     public function test_accounting_assistant_registers_tool_and_remembers_conversations(): void
     {
+        $this->actingBusinessOwnerWithCurrency();
+
         $assistant = new AccountingAssistant;
 
         $tools = [...$assistant->tools()];
 
-        $this->assertCount(6, $tools);
+        $this->assertCount(7, $tools);
         $this->assertInstanceOf(CreateBankAccount::class, $tools[0]);
         $this->assertInstanceOf(CreateTransaction::class, $tools[1]);
         $this->assertInstanceOf(GetDailyExpenses::class, $tools[2]);
         $this->assertInstanceOf(ImportQuote::class, $tools[3]);
-        $this->assertInstanceOf(ImportInvoice::class, $tools[4]);
-        $this->assertInstanceOf(CreateParty::class, $tools[5]);
+        $this->assertInstanceOf(CreateInvoice::class, $tools[4]);
+        $this->assertInstanceOf(ImportInvoice::class, $tools[5]);
+        $this->assertInstanceOf(CreateParty::class, $tools[6]);
         $this->assertTrue(RememberConversation::appliesTo($assistant));
     }
 
