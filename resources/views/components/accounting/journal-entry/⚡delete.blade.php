@@ -1,8 +1,10 @@
 <?php
 
 use App\Actions\Ledger\DeleteJournalEntryAction;
+use App\Enums\Business\BusinessRole;
 use App\Models\Accounting\JournalEntry;
 use App\Models\Accounting\Transaction;
+use App\Models\BusinessUser;
 use Flux\Flux;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\On;
@@ -22,10 +24,7 @@ new class extends Component
 
         $journalEntry->loadMissing('referenceable');
 
-        $canDelete = $journalEntry->isOpen()
-            || $journalEntry->referenceable instanceof Transaction;
-
-        abort_unless($canDelete, 403);
+        abort_unless($this->canDelete($journalEntry), 403);
 
         $this->journalEntry = $journalEntry;
 
@@ -47,6 +46,44 @@ new class extends Component
 
         Flux::toast(__('general.journal_entry_deleted'));
     }
+
+    protected function canDelete(JournalEntry $journalEntry): bool
+    {
+        if ($journalEntry->referenceable instanceof Transaction) {
+            return true;
+        }
+
+        if ($journalEntry->isSystemGenerated()) {
+            return false;
+        }
+
+        if ($journalEntry->isOpen()) {
+            return true;
+        }
+
+        return $this->currentUserIsBusinessOwner();
+    }
+
+    protected function currentUserIsBusinessOwner(): bool
+    {
+        $user = Auth::user();
+        $businessId = $user?->current_business_id;
+
+        if ($user === null || $businessId === null) {
+            return false;
+        }
+
+        if ((int) $user->currentBusiness?->owner_id === (int) $user->id) {
+            return true;
+        }
+
+        $membership = BusinessUser::query()
+            ->where('business_id', $businessId)
+            ->where('user_id', $user->id)
+            ->first();
+
+        return $membership !== null && $membership->hasRole(BusinessRole::Owner);
+    }
 };
 ?>
 
@@ -58,6 +95,8 @@ new class extends Component
             <flux:text class="mt-2">
                 @if ($journalEntry?->referenceable instanceof Transaction)
                     {{ __('general.journal_delete_cascades_transaction') }}
+                @elseif ($journalEntry && ! $journalEntry->isOpen())
+                    {{ __('general.delete_posted_journal_entry_warning') }}
                 @else
                     {{ __('general.delete_journal_entry_warning') }}
                 @endif

@@ -39,6 +39,7 @@ class ProcessTransactionAction
      *     loan_id?: int|null,
      *     cheque_id?: int|null,
      *     skip_party_balance?: bool,
+     *     skip_auto_post?: bool,
      *     apply_loan_payment?: bool,
      *     transaction_date: string,
      *     currency?: string|null,
@@ -300,15 +301,17 @@ class ProcessTransactionAction
 
             $fresh = $transaction->fresh(['account', 'destinationAccount', 'party', 'invoice', 'category', 'loan', 'cheque']);
 
-            try {
-                $this->autoPostingEngine->postTransaction($fresh ?? $transaction, $user);
-            } catch (Throwable $exception) {
-                Log::error('Treasury auto-post failed.', [
-                    'transaction_id' => $transaction->id,
-                    'message' => $exception->getMessage(),
-                ]);
+            if (! (bool) ($data['skip_auto_post'] ?? false)) {
+                try {
+                    $this->autoPostingEngine->postTransaction($fresh ?? $transaction, $user);
+                } catch (Throwable $exception) {
+                    Log::error('Treasury auto-post failed.', [
+                        'transaction_id' => $transaction->id,
+                        'message' => $exception->getMessage(),
+                    ]);
 
-                throw $exception;
+                    throw $exception;
+                }
             }
 
             return $fresh ?? $transaction;

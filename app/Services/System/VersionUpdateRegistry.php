@@ -14,6 +14,7 @@ use App\Console\Commands\Updates\Update_0_1_0_beta_9;
 use App\Console\Commands\Updates\Update_0_1_0_beta_10;
 use App\Console\Commands\Updates\Update_0_1_0_beta_11;
 use App\Console\Commands\Updates\Update_0_1_0_beta_12;
+use App\Console\Commands\Updates\Update_0_1_0_beta_13;
 use App\Console\Commands\Updates\VersionUpdate;
 use App\Support\System\AppVersion;
 
@@ -39,6 +40,7 @@ class VersionUpdateRegistry
             Update_0_1_0_beta_10::class,
             Update_0_1_0_beta_11::class,
             Update_0_1_0_beta_12::class,
+            Update_0_1_0_beta_13::class,
         ];
     }
 

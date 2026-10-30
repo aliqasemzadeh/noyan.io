@@ -144,8 +144,11 @@ class CreateJournalEntryActionTest extends TestCase
         $posted = app(PostJournalEntryAction::class)->handle($user, $updated);
         $this->assertTrue($posted->isPosted());
 
-        $this->expectException(ValidationException::class);
         app(DeleteJournalEntryAction::class)->handle($user, $posted);
+
+        $this->assertSoftDeleted('journal_entries', [
+            'id' => $posted->id,
+        ]);
     }
 
     public function test_can_delete_draft_journal_entry(): void

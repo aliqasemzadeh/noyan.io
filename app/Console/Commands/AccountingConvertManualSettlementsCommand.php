@@ -13,7 +13,7 @@ class AccountingConvertManualSettlementsCommand extends Command
                             {business? : Business ID}
                             {--all : Convert for every business}';
 
-    protected $description = 'Convert unlinked cash↔party settlement journals into treasury transactions (idempotent for already-linked vouchers)';
+    protected $description = 'Convert unlinked cash↔party settlements and cash/bank transfers into treasury transactions (idempotent for already-linked vouchers)';
 
     public function handle(ConvertManualSettlementJournalsAction $convert): int
     {

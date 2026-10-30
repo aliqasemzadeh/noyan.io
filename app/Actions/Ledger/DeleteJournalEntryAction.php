@@ -3,8 +3,10 @@
 namespace App\Actions\Ledger;
 
 use App\Actions\Transactions\DeleteTransactionAction;
+use App\Enums\Business\BusinessRole;
 use App\Models\Accounting\JournalEntry;
 use App\Models\Accounting\Transaction;
+use App\Models\BusinessUser;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -30,11 +32,12 @@ class DeleteJournalEntryAction
 
         $entry->loadMissing('referenceable');
         $reference = $entry->referenceable;
+        $isOwner = $this->userOwnsBusiness($user, (int) $businessId);
 
         // System vouchers that mirror a treasury transaction: delete the source transaction
         // (which voids linked journals and reverses cash/party balances).
         if ($reference instanceof Transaction) {
-            $this->deleteTransaction->handle($user, $reference);
+            $this->deleteLinkedTreasury($user, $entry, $reference);
 
             return;
         }
@@ -45,7 +48,7 @@ class DeleteJournalEntryAction
             ]);
         }
 
-        DB::transaction(function () use ($entry, $businessId): void {
+        DB::transaction(function () use ($entry, $businessId, $isOwner): void {
             $locked = JournalEntry::query()
                 ->whereKey($entry->id)
                 ->lockForUpdate()
@@ -61,7 +64,7 @@ class DeleteJournalEntryAction
                 ]);
             }
 
-            if (! $locked->isOpen()) {
+            if (! $locked->isOpen() && ! $isOwner) {
                 throw ValidationException::withMessages([
                     'entry' => [__('general.journal_only_draft_deletable')],
                 ]);
@@ -70,5 +73,47 @@ class DeleteJournalEntryAction
             $locked->lines()->each(fn ($line) => $line->delete());
             $locked->delete();
         });
+    }
+
+    protected function deleteLinkedTreasury(User $user, JournalEntry $entry, Transaction $transaction): void
+    {
+        $feeTransactions = Transaction::query()
+            ->where('business_id', $entry->business_id)
+            ->where('id', '!=', $transaction->id)
+            ->get()
+            ->filter(function (Transaction $candidate) use ($entry, $transaction): bool {
+                $meta = $candidate->meta ?? [];
+
+                if (! is_array($meta)) {
+                    return false;
+                }
+
+                if ((int) ($meta['fee_of_transaction_id'] ?? 0) === (int) $transaction->id) {
+                    return true;
+                }
+
+                return (int) ($meta['converted_from_journal_entry_id'] ?? 0) === (int) $entry->id
+                    && $candidate->type?->value === 'expense';
+            });
+
+        foreach ($feeTransactions as $feeTransaction) {
+            $this->deleteTransaction->handle($user, $feeTransaction);
+        }
+
+        $this->deleteTransaction->handle($user, $transaction);
+    }
+
+    protected function userOwnsBusiness(User $user, int $businessId): bool
+    {
+        if ((int) $user->currentBusiness?->owner_id === (int) $user->id) {
+            return true;
+        }
+
+        $membership = BusinessUser::query()
+            ->where('business_id', $businessId)
+            ->where('user_id', $user->id)
+            ->first();
+
+        return $membership !== null && $membership->hasRole(BusinessRole::Owner);
     }
 }

@@ -22,6 +22,7 @@ use App\Models\Accounting\Party;
 use App\Models\Accounting\Transaction;
 use App\Models\Business;
 use App\Models\BusinessLedgerSetting;
+use App\Models\BusinessUser;
 use App\Models\Category;
 use App\Models\Currency;
 use App\Models\User;
@@ -140,7 +141,11 @@ class LedgerGlSyncButtonsTest extends TestCase
         $stats = app(ConvertManualSettlementJournalsAction::class)->handle($business, $user);
 
         $this->assertSame(1, $stats['converted']);
-        $this->assertSoftDeleted('journal_entries', ['id' => $entry->id]);
+        $this->assertDatabaseHas('journal_entries', [
+            'id' => $entry->id,
+            'deleted_at' => null,
+        ]);
+        $this->assertNotNull($entry->fresh()->referenceable_id);
 
         $transaction = Transaction::query()
             ->where('business_id', $business->id)
@@ -150,6 +155,7 @@ class LedgerGlSyncButtonsTest extends TestCase
 
         $this->assertNotNull($transaction);
         $this->assertSame($invoice->id, $transaction->invoice_id);
+        $this->assertSame($transaction->id, (int) $entry->fresh()->referenceable_id);
         $this->assertSame(0, bccomp((string) $party->fresh()->balance, '0', 18));
         $this->assertSame(0, bccomp((string) $account->fresh()->current_balance, '74800000', 18));
         $this->assertSame(InvoicePaymentStatus::Paid, $invoice->fresh()->payment_status);
@@ -226,7 +232,7 @@ class LedgerGlSyncButtonsTest extends TestCase
         $this->assertSoftDeleted('journal_entries', ['id' => $entry->id]);
     }
 
-    public function test_posted_manual_journal_still_cannot_be_deleted_without_conversion(): void
+    public function test_owner_can_soft_delete_posted_manual_journal(): void
     {
         [$user, $business] = $this->actingBusinessUser();
 
@@ -237,8 +243,30 @@ class LedgerGlSyncButtonsTest extends TestCase
             'referenceable_id' => null,
         ]);
 
-        $this->expectException(ValidationException::class);
         app(DeleteJournalEntryAction::class)->handle($user, $entry);
+
+        $this->assertSoftDeleted('journal_entries', ['id' => $entry->id]);
+    }
+
+    public function test_non_owner_cannot_delete_posted_manual_journal(): void
+    {
+        [$owner, $business] = $this->actingBusinessUser();
+
+        $member = User::factory()->create(['current_business_id' => $business->id]);
+        BusinessUser::factory()->accountant()->create([
+            'business_id' => $business->id,
+            'user_id' => $member->id,
+        ]);
+
+        $entry = JournalEntry::factory()->posted()->create([
+            'business_id' => $business->id,
+            'created_by' => $owner->id,
+            'referenceable_type' => null,
+            'referenceable_id' => null,
+        ]);
+
+        $this->expectException(ValidationException::class);
+        app(DeleteJournalEntryAction::class)->handle($member, $entry);
     }
 
     /**

@@ -281,7 +281,7 @@ new class extends Component
         </flux:callout>
     @endif
 
-    <form wire:submit="saveAsDraft" class="space-y-6">
+    <form wire:submit="saveAsDraft" class="space-y-6 pb-24 sm:pb-0">
         {{-- Header Card: 12-Column Responsive Layout without Overflow --}}
         <flux:card>
             <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-12 lg:items-start">
@@ -350,13 +350,12 @@ new class extends Component
                     <span class="w-6 text-center">#</span>
                     <span>{{ __('general.gl_account') }}</span>
                 </div>
-                <div class="col-span-3 min-w-0">{{ __('general.line_description') }}</div>
+                <div class="col-span-4 min-w-0">{{ __('general.line_description') }}</div>
                 <div class="col-span-2 min-w-0">{{ __('general.debit') }}</div>
                 <div class="col-span-2 min-w-0">{{ __('general.credit') }}</div>
-                <div class="col-span-1 text-end">{{ __('general.actions') }}</div>
             </div>
 
-            <div class="divide-y divide-zinc-200/80 rounded-xl border border-zinc-200 dark:divide-zinc-700/80 dark:border-zinc-700">
+            <div class="divide-y divide-zinc-200/80 overflow-visible rounded-xl border border-zinc-200 dark:divide-zinc-700/80 dark:border-zinc-700">
                 @foreach ($form->lines as $index => $line)
                     @php
                         $lineAccountId = (int) ($line['gl_account_id'] ?? 0);
@@ -367,7 +366,7 @@ new class extends Component
                     @endphp
 
                     <div
-                        class="p-3 transition-colors hover:bg-zinc-50/60 dark:hover:bg-zinc-800/30 sm:p-4"
+                        class="overflow-visible p-3 transition-colors hover:bg-zinc-50/60 dark:hover:bg-zinc-800/30 sm:p-4"
                         wire:key="journal-line-{{ $line['id'] }}"
                     >
                         {{-- Mobile Header --}}
@@ -476,7 +475,7 @@ new class extends Component
                             </div>
 
                             {{-- Description Column --}}
-                            <div class="min-w-0 md:col-span-2 xl:col-span-3">
+                            <div class="min-w-0 md:col-span-2 xl:col-span-4">
                                 <flux:field>
                                     <flux:label class="xl:sr-only">{{ __('general.line_description') }}</flux:label>
                                     <flux:input
@@ -515,71 +514,71 @@ new class extends Component
                                     <flux:error name="form.lines.{{ $index }}.credit" />
                                 </flux:field>
                             </div>
+                        </div>
 
-                            {{-- Desktop Row Actions --}}
-                            <div class="hidden items-center justify-end gap-1 pt-1 xl:col-span-1 xl:flex">
-                                <flux:tooltip content="{{ __('general.journal_line_settings') }}">
+                        {{-- Desktop Row Actions (separate row so fields never collide with buttons) --}}
+                        <div class="mt-3 hidden flex-wrap items-center gap-1 xl:ms-8 xl:flex">
+                            <flux:tooltip content="{{ __('general.journal_line_settings') }}">
+                                <flux:button
+                                    type="button"
+                                    size="xs"
+                                    variant="primary"
+                                    color="violet"
+                                    icon="sliders-horizontal"
+                                    icon:variant="outline"
+                                    wire:click="openLineSettings({{ $index }})"
+                                />
+                            </flux:tooltip>
+
+                            <flux:tooltip content="{{ __('general.journal_balance_line') }}">
+                                <flux:button
+                                    type="button"
+                                    size="xs"
+                                    variant="primary"
+                                    color="amber"
+                                    icon="scale"
+                                    icon:variant="outline"
+                                    wire:click="balanceLine({{ $index }})"
+                                />
+                            </flux:tooltip>
+
+                            <flux:tooltip content="{{ __('general.journal_swap_amounts') }}">
+                                <flux:button
+                                    type="button"
+                                    size="xs"
+                                    variant="primary"
+                                    color="sky"
+                                    icon="arrow-left-right"
+                                    icon:variant="outline"
+                                    wire:click="swapLineAmounts({{ $index }})"
+                                />
+                            </flux:tooltip>
+
+                            <flux:tooltip content="{{ __('general.journal_duplicate_line') }}">
+                                <flux:button
+                                    type="button"
+                                    size="xs"
+                                    variant="primary"
+                                    color="zinc"
+                                    icon="copy"
+                                    icon:variant="outline"
+                                    wire:click="duplicateLine({{ $index }})"
+                                />
+                            </flux:tooltip>
+
+                            @if (count($form->lines) > 2)
+                                <flux:tooltip content="{{ __('general.delete') }}">
                                     <flux:button
                                         type="button"
                                         size="xs"
                                         variant="primary"
-                                        color="violet"
-                                        icon="sliders-horizontal"
+                                        color="red"
+                                        icon="trash"
                                         icon:variant="outline"
-                                        wire:click="openLineSettings({{ $index }})"
+                                        wire:click="removeLine({{ $index }})"
                                     />
                                 </flux:tooltip>
-
-                                <flux:tooltip content="{{ __('general.journal_balance_line') }}">
-                                    <flux:button
-                                        type="button"
-                                        size="xs"
-                                        variant="primary"
-                                        color="amber"
-                                        icon="scale"
-                                        icon:variant="outline"
-                                        wire:click="balanceLine({{ $index }})"
-                                    />
-                                </flux:tooltip>
-
-                                <flux:tooltip content="{{ __('general.journal_swap_amounts') }}">
-                                    <flux:button
-                                        type="button"
-                                        size="xs"
-                                        variant="primary"
-                                        color="sky"
-                                        icon="arrow-left-right"
-                                        icon:variant="outline"
-                                        wire:click="swapLineAmounts({{ $index }})"
-                                    />
-                                </flux:tooltip>
-
-                                <flux:tooltip content="{{ __('general.journal_duplicate_line') }}">
-                                    <flux:button
-                                        type="button"
-                                        size="xs"
-                                        variant="primary"
-                                        color="zinc"
-                                        icon="copy"
-                                        icon:variant="outline"
-                                        wire:click="duplicateLine({{ $index }})"
-                                    />
-                                </flux:tooltip>
-
-                                @if (count($form->lines) > 2)
-                                    <flux:tooltip content="{{ __('general.delete') }}">
-                                        <flux:button
-                                            type="button"
-                                            size="xs"
-                                            variant="primary"
-                                            color="red"
-                                            icon="trash"
-                                            icon:variant="outline"
-                                            wire:click="removeLine({{ $index }})"
-                                        />
-                                    </flux:tooltip>
-                                @endif
-                            </div>
+                            @endif
                         </div>
 
                         {{-- Multi-column Sub-row for Required Floating Details & Personal Category Summary (No Horizontal Overflow) --}}

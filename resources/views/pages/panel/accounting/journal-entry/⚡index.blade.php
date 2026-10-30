@@ -2,8 +2,11 @@
 
 use App\Enums\Accounting\JournalEntryStatus;
 use App\Enums\Business\BusinessPermission;
+use App\Enums\Business\BusinessRole;
 use App\Models\Accounting\FiscalYear;
 use App\Models\Accounting\JournalEntry;
+use App\Models\Accounting\Transaction;
+use App\Models\BusinessUser;
 use App\Support\LocaleDate;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
@@ -116,6 +119,44 @@ new class extends Component
 
         return number_format((float) $normalized, substr_count($normalized, '.') ? strlen(explode('.', $normalized)[1]) : 0);
     }
+
+    public function canDeleteEntry(JournalEntry $entry): bool
+    {
+        if ($entry->referenceable instanceof Transaction) {
+            return true;
+        }
+
+        if ($entry->isSystemGenerated()) {
+            return false;
+        }
+
+        if ($entry->isOpen()) {
+            return true;
+        }
+
+        return $this->currentUserIsBusinessOwner();
+    }
+
+    public function currentUserIsBusinessOwner(): bool
+    {
+        $user = Auth::user();
+        $businessId = $user?->current_business_id;
+
+        if ($user === null || $businessId === null) {
+            return false;
+        }
+
+        if ((int) $user->currentBusiness?->owner_id === (int) $user->id) {
+            return true;
+        }
+
+        $membership = BusinessUser::query()
+            ->where('business_id', $businessId)
+            ->where('user_id', $user->id)
+            ->first();
+
+        return $membership !== null && $membership->hasRole(BusinessRole::Owner);
+    }
 };
 ?>
 
@@ -213,6 +254,16 @@ new class extends Component
                         </flux:table.cell>
                         <flux:table.cell align="end">
                             <div class="flex justify-end gap-2">
+                                <flux:tooltip content="{{ __('general.view') }}">
+                                    <flux:button
+                                        size="xs"
+                                        variant="primary"
+                                        color="zinc"
+                                        icon="eye"
+                                        icon:variant="outline"
+                                        wire:click="$dispatch('panels.accounting.journal-entry.view.assign-data', { journalEntry: {{ $entry->id }} })"
+                                    />
+                                </flux:tooltip>
                                 @if ($entry->isOpen())
                                     @unless ($entry->isSystemGenerated())
                                         <flux:tooltip content="{{ __('general.edit') }}">
@@ -240,8 +291,8 @@ new class extends Component
                                         </flux:tooltip>
                                     @endif
                                 @endif
-                                @if ($entry->isOpen() || $entry->referenceable instanceof \App\Models\Accounting\Transaction)
-                                    <flux:tooltip content="{{ $entry->referenceable instanceof \App\Models\Accounting\Transaction ? __('general.journal_delete_cascades_transaction') : __('general.delete') }}">
+                                @if ($this->canDeleteEntry($entry))
+                                    <flux:tooltip content="{{ $entry->referenceable instanceof Transaction ? __('general.journal_delete_cascades_transaction') : __('general.delete') }}">
                                         <flux:button
                                             size="xs"
                                             variant="danger"
@@ -265,6 +316,7 @@ new class extends Component
         </flux:table>
     </flux:card>
 
+    <livewire:accounting.journal-entry.view :key="'journal-entry-view'" />
     <livewire:accounting.journal-entry.delete :key="'journal-entry-delete'" />
     <livewire:accounting.journal-entry.post :key="'journal-entry-post'" />
 </div>

@@ -7,8 +7,10 @@ use App\Enums\Accounting\JournalEntryStatus;
 use App\Models\Accounting\JournalEntry;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 use RuntimeException;
+use Throwable;
 
 class PostJournalEntryAction
 {
@@ -22,7 +24,7 @@ class PostJournalEntryAction
             throw new RuntimeException('Current business is required to post a journal entry.');
         }
 
-        return DB::transaction(function () use ($entry, $businessId): JournalEntry {
+        return DB::transaction(function () use ($user, $entry, $businessId): JournalEntry {
             $locked = JournalEntry::query()
                 ->with('lines')
                 ->whereKey($entry->id)
@@ -62,7 +64,20 @@ class PostJournalEntryAction
                 'status' => JournalEntryStatus::Posted,
             ]);
 
-            return $locked->fresh(['lines', 'fiscalYear']);
+            $posted = $locked->fresh(['lines', 'fiscalYear']);
+
+            try {
+                app(SyncTreasuryFromPostedJournalAction::class)->handle($user, $posted);
+            } catch (Throwable $exception) {
+                Log::error('Treasury sync from posted journal failed.', [
+                    'journal_entry_id' => $posted->id,
+                    'message' => $exception->getMessage(),
+                ]);
+
+                throw $exception;
+            }
+
+            return $posted->fresh(['lines', 'fiscalYear', 'referenceable']);
         });
     }
 }
