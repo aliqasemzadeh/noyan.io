@@ -7,8 +7,10 @@ use Laravel\Ai\Attributes\MaxSteps;
 use Laravel\Ai\Attributes\Provider;
 use Laravel\Ai\Attributes\Timeout;
 use Laravel\Ai\Contracts\Agent;
+use Laravel\Ai\Contracts\HasProviderOptions;
 use Laravel\Ai\Contracts\HasTools;
 use Laravel\Ai\Contracts\Tool;
+use Laravel\Ai\Enums\Lab;
 use Laravel\Ai\Promptable;
 use Laravel\Ai\Providers\Tools\ProviderTool;
 use Stringable;
@@ -16,9 +18,20 @@ use Stringable;
 #[Provider('gap')]
 #[MaxSteps(2)]
 #[Timeout(120)]
-class UserAssistant implements Agent, HasTools
+class UserAssistant implements Agent, HasProviderOptions, HasTools
 {
     use Promptable;
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function providerOptions(Lab|string $provider): array
+    {
+        return match ($provider) {
+            'gap' => ['reasoning_effort' => 'none'],
+            default => [],
+        };
+    }
 
     /**
      * Get the instructions that the agent should follow.
