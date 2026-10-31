@@ -134,6 +134,57 @@ class JournalEntryManagementTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_user_can_view_and_print_journal_entry(): void
+    {
+        [$user, , $fiscalYear, $debitCategory, $creditCategory] = $this->seedContext();
+
+        $entry = app(CreateJournalEntryAction::class)->handle($user, [
+            'fiscal_year_id' => $fiscalYear->id,
+            'entry_date' => now()->toDateString(),
+            'description' => 'Visible voucher',
+        ], [
+            ['category_id' => $debitCategory->id, 'debit' => '100', 'credit' => '0'],
+            ['category_id' => $creditCategory->id, 'debit' => '0', 'credit' => '100'],
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('accounting.journal-entries.view', $entry))
+            ->assertOk()
+            ->assertSee('Visible voucher')
+            ->assertSee($entry->voucher_number);
+
+        $this->actingAs($user)
+            ->get(route('accounting.journal-entries.print', $entry))
+            ->assertOk()
+            ->assertSee($entry->voucher_number);
+    }
+
+    public function test_journal_entry_from_other_business_is_not_found(): void
+    {
+        [$user, , $fiscalYear, $debitCategory, $creditCategory] = $this->seedContext();
+
+        $entry = app(CreateJournalEntryAction::class)->handle($user, [
+            'fiscal_year_id' => $fiscalYear->id,
+            'entry_date' => now()->toDateString(),
+            'description' => 'Owned voucher',
+        ], [
+            ['category_id' => $debitCategory->id, 'debit' => '100', 'credit' => '0'],
+            ['category_id' => $creditCategory->id, 'debit' => '0', 'credit' => '100'],
+        ]);
+
+        $otherUser = User::factory()->create();
+        $otherBusiness = Business::factory()->for($otherUser, 'owner')->create();
+        $otherUser->forceFill(['current_business_id' => $otherBusiness->id])->save();
+
+        $this->actingAs($otherUser)
+            ->get(route('accounting.journal-entries.view', $entry))
+            ->assertNotFound();
+
+        $this->actingAs($otherUser)
+            ->get(route('accounting.journal-entries.print', $entry))
+            ->assertNotFound();
+    }
+
     /**
      * @return array{0: User, 1: Business}
      */

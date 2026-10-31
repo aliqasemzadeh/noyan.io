@@ -165,6 +165,8 @@ Route::middleware('auth')->group(function () {
 
         Route::livewire('/journal-entries', 'pages::panel.accounting.journal-entry.index')->name('journal-entries.index');
         Route::livewire('/journal-entries/create', 'pages::panel.accounting.journal-entry.form')->name('journal-entries.create');
+        Route::livewire('/journal-entries/{journalEntry}', 'pages::panel.accounting.journal-entry.view')->name('journal-entries.view');
+        Route::livewire('/journal-entries/{journalEntry}/print', 'pages::panel.accounting.journal-entry.print')->name('journal-entries.print');
         Route::livewire('/journal-entries/{journalEntry}/edit', 'pages::panel.accounting.journal-entry.form')->name('journal-entries.edit');
         Route::livewire('/fiscal-years', 'pages::panel.accounting.fiscal-year.index')->name('fiscal-years.index');
         Route::livewire('/cost-centers', 'pages::panel.accounting.cost-center.index')->name('cost-centers.index');

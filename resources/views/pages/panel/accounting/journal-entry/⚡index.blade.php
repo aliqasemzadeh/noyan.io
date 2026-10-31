@@ -261,22 +261,25 @@ new class extends Component
                                         color="zinc"
                                         icon="eye"
                                         icon:variant="outline"
-                                        wire:click="$dispatch('panels.accounting.journal-entry.view.assign-data', { journalEntry: {{ $entry->id }} })"
+                                        :href="route('accounting.journal-entries.view', $entry)"
+                                        wire:navigate
                                     />
                                 </flux:tooltip>
                                 @if ($entry->isOpen())
                                     @unless ($entry->isSystemGenerated())
-                                        <flux:tooltip content="{{ __('general.edit') }}">
-                                            <flux:button
-                                                size="xs"
-                                                variant="primary"
-                                                color="blue"
-                                                icon="pencil"
-                                                icon:variant="outline"
-                                                :href="route('accounting.journal-entries.edit', $entry)"
-                                                wire:navigate
-                                            />
-                                        </flux:tooltip>
+                                        @if (Auth::user()?->canInBusiness(BusinessPermission::JournalEntryEdit) || $this->currentUserIsBusinessOwner())
+                                            <flux:tooltip content="{{ __('general.edit') }}">
+                                                <flux:button
+                                                    size="xs"
+                                                    variant="primary"
+                                                    color="blue"
+                                                    icon="pencil"
+                                                    icon:variant="outline"
+                                                    :href="route('accounting.journal-entries.edit', $entry)"
+                                                    wire:navigate
+                                                />
+                                            </flux:tooltip>
+                                        @endif
                                     @endunless
                                     @if (Auth::user()?->canInBusiness(BusinessPermission::JournalEntryPost))
                                         <flux:tooltip content="{{ __('general.post_journal_entry') }}">
@@ -316,7 +319,6 @@ new class extends Component
         </flux:table>
     </flux:card>
 
-    <livewire:accounting.journal-entry.view :key="'journal-entry-view'" />
     <livewire:accounting.journal-entry.delete :key="'journal-entry-delete'" />
     <livewire:accounting.journal-entry.post :key="'journal-entry-post'" />
 </div>

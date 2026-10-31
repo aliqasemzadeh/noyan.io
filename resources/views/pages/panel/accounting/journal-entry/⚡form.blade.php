@@ -3,12 +3,15 @@
 use App\Actions\Ledger\CreateJournalEntryAction;
 use App\Actions\Ledger\PostJournalEntryAction;
 use App\Actions\Ledger\UpdateJournalEntryAction;
+use App\Enums\Business\BusinessPermission;
+use App\Enums\Business\BusinessRole;
 use App\Enums\CategoryType;
 use App\Livewire\Forms\Accounting\JournalEntryForm;
 use App\Models\Accounting\FiscalYear;
 use App\Models\Accounting\GlAccount;
 use App\Models\Accounting\GlDetail;
 use App\Models\Accounting\JournalEntry;
+use App\Models\BusinessUser;
 use App\Models\Category;
 use Flux\Flux;
 use Illuminate\Support\Collection;
@@ -30,12 +33,18 @@ new class extends Component
             abort_unless((int) $journalEntry->business_id === (int) Auth::user()?->current_business_id, 404);
             abort_unless($journalEntry->isOpen(), 403);
             abort_if($journalEntry->isSystemGenerated(), 403, __('general.journal_system_generated_locked'));
+            abort_unless(
+                Auth::user()?->canInBusiness(BusinessPermission::JournalEntryEdit) || $this->currentUserIsBusinessOwner(),
+                403
+            );
 
-            $journalEntry->load('lines');
+            $journalEntry->load('lines.details');
             $this->form->setJournalEntry($journalEntry);
 
             return;
         }
+
+        abort_unless(Auth::user()?->canInBusiness(BusinessPermission::JournalEntryCreate), 403);
 
         $businessId = Auth::user()?->current_business_id;
         $defaultFiscalYearId = null;
@@ -49,6 +58,27 @@ new class extends Component
         }
 
         $this->form->initializeDefaults($defaultFiscalYearId !== null ? (int) $defaultFiscalYearId : null);
+    }
+
+    public function currentUserIsBusinessOwner(): bool
+    {
+        $user = Auth::user();
+        $businessId = $user?->current_business_id;
+
+        if ($user === null || $businessId === null) {
+            return false;
+        }
+
+        if ((int) $user->currentBusiness?->owner_id === (int) $user->id) {
+            return true;
+        }
+
+        $membership = BusinessUser::query()
+            ->where('business_id', $businessId)
+            ->where('user_id', $user->id)
+            ->first();
+
+        return $membership !== null && $membership->hasRole(BusinessRole::Owner);
     }
 
     public function updatedFormLines(mixed $value, string $key): void
@@ -120,7 +150,7 @@ new class extends Component
 
         Flux::toast(__('general.journal_entry_posted', ['number' => $entry->voucher_number]));
 
-        $this->redirect(route('accounting.journal-entries.index'), navigate: true);
+        $this->redirect(route('accounting.journal-entries.view', $entry), navigate: true);
     }
 
     /**
