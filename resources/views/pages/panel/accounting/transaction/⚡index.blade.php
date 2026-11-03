@@ -8,6 +8,7 @@ use App\Models\Accounting\Account;
 use App\Models\Accounting\Party;
 use App\Models\Accounting\Transaction;
 use App\Models\Category;
+use App\Support\Accounting\AccountLedgerBalance;
 use Flux\Flux;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
@@ -649,7 +650,7 @@ new class extends Component
         $businessId = Auth::user()?->current_business_id;
         $direction = $this->sortDirection === 'asc' ? 'asc' : 'desc';
 
-        return Transaction::query()
+        $paginator = Transaction::query()
             ->with(['account', 'destinationAccount', 'party', 'category:id,name'])
             ->when($businessId === null, fn ($query) => $query->whereRaw('1 = 0'))
             ->when($businessId !== null, fn ($query) => $query->where('business_id', $businessId))
@@ -685,6 +686,20 @@ new class extends Component
             ->orderBy('transaction_date', $direction)
             ->orderBy('created_at', $direction)
             ->paginate(config('general.per_page', 15));
+
+        if (ctype_digit($this->accountFilter)) {
+            $filteredAccount = Account::query()->find((int) $this->accountFilter);
+
+            if ($filteredAccount !== null) {
+                AccountLedgerBalance::attachForAccount($filteredAccount, $paginator->getCollection());
+            } else {
+                AccountLedgerBalance::attachForMixedAccounts($paginator->getCollection());
+            }
+        } else {
+            AccountLedgerBalance::attachForMixedAccounts($paginator->getCollection());
+        }
+
+        return $paginator;
     }
 
     public function formatDate(\DateTimeInterface|string|null $date): string
@@ -853,6 +868,7 @@ new class extends Component
                 <flux:table.column>{{ __('general.party') }}</flux:table.column>
                 <flux:table.column>{{ __('general.category') }}</flux:table.column>
                 <flux:table.column>{{ __('general.amount') }}</flux:table.column>
+                <flux:table.column>{{ __('general.balance_after') }}</flux:table.column>
                 <flux:table.column align="end">{{ __('general.actions') }}</flux:table.column>
             </flux:table.columns>
 
@@ -885,6 +901,9 @@ new class extends Component
                         <flux:table.cell>
                             <span dir="ltr">{{ $this->formatAmount((string) $transaction->amount) }} {{ $transaction->currency }}</span>
                         </flux:table.cell>
+                        <flux:table.cell>
+                            <span dir="ltr">{{ $this->formatAmount((string) ($transaction->balance_after ?? '0')) }} {{ $transaction->currency }}</span>
+                        </flux:table.cell>
                         <flux:table.cell align="end">
                             <div class="flex justify-end gap-2">
                                 <flux:tooltip content="{{ __('general.edit') }}">
@@ -911,7 +930,7 @@ new class extends Component
                     </flux:table.row>
                 @empty
                     <flux:table.row>
-                        <flux:table.cell colspan="8">
+                        <flux:table.cell colspan="9">
                             {{ __('general.no_transactions') }}
                         </flux:table.cell>
                     </flux:table.row>

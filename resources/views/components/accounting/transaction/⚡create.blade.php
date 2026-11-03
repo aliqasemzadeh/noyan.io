@@ -32,14 +32,22 @@ new class extends Component
     }
 
     #[On('panels.accounting.transaction.create.open')]
-    public function openAs(string $type): void
+    public function openAs(string $type, ?int $accountId = null): void
     {
         if (! in_array($type, TransactionType::values(), true)) {
             return;
         }
 
+        $this->form->resetForm();
+        $this->tagSearch = '';
+        unset($this->suggestedTags, $this->transactionCategories, $this->accounts, $this->parties);
+
         $this->form->type = $type;
         $this->applyType($type);
+
+        if ($accountId !== null && $this->accounts->contains(fn (Account $account): bool => (int) $account->id === $accountId)) {
+            $this->form->account_id = $accountId;
+        }
 
         Flux::modal('transaction.create')->show();
     }
@@ -151,6 +159,7 @@ new class extends Component
         $this->form->store();
 
         $this->dispatch('panels.accounting.transaction.index.table');
+        $this->dispatch('panels.accounting.account.view.refresh');
 
         Flux::modals()->close();
 

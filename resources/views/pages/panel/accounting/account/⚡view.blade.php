@@ -4,6 +4,7 @@ use App\Enums\Accounting\TransactionType;
 use App\Models\Accounting\Account;
 use App\Models\Accounting\Transaction;
 use App\Models\Currency;
+use App\Support\Accounting\AccountLedgerBalance;
 use App\Support\LocaleDate;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
@@ -98,7 +99,7 @@ new class extends Component
         $dateFrom = LocaleDate::parseFilterDate($this->dateFrom);
         $dateTo = LocaleDate::parseFilterDate($this->dateTo);
 
-        return Transaction::query()
+        $paginator = Transaction::query()
             ->with(['party', 'invoice:id,invoice_number', 'loan:id,title', 'account', 'destinationAccount'])
             ->where(function ($query) use ($accountId): void {
                 $query->where('account_id', $accountId)
@@ -141,6 +142,10 @@ new class extends Component
             ->latest('transaction_date')
             ->latest('id')
             ->paginate(config('general.per_page', 15));
+
+        AccountLedgerBalance::attachForAccount($this->account, $paginator->getCollection());
+
+        return $paginator;
     }
 
     public function directionFor(Transaction $transaction): string
@@ -249,33 +254,44 @@ new class extends Component
                 </div>
             </div>
 
-            <flux:dropdown>
-                <flux:button icon:trailing="chevron-down" variant="primary" color="zinc">
-                    {{ __('general.options') }}
+            <div class="flex flex-wrap items-center justify-end gap-2">
+                <flux:button
+                    variant="primary"
+                    color="teal"
+                    icon="plus"
+                    wire:click="$dispatch('panels.accounting.transaction.create.open', { type: 'expense', accountId: {{ $account->id }} })"
+                >
+                    {{ __('general.create_transaction') }}
                 </flux:button>
-                <flux:menu>
-                    <flux:menu.item
-                        icon="pencil"
-                        wire:click="$dispatch('panels.accounting.account.edit.assign-data', { account: {{ $account->id }} })"
-                    >
-                        {{ __('general.edit') }}
-                    </flux:menu.item>
-                    <flux:menu.item
-                        icon="refresh-cw"
-                        wire:click="$dispatch('panels.accounting.account.rebalance.assign-data', { account: {{ $account->id }} })"
-                    >
-                        {{ __('general.rebalance_account') }}
-                    </flux:menu.item>
-                    <flux:menu.separator />
-                    <flux:menu.item
-                        variant="danger"
-                        icon="trash"
-                        wire:click="$dispatch('panels.accounting.account.delete.assign-data', { account: {{ $account->id }} })"
-                    >
-                        {{ __('general.delete') }}
-                    </flux:menu.item>
-                </flux:menu>
-            </flux:dropdown>
+
+                <flux:dropdown>
+                    <flux:button icon:trailing="chevron-down" variant="primary" color="zinc">
+                        {{ __('general.options') }}
+                    </flux:button>
+                    <flux:menu>
+                        <flux:menu.item
+                            icon="pencil"
+                            wire:click="$dispatch('panels.accounting.account.edit.assign-data', { account: {{ $account->id }} })"
+                        >
+                            {{ __('general.edit') }}
+                        </flux:menu.item>
+                        <flux:menu.item
+                            icon="refresh-cw"
+                            wire:click="$dispatch('panels.accounting.account.rebalance.assign-data', { account: {{ $account->id }} })"
+                        >
+                            {{ __('general.rebalance_account') }}
+                        </flux:menu.item>
+                        <flux:menu.separator />
+                        <flux:menu.item
+                            variant="danger"
+                            icon="trash"
+                            wire:click="$dispatch('panels.accounting.account.delete.assign-data', { account: {{ $account->id }} })"
+                        >
+                            {{ __('general.delete') }}
+                        </flux:menu.item>
+                    </flux:menu>
+                </flux:dropdown>
+            </div>
         </div>
     </div>
 
@@ -424,6 +440,7 @@ new class extends Component
                 <flux:table.column>{{ __('general.direction') }}</flux:table.column>
                 <flux:table.column>{{ __('general.party') }}</flux:table.column>
                 <flux:table.column>{{ __('general.amount') }}</flux:table.column>
+                <flux:table.column>{{ __('general.balance_after') }}</flux:table.column>
                 <flux:table.column>{{ __('general.reference_number') }}</flux:table.column>
                 <flux:table.column>{{ __('general.note') }}</flux:table.column>
             </flux:table.columns>
@@ -445,12 +462,13 @@ new class extends Component
                         </flux:table.cell>
                         <flux:table.cell>{{ $transaction->party?->displayName() ?? '—' }}</flux:table.cell>
                         <flux:table.cell dir="ltr">{{ $this->formatAmount((string) $transaction->amount) }}</flux:table.cell>
+                        <flux:table.cell dir="ltr">{{ $this->formatAmount((string) ($transaction->balance_after ?? '0')) }}</flux:table.cell>
                         <flux:table.cell>{{ $transaction->reference_number ?: '—' }}</flux:table.cell>
                         <flux:table.cell>{{ $transaction->note ?: '—' }}</flux:table.cell>
                     </flux:table.row>
                 @empty
                     <flux:table.row>
-                        <flux:table.cell colspan="7">{{ __('general.no_transactions') }}</flux:table.cell>
+                        <flux:table.cell colspan="8">{{ __('general.no_transactions') }}</flux:table.cell>
                     </flux:table.row>
                 @endforelse
             </flux:table.rows>
@@ -460,4 +478,7 @@ new class extends Component
     <livewire:accounting.account.edit :key="'account-edit-view-'.$account->id" />
     <livewire:accounting.account.rebalance :key="'account-rebalance-view-'.$account->id" />
     <livewire:accounting.account.delete :key="'account-delete-view-'.$account->id" />
+    <livewire:accounting.transaction.create :key="'account-transaction-create-'.$account->id" />
+    <livewire:accounting.transaction.edit :key="'account-transaction-edit-'.$account->id" />
+    <livewire:accounting.transaction.delete :key="'account-transaction-delete-'.$account->id" />
 </div>
