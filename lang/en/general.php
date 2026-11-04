@@ -387,6 +387,7 @@ return [
     'user_created' => 'User with mobile :mobile was created.',
     'user_already_exists' => 'A user with mobile :mobile already exists.',
     'created_at' => 'Created at',
+    'document_created_at' => 'Document created at',
     'no_users' => 'No users have been created yet.',
     'businesses' => 'Businesses',
     'business' => 'Business',

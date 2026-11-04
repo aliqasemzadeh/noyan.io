@@ -166,11 +166,18 @@ new class extends Component
 
     public function save(UpdateTransactionAction $action): void
     {
+        $loanId = $this->transaction?->loan_id;
+
         $this->form->update($action);
 
         $this->reset('transaction');
 
         $this->dispatch('panels.accounting.transaction.index.table');
+
+        if ($loanId !== null) {
+            $this->dispatch('panels.accounting.loan.show.refresh', loanId: (int) $loanId);
+            $this->dispatch('panels.accounting.loan.index.table');
+        }
 
         Flux::modals()->close();
 

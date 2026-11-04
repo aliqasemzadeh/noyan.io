@@ -107,6 +107,11 @@ new class extends Component
         return LocaleDate::formatDate($date);
     }
 
+    public function formatDateTime(\DateTimeInterface|string|null $date): string
+    {
+        return LocaleDate::formatDateTime($date);
+    }
+
     public function formatAmount(?string $amount): string
     {
         $amount = (string) ($amount ?? '0');
@@ -226,6 +231,7 @@ new class extends Component
             <flux:table.columns>
                 <flux:table.column>{{ __('general.voucher_number') }}</flux:table.column>
                 <flux:table.column>{{ __('general.journal_entry_date') }}</flux:table.column>
+                <flux:table.column>{{ __('general.document_created_at') }}</flux:table.column>
                 <flux:table.column>{{ __('general.fiscal_year') }}</flux:table.column>
                 <flux:table.column>{{ __('general.description') }}</flux:table.column>
                 <flux:table.column>{{ __('general.total_debit') }}</flux:table.column>
@@ -240,6 +246,7 @@ new class extends Component
                             <span dir="ltr" class="font-medium">{{ $entry->voucher_number }}</span>
                         </flux:table.cell>
                         <flux:table.cell>{{ $this->formatDate($entry->entry_date) }}</flux:table.cell>
+                        <flux:table.cell>{{ $this->formatDateTime($entry->created_at) }}</flux:table.cell>
                         <flux:table.cell>{{ $entry->fiscalYear?->name }}</flux:table.cell>
                         <flux:table.cell>
                             <div class="max-w-xs truncate">{{ $entry->description }}</div>
@@ -310,7 +317,7 @@ new class extends Component
                     </flux:table.row>
                 @empty
                     <flux:table.row>
-                        <flux:table.cell colspan="7">
+                        <flux:table.cell colspan="8">
                             {{ __('general.no_journal_entries') }}
                         </flux:table.cell>
                     </flux:table.row>

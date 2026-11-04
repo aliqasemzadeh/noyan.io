@@ -162,6 +162,56 @@ class TransactionEditDeleteTest extends TestCase
         $this->assertSame(0, bccomp((string) $loan->paid_amount, '1500', 18));
     }
 
+    public function test_livewire_can_edit_and_delete_loan_payment(): void
+    {
+        [$user, $account, $party, $loan] = $this->prepareLoan(LoanType::Received, '3000');
+
+        app(RecordLoanPaymentAction::class)->handle($user, $loan, [
+            'amount' => '1000',
+            'transaction_date' => now()->toDateString(),
+            'account_id' => $account->id,
+        ]);
+
+        $payment = Transaction::query()
+            ->where('loan_id', $loan->id)
+            ->where('meta->loan_payment', true)
+            ->firstOrFail();
+
+        Livewire::actingAs($user)
+            ->test('accounting.transaction.edit')
+            ->call('assignData', $payment)
+            ->set('form.amount', '750')
+            ->call('save')
+            ->assertHasNoErrors()
+            ->assertDispatched('panels.accounting.loan.show.refresh', loanId: $loan->id)
+            ->assertDispatched('panels.accounting.loan.index.table');
+
+        $loan->refresh();
+        $this->assertSame(0, bccomp((string) $loan->paid_amount, '750', 18));
+        $this->assertDatabaseHas('transactions', [
+            'id' => $payment->id,
+            'amount' => '750',
+        ]);
+
+        Livewire::actingAs($user)
+            ->test('pages::panel.accounting.loan.show', ['loan' => $loan])
+            ->assertSee(__('general.actions'))
+            ->assertSeeHtml('panels.accounting.transaction.edit.assign-data')
+            ->assertSeeHtml('panels.accounting.transaction.delete.assign-data');
+
+        Livewire::actingAs($user)
+            ->test('accounting.transaction.delete')
+            ->call('assignData', $payment->fresh())
+            ->call('delete')
+            ->assertHasNoErrors()
+            ->assertDispatched('panels.accounting.loan.show.refresh', loanId: $loan->id)
+            ->assertDispatched('panels.accounting.loan.index.table');
+
+        $loan->refresh();
+        $this->assertSame(0, bccomp((string) $loan->paid_amount, '0', 18));
+        $this->assertSoftDeleted('transactions', ['id' => $payment->id]);
+    }
+
     public function test_skip_party_balance_delete_does_not_touch_party(): void
     {
         [$user, $account, $party] = $this->prepareContext(openingBalance: '10000', partyBalance: '3000');

@@ -35,10 +35,17 @@ new class extends Component
             403
         );
 
+        $loanId = $this->transaction->loan_id;
+
         $action->handle(Auth::user(), $this->transaction);
         $this->reset('transaction');
 
         $this->dispatch('panels.accounting.transaction.index.table');
+
+        if ($loanId !== null) {
+            $this->dispatch('panels.accounting.loan.show.refresh', loanId: (int) $loanId);
+            $this->dispatch('panels.accounting.loan.index.table');
+        }
 
         Flux::modals()->close();
 

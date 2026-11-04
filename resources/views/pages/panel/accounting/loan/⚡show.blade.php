@@ -43,6 +43,7 @@ new class extends Component
     }
 
     #[On('panels.accounting.loan.index.table')]
+    #[On('panels.accounting.transaction.index.table')]
     public function handleLoanListChanged(): void
     {
         $this->refreshLoan();
@@ -193,10 +194,12 @@ new class extends Component
                 <flux:table.column>{{ __('general.account') }}</flux:table.column>
                 <flux:table.column>{{ __('general.amount') }}</flux:table.column>
                 <flux:table.column>{{ __('general.note') }}</flux:table.column>
+                <flux:table.column align="end">{{ __('general.actions') }}</flux:table.column>
             </flux:table.columns>
 
             <flux:table.rows>
                 @forelse ($this->transactions as $transaction)
+                    @php($isLoanPayment = (bool) (($transaction->meta['loan_payment'] ?? false)))
                     <flux:table.row :key="$transaction->id">
                         <flux:table.cell>{{ $this->formatDate($transaction->transaction_date) }}</flux:table.cell>
                         <flux:table.cell>
@@ -207,10 +210,35 @@ new class extends Component
                         <flux:table.cell>{{ $transaction->account?->name ?? '—' }}</flux:table.cell>
                         <flux:table.cell dir="ltr">{{ $this->formatAmount((string) $transaction->amount) }}</flux:table.cell>
                         <flux:table.cell>{{ $transaction->note ?: '—' }}</flux:table.cell>
+                        <flux:table.cell align="end">
+                            @if ($isLoanPayment)
+                                <div class="flex justify-end gap-2">
+                                    <flux:tooltip content="{{ __('general.edit') }}">
+                                        <flux:button
+                                            size="xs"
+                                            variant="primary"
+                                            color="blue"
+                                            icon="pencil"
+                                            icon:variant="outline"
+                                            wire:click="$dispatch('panels.accounting.transaction.edit.assign-data', { transaction: {{ $transaction->id }} })"
+                                        />
+                                    </flux:tooltip>
+                                    <flux:tooltip content="{{ __('general.delete') }}">
+                                        <flux:button
+                                            size="xs"
+                                            variant="danger"
+                                            icon="trash"
+                                            icon:variant="outline"
+                                            wire:click="$dispatch('panels.accounting.transaction.delete.assign-data', { transaction: {{ $transaction->id }} })"
+                                        />
+                                    </flux:tooltip>
+                                </div>
+                            @endif
+                        </flux:table.cell>
                     </flux:table.row>
                 @empty
                     <flux:table.row>
-                        <flux:table.cell colspan="5">
+                        <flux:table.cell colspan="6">
                             {{ __('general.no_transactions') }}
                         </flux:table.cell>
                     </flux:table.row>
@@ -220,4 +248,6 @@ new class extends Component
     </flux:card>
 
     <livewire:accounting.loan.pay :key="'loan-pay-'.$loan->id" />
+    <livewire:accounting.transaction.edit :key="'loan-transaction-edit-'.$loan->id" />
+    <livewire:accounting.transaction.delete :key="'loan-transaction-delete-'.$loan->id" />
 </div>

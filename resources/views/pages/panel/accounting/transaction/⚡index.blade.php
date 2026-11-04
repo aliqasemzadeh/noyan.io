@@ -9,6 +9,7 @@ use App\Models\Accounting\Party;
 use App\Models\Accounting\Transaction;
 use App\Models\Category;
 use App\Support\Accounting\AccountLedgerBalance;
+use App\Support\LocaleDate;
 use Flux\Flux;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
@@ -711,6 +712,11 @@ new class extends Component
         return Jalalian::fromDateTime($date)->format('Y/m/d');
     }
 
+    public function formatDateTime(\DateTimeInterface|string|null $date): string
+    {
+        return LocaleDate::formatDateTime($date);
+    }
+
     public function formatAmount(string $amount): string
     {
         if (! str_contains($amount, '.')) {
@@ -863,6 +869,7 @@ new class extends Component
                     />
                 </flux:table.column>
                 <flux:table.column>{{ __('general.transaction_date') }}</flux:table.column>
+                <flux:table.column>{{ __('general.document_created_at') }}</flux:table.column>
                 <flux:table.column>{{ __('general.transaction_type') }}</flux:table.column>
                 <flux:table.column>{{ __('general.account') }}</flux:table.column>
                 <flux:table.column>{{ __('general.party') }}</flux:table.column>
@@ -879,6 +886,7 @@ new class extends Component
                             <flux:checkbox wire:model.live="selected" value="{{ $transaction->id }}" />
                         </flux:table.cell>
                         <flux:table.cell>{{ $this->formatDate($transaction->transaction_date) }}</flux:table.cell>
+                        <flux:table.cell>{{ $this->formatDateTime($transaction->created_at) }}</flux:table.cell>
                         <flux:table.cell>
                             <flux:badge size="sm" :color="$transaction->type->badgeColor()">
                                 {{ $transaction->type->label() }}
@@ -930,7 +938,7 @@ new class extends Component
                     </flux:table.row>
                 @empty
                     <flux:table.row>
-                        <flux:table.cell colspan="9">
+                        <flux:table.cell colspan="10">
                             {{ __('general.no_transactions') }}
                         </flux:table.cell>
                     </flux:table.row>

@@ -387,6 +387,7 @@ return [
     'user_created' => 'کاربر با شماره :mobile ثبت شد.',
     'user_already_exists' => 'کاربر با شماره :mobile از قبل وجود دارد.',
     'created_at' => 'تاریخ ایجاد',
+    'document_created_at' => 'تاریخ ایجاد سند',
     'no_users' => 'هنوز کاربری ثبت نشده است.',
     'businesses' => 'کسب‌وکارها',
     'business' => 'کسب‌وکار',
