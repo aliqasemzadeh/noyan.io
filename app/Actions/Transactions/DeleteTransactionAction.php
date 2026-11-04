@@ -105,6 +105,22 @@ class DeleteTransactionAction
                 $this->reverseLoanPayment($loan, $amount);
             }
 
+            $feeSiblings = Transaction::query()
+                ->where('business_id', $businessId)
+                ->whereKeyNot($locked->id)
+                ->whereNull('deleted_at')
+                ->get()
+                ->filter(function (Transaction $candidate) use ($locked): bool {
+                    $meta = $candidate->meta ?? [];
+
+                    return is_array($meta)
+                        && (int) ($meta['fee_of_transaction_id'] ?? 0) === (int) $locked->id;
+                });
+
+            foreach ($feeSiblings as $feeSibling) {
+                $this->handleNestedFeeDelete($businessId, $feeSibling);
+            }
+
             $this->autoPostingEngine->voidTransaction($locked);
 
             $locked->delete();
@@ -114,6 +130,48 @@ class DeleteTransactionAction
                 $destination,
             ]));
         });
+    }
+
+    /**
+     * Soft-delete a fee sibling without recursively scanning for more fees.
+     */
+    protected function handleNestedFeeDelete(int $businessId, Transaction $fee): void
+    {
+        $locked = Transaction::query()
+            ->where('business_id', $businessId)
+            ->whereKey($fee->id)
+            ->lockForUpdate()
+            ->first();
+
+        if ($locked === null) {
+            return;
+        }
+
+        $amount = $this->normalizeDecimal((string) $locked->amount);
+
+        $account = Account::query()
+            ->where('business_id', $businessId)
+            ->whereKey($locked->account_id)
+            ->lockForUpdate()
+            ->first();
+
+        if ($account === null) {
+            return;
+        }
+
+        $destination = null;
+
+        if ($locked->destination_account_id !== null) {
+            $destination = Account::query()
+                ->where('business_id', $businessId)
+                ->whereKey($locked->destination_account_id)
+                ->lockForUpdate()
+                ->first();
+        }
+
+        $this->reverseBalanceEffects($locked->type, $account, $destination, null, $amount);
+        $this->autoPostingEngine->voidTransaction($locked);
+        $locked->delete();
     }
 
     /**

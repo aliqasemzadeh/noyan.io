@@ -4,6 +4,7 @@ use App\Actions\Transactions\DeleteTransactionAction;
 use App\Actions\Transactions\UpdateTransactionAction;
 use App\Enums\Accounting\TransactionType;
 use App\Enums\CategoryType;
+use App\Exports\TransactionsExport;
 use App\Models\Accounting\Account;
 use App\Models\Accounting\Party;
 use App\Models\Accounting\Transaction;
@@ -12,6 +13,7 @@ use App\Support\Accounting\AccountLedgerBalance;
 use App\Support\LocaleDate;
 use Flux\Flux;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Js;
@@ -20,7 +22,9 @@ use Livewire\Attributes\On;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithPagination;
+use Maatwebsite\Excel\Facades\Excel;
 use Morilog\Jalali\Jalalian;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 new class extends Component
 {
@@ -116,6 +120,13 @@ new class extends Component
             $this->bulkParties,
             $this->suggestedBulkTags,
         );
+    }
+
+    public function export(): BinaryFileResponse
+    {
+        $filename = 'transactions-'.now()->format('Y-m-d-His').'.xlsx';
+
+        return Excel::download(new TransactionsExport($this->filteredTransactionsQuery()), $filename);
     }
 
     public function clearSelection(): void
@@ -651,39 +662,8 @@ new class extends Component
         $businessId = Auth::user()?->current_business_id;
         $direction = $this->sortDirection === 'asc' ? 'asc' : 'desc';
 
-        $paginator = Transaction::query()
+        $paginator = $this->filteredTransactionsQuery()
             ->with(['account', 'destinationAccount', 'party', 'category:id,name'])
-            ->when($businessId === null, fn ($query) => $query->whereRaw('1 = 0'))
-            ->when($businessId !== null, fn ($query) => $query->where('business_id', $businessId))
-            ->when($this->search !== '', function ($query): void {
-                $search = '%'.$this->search.'%';
-
-                $query->where(function ($query) use ($search): void {
-                    $query->where('reference_number', 'like', $search)
-                        ->orWhere('note', 'like', $search)
-                        ->orWhere('currency', 'like', $search)
-                        ->orWhereHas('account', fn ($accountQuery) => $accountQuery->where('name', 'like', $search))
-                        ->orWhereHas('party', function ($partyQuery) use ($search): void {
-                            $partyQuery->where('name', 'like', $search)
-                                ->orWhere('legal_name', 'like', $search);
-                        });
-                });
-            })
-            ->when($this->typeFilter !== '', fn ($query) => $query->where('type', $this->typeFilter))
-            ->when(
-                $this->tagFilter !== '' && $businessId !== null,
-                fn ($query) => $query->withAnyTags([$this->tagFilter], Transaction::tagTypeForBusiness($businessId))
-            )
-            ->when($this->accountFilter !== '', function ($query): void {
-                $accountId = (int) $this->accountFilter;
-
-                $query->where(function ($query) use ($accountId): void {
-                    $query->where('account_id', $accountId)
-                        ->orWhere('destination_account_id', $accountId);
-                });
-            })
-            ->when($this->categoryFilter === 'none', fn ($query) => $query->whereNull('category_id'))
-            ->when(ctype_digit($this->categoryFilter), fn ($query) => $query->where('category_id', (int) $this->categoryFilter))
             ->orderBy('transaction_date', $direction)
             ->orderBy('created_at', $direction)
             ->paginate(config('general.per_page', 15));
@@ -727,6 +707,47 @@ new class extends Component
 
         return number_format((float) $normalized, substr_count($normalized, '.') ? strlen(explode('.', $normalized)[1]) : 0);
     }
+
+    /**
+     * @return Builder<Transaction>
+     */
+    protected function filteredTransactionsQuery(): Builder
+    {
+        $businessId = Auth::user()?->current_business_id;
+
+        return Transaction::query()
+            ->when($businessId === null, fn ($query) => $query->whereRaw('1 = 0'))
+            ->when($businessId !== null, fn ($query) => $query->where('business_id', $businessId))
+            ->when($this->search !== '', function ($query): void {
+                $search = '%'.$this->search.'%';
+
+                $query->where(function ($query) use ($search): void {
+                    $query->where('reference_number', 'like', $search)
+                        ->orWhere('note', 'like', $search)
+                        ->orWhere('currency', 'like', $search)
+                        ->orWhereHas('account', fn ($accountQuery) => $accountQuery->where('name', 'like', $search))
+                        ->orWhereHas('party', function ($partyQuery) use ($search): void {
+                            $partyQuery->where('name', 'like', $search)
+                                ->orWhere('legal_name', 'like', $search);
+                        });
+                });
+            })
+            ->when($this->typeFilter !== '', fn ($query) => $query->where('type', $this->typeFilter))
+            ->when(
+                $this->tagFilter !== '' && $businessId !== null,
+                fn ($query) => $query->withAnyTags([$this->tagFilter], Transaction::tagTypeForBusiness($businessId))
+            )
+            ->when($this->accountFilter !== '', function ($query): void {
+                $accountId = (int) $this->accountFilter;
+
+                $query->where(function ($query) use ($accountId): void {
+                    $query->where('account_id', $accountId)
+                        ->orWhere('destination_account_id', $accountId);
+                });
+            })
+            ->when($this->categoryFilter === 'none', fn ($query) => $query->whereNull('category_id'))
+            ->when(ctype_digit($this->categoryFilter), fn ($query) => $query->where('category_id', (int) $this->categoryFilter));
+    }
 };
 ?>
 
@@ -752,11 +773,24 @@ new class extends Component
                 <flux:text class="mt-1">{{ __('general.transactions_page_hint') }}</flux:text>
             </div>
 
-            <flux:modal.trigger name="transaction.create">
-                <flux:button variant="primary" color="teal" icon="plus">
-                    {{ __('general.create_transaction') }}
-                </flux:button>
-            </flux:modal.trigger>
+            <div class="flex items-center gap-2">
+                <flux:tooltip content="{{ __('general.export') }}">
+                    <flux:button
+                        size="sm"
+                        variant="primary"
+                        color="zinc"
+                        icon="download"
+                        icon:variant="outline"
+                        wire:click="export"
+                    />
+                </flux:tooltip>
+
+                <flux:modal.trigger name="transaction.create">
+                    <flux:button variant="primary" color="teal" icon="plus">
+                        {{ __('general.create_transaction') }}
+                    </flux:button>
+                </flux:modal.trigger>
+            </div>
         </div>
     </div>
 

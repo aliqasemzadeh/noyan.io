@@ -15,6 +15,7 @@ use App\Support\Accounting\ShetabTransferFee;
 use App\Support\LocaleDate;
 use Carbon\Carbon;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -155,6 +156,8 @@ class CreateTransaction implements Tool
         $runningBalances = [];
         /** @var array<string, int> $accountNotFoundCounts */
         $accountNotFoundCounts = [];
+        /** @var list<int> fee txn ids waiting for the following main paya/transfer row (Mellat: fee then amount) */
+        $pendingFeeTransactionIds = [];
 
         $transactions = array_map(function (mixed $item) use ($defaultAccountNumber, $defaultAccountName): mixed {
             if (! is_array($item)) {
@@ -214,19 +217,34 @@ class CreateTransaction implements Tool
                 }
             }
 
+            $note = (string) ($item['note'] ?? '');
+            $isFeeRow = $this->noteLooksLikeFee($note);
+
             $result = $this->createOne($user, $businessId, [
                 'type' => (string) ($item['type'] ?? ''),
                 'amount' => (string) ($item['amount'] ?? ''),
                 'account_number' => (string) ($item['account_number'] ?? ''),
                 'account_name' => (string) ($item['account_name'] ?? ''),
                 'transaction_date' => (string) ($item['transaction_date'] ?? ''),
-                'note' => (string) ($item['note'] ?? ''),
+                'note' => $note,
                 'reference_number' => (string) ($item['reference_number'] ?? ''),
                 'expected_balance' => (string) ($item['expected_balance'] ?? ''),
+                'fee_of_transaction_id' => null,
             ], $confirmed, $runningBalances, $forceSkip);
 
             if ($result['action'] === 'created') {
                 $createdCount++;
+                $createdId = $result['transaction_id'] ?? null;
+
+                if ($createdId !== null) {
+                    if ($isFeeRow) {
+                        $pendingFeeTransactionIds[] = $createdId;
+                    } else {
+                        $this->attachPendingFeesToMain($pendingFeeTransactionIds, $createdId);
+                        $pendingFeeTransactionIds = [];
+                    }
+                }
+
                 $lines[] = __('general.ai_transaction_batch_item_ok', [
                     'n' => $index,
                     'message' => $result['message'],
@@ -415,10 +433,11 @@ class CreateTransaction implements Tool
      *     transaction_date: string,
      *     note: string,
      *     reference_number: string,
-     *     expected_balance: string
+     *     expected_balance: string,
+     *     fee_of_transaction_id?: int|null
      * }  $data
      * @param  array<int, string>  $runningBalances
-     * @return array{ok: bool, action: 'created'|'skipped'|'preview'|'failed', message: string, code?: string|null, lookup?: string|null}
+     * @return array{ok: bool, action: 'created'|'skipped'|'preview'|'failed', message: string, code?: string|null, lookup?: string|null, transaction_id?: int|null}
      */
     protected function createOne(
         User $user,
@@ -436,6 +455,10 @@ class CreateTransaction implements Tool
         $note = trim($data['note']);
         $referenceNumber = trim($data['reference_number']);
         $expectedBalance = $this->normalizeDigits($data['expected_balance']);
+        $feeOfTransactionId = isset($data['fee_of_transaction_id']) ? (int) $data['fee_of_transaction_id'] : null;
+        if ($feeOfTransactionId !== null && $feeOfTransactionId <= 0) {
+            $feeOfTransactionId = null;
+        }
         $lookupLabel = trim($data['account_number']) !== ''
             ? trim($data['account_number'])
             : ($accountName !== '' ? $accountName : '—');
@@ -611,6 +634,7 @@ class CreateTransaction implements Tool
                         'amount' => $feeAmount,
                         'category_id' => $feeCategoryId,
                         'note' => __('general.ai_transaction_fee_note'),
+                        'meta' => ['fee_of_transaction_id' => $main->id],
                     ]);
 
                     return $main;
@@ -630,15 +654,22 @@ class CreateTransaction implements Tool
                     $message .= "\n".implode("\n", $dateWarnings);
                 }
 
-                return $this->result(true, 'created', $message);
+                return $this->result(true, 'created', $message, transactionId: (int) $transaction->id);
+            }
+
+            $meta = null;
+
+            if ($feeOfTransactionId !== null) {
+                $meta = ['fee_of_transaction_id' => $feeOfTransactionId];
             }
 
             $transaction = app(ProcessTransactionAction::class)->handle($user, [
                 ...$payloadBase,
                 'type' => $type,
                 'amount' => $amount,
-                'category_id' => $mainCategoryId,
+                'category_id' => $this->noteLooksLikeFee($note) ? $feeCategoryId : $mainCategoryId,
                 'note' => $note !== '' ? $note : null,
+                'meta' => $meta,
             ]);
         } catch (ValidationException $exception) {
             return $this->fail(__('general.ai_transaction_invalid', [
@@ -659,15 +690,73 @@ class CreateTransaction implements Tool
             $message .= "\n".implode("\n", $dateWarnings);
         }
 
-        return $this->result(true, 'created', $message);
+        return $this->result(true, 'created', $message, transactionId: (int) $transaction->id);
     }
 
     /**
-     * @return array{ok: true, action: 'created'|'skipped'|'preview', message: string, code?: null, lookup?: null}
+     * Import a pre-parsed bank statement batch (used by CSV import tool).
+     *
+     * @param  list<array<string, mixed>>  $transactions
      */
-    protected function result(bool $ok, string $action, string $message): array
+    public function importParsedBatch(
+        User $user,
+        int $businessId,
+        array $transactions,
+        bool $confirmed,
+        string $defaultAccountNumber = '',
+        string $defaultAccountName = '',
+    ): string {
+        return $this->handleBatch(
+            $user,
+            $businessId,
+            $transactions,
+            $confirmed,
+            $defaultAccountNumber,
+            $defaultAccountName,
+        );
+    }
+
+    protected function noteLooksLikeFee(string $note): bool
     {
-        return ['ok' => $ok, 'action' => $action, 'message' => $message];
+        $haystack = mb_strtolower($note);
+
+        return str_contains($haystack, 'کارمزد') || str_contains($haystack, 'كارمزد');
+    }
+
+    /**
+     * @param  list<int>  $feeIds
+     */
+    protected function attachPendingFeesToMain(array $feeIds, int $mainTransactionId): void
+    {
+        if ($feeIds === []) {
+            return;
+        }
+
+        foreach ($feeIds as $feeId) {
+            $fee = Transaction::query()->whereKey($feeId)->first();
+
+            if ($fee === null) {
+                continue;
+            }
+
+            $meta = is_array($fee->meta) ? $fee->meta : [];
+            $meta['fee_of_transaction_id'] = $mainTransactionId;
+            $fee->forceFill(['meta' => $meta])->save();
+        }
+    }
+
+    /**
+     * @return array{ok: true, action: 'created'|'skipped'|'preview', message: string, code?: null, lookup?: null, transaction_id?: int|null}
+     */
+    protected function result(bool $ok, string $action, string $message, ?int $transactionId = null): array
+    {
+        $payload = ['ok' => $ok, 'action' => $action, 'message' => $message];
+
+        if ($transactionId !== null) {
+            $payload['transaction_id'] = $transactionId;
+        }
+
+        return $payload;
     }
 
     /**
@@ -782,7 +871,7 @@ class CreateTransaction implements Tool
     /**
      * Match account_number, IBAN (IR…), or 16-digit card — type is inferred from the value.
      *
-     * @param  \Illuminate\Database\Eloquent\Builder<Account>  $query
+     * @param  Builder<Account>  $query
      */
     protected function findAccountByIdentifier($query, string $identifier): ?Account
     {

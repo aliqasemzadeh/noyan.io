@@ -275,6 +275,62 @@ class TransactionEditDeleteTest extends TestCase
         $this->assertSame(0, bccomp((string) $account->current_balance, '10000', 18));
     }
 
+    public function test_livewire_can_change_transaction_date(): void
+    {
+        [$user, $account] = $this->prepareContext(openingBalance: '10000');
+
+        $transaction = app(ProcessTransactionAction::class)->handle($user, [
+            'type' => TransactionType::Expense,
+            'account_id' => $account->id,
+            'transaction_date' => '2026-10-24',
+            'amount' => '500',
+            'currency' => 'IRR',
+            'exchange_rate' => '1',
+        ]);
+
+        Livewire::actingAs($user)
+            ->test('accounting.transaction.edit')
+            ->call('assignData', $transaction)
+            ->set('form.transaction_date', '1405/08/10')
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $transaction->refresh();
+        $this->assertSame('2026-11-01', $transaction->transaction_date?->toDateString());
+    }
+
+    public function test_deleting_transaction_cascades_linked_fee_sibling(): void
+    {
+        [$user, $account] = $this->prepareContext(openingBalance: '100000');
+
+        $main = app(ProcessTransactionAction::class)->handle($user, [
+            'type' => TransactionType::Expense,
+            'account_id' => $account->id,
+            'transaction_date' => now()->toDateString(),
+            'amount' => '10000',
+            'currency' => 'IRR',
+            'exchange_rate' => '1',
+            'note' => 'پایا تست',
+        ]);
+
+        $fee = app(ProcessTransactionAction::class)->handle($user, [
+            'type' => TransactionType::Expense,
+            'account_id' => $account->id,
+            'transaction_date' => now()->toDateString(),
+            'amount' => '120',
+            'currency' => 'IRR',
+            'exchange_rate' => '1',
+            'note' => 'کارمزد پایا',
+            'meta' => ['fee_of_transaction_id' => $main->id],
+        ]);
+
+        app(DeleteTransactionAction::class)->handle($user, $main);
+
+        $this->assertSoftDeleted('transactions', ['id' => $main->id]);
+        $this->assertSoftDeleted('transactions', ['id' => $fee->id]);
+        $this->assertSame(0, bccomp((string) $account->fresh()->current_balance, '100000', 18));
+    }
+
     public function test_account_delete_is_soft(): void
     {
         [$user, $account] = $this->prepareContext(openingBalance: '10000');

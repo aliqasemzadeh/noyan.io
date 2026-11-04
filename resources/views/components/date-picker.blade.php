@@ -13,12 +13,16 @@
     $wireModelName = $wireModel->value();
     $name ??= $wireModelName ? (string) str($wireModelName)->afterLast('.') : null;
     $placeholder ??= __('general.select_date');
-    $entangle = $wireModelName ? "\$wire.entangle('{$wireModelName}')" : 'null';
+    // Keep wire:model on the root so Alpine x-modelable can sync datepickerValue ↔ Livewire.
+    // Passing $wire.entangle(...) into a JS factory unwraps it to a plain string and breaks edits.
+    $wireModelAttributes = $wireModelName ? $attributes->wire('model') : null;
 @endphp
 
 <div
     class="w-full"
-    x-data="window.persianDatePicker({{ $entangle }}, @js($value))"
+    x-data="window.persianDatePicker(@js($value))"
+    x-modelable="datepickerValue"
+    {{ $wireModelAttributes }}
     x-cloak
 >
     <flux:field :$name>
@@ -141,10 +145,10 @@
 
 @script
 <script>
-    window.persianDatePicker = function(datepickerValue, initialValue) {
+    window.persianDatePicker = function(initialValue) {
         return {
             showDatepicker: false,
-            datepickerValue: datepickerValue,
+            datepickerValue: initialValue || '',
             month: '',
             year: '',
             years: [],
@@ -154,9 +158,7 @@
             DAYS: ['ش', 'ی', 'د', 'س', 'چ', 'پ', 'ج'],
 
             init() {
-                if (!this.datepickerValue && initialValue) {
-                    this.datepickerValue = initialValue;
-                }
+                // x-modelable + wire:model may already have hydrated datepickerValue from Livewire.
 
                 const today = this.getTodayPersian();
                 let initYear = parseInt(today.year);

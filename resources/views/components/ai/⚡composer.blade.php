@@ -152,7 +152,7 @@ new class extends Component
                     'required',
                     'file',
                     'max:10240',
-                    'mimes:xlsx,xls',
+                    'mimes:xlsx,xls,csv,txt',
                 ],
             ], attributes: [
                 'document' => __('general.ai_document'),
@@ -185,7 +185,7 @@ new class extends Component
                 'nullable',
                 'file',
                 'max:10240',
-                'mimes:xlsx,xls',
+                'mimes:xlsx,xls,csv,txt',
             ],
         ], attributes: [
             'prompt' => __('general.ai_prompt'),
@@ -207,14 +207,19 @@ new class extends Component
 
             $originalName = $this->document->getClientOriginalName();
             $attachment = ['name' => $originalName];
+            $isCsv = in_array($extension, ['csv', 'txt'], true);
 
-            $displaySuffix = __('general.ai_document_prompt_display', [
-                'file' => $originalName,
-            ]);
-            $agentSuffix = __('general.ai_document_prompt_suffix', [
-                'file' => $originalName,
-                'path' => $storedDocumentPath,
-            ]);
+            $displaySuffix = __(
+                $isCsv ? 'general.ai_bank_statement_prompt_display' : 'general.ai_document_prompt_display',
+                ['file' => $originalName],
+            );
+            $agentSuffix = __(
+                $isCsv ? 'general.ai_bank_statement_prompt_suffix' : 'general.ai_document_prompt_suffix',
+                [
+                    'file' => $originalName,
+                    'path' => $storedDocumentPath,
+                ],
+            );
 
             $displayText = trim($displayText."\n".$displaySuffix);
             $agentPrompt = trim($agentPrompt."\n".$agentSuffix);
@@ -575,7 +580,7 @@ new class extends Component
             class="hidden"
             x-ref="documentInput"
             wire:model="document"
-            accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+            accept=".xlsx,.xls,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
             x-on:livewire-upload-start="uploading = true; progress = 0"
             x-on:livewire-upload-progress="progress = $event.detail.progress"
             x-on:livewire-upload-finish="uploading = false; progress = 0"
