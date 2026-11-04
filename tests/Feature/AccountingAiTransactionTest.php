@@ -86,7 +86,9 @@ class AccountingAiTransactionTest extends TestCase
             'account_number' => '9999999999',
         ]));
 
-        $this->assertSame(__('general.ai_transaction_account_not_found'), $result);
+        $this->assertSame(__('general.ai_transaction_account_not_found_with_id', [
+            'lookup' => '9999999999',
+        ]), $result);
         $this->assertDatabaseCount('transactions', 0);
         $this->assertSame($accountCountBefore, Account::query()->count());
         $this->assertSame($business->id, $user->current_business_id);
@@ -175,6 +177,63 @@ class AccountingAiTransactionTest extends TestCase
         ]);
     }
 
+    public function test_tool_batch_uses_root_account_number_for_all_rows(): void
+    {
+        [$user, $business, $currency, $account] = $this->actingBusinessOwnerWithBankAccount(
+            currentBalance: '10000000',
+        );
+
+        $result = (string) (new CreateTransaction)->handle(new Request([
+            'confirmed' => true,
+            'account_number' => '5199858647',
+            'transactions' => [
+                [
+                    'type' => 'expense',
+                    'amount' => '1000',
+                    'expected_balance' => '9999000',
+                ],
+                [
+                    'type' => 'expense',
+                    'amount' => '2000',
+                    'expected_balance' => '9997000',
+                ],
+            ],
+        ]));
+
+        $this->assertStringNotContainsString('ناموفق', $result);
+        $this->assertDatabaseCount('transactions', 2);
+        $this->assertSame(0, bccomp('9997000', (string) $account->fresh()->current_balance, 18));
+    }
+
+    public function test_tool_batch_collapses_account_not_found_errors(): void
+    {
+        [$user] = $this->actingBusinessOwnerWithBankAccount();
+
+        $result = (string) (new CreateTransaction)->handle(new Request([
+            'confirmed' => true,
+            'account_number' => 'علی قاسم زاده',
+            'transactions' => [
+                [
+                    'type' => 'expense',
+                    'amount' => '1000',
+                    'expected_balance' => '1',
+                ],
+                [
+                    'type' => 'expense',
+                    'amount' => '2000',
+                    'expected_balance' => '1',
+                ],
+            ],
+        ]));
+
+        $this->assertSame(__('general.ai_transaction_batch_account_not_found', [
+            'lookup' => 'علی قاسم زاده',
+            'count' => 2,
+            'total' => 2,
+        ]), $result);
+        $this->assertDatabaseCount('transactions', 0);
+    }
+
     public function test_composer_dispatches_transaction_table_event(): void
     {
         AccountingAssistant::fake([__('general.ai_transaction_created', [
@@ -255,7 +314,11 @@ class AccountingAiTransactionTest extends TestCase
             ],
         ]));
 
-        $this->assertStringContainsString(__('general.ai_transaction_account_not_found'), $result);
+        $this->assertStringContainsString(__('general.ai_transaction_batch_account_not_found', [
+            'lookup' => '9999999999',
+            'count' => 1,
+            'total' => 2,
+        ]), $result);
         $this->assertDatabaseCount('transactions', 1);
         $this->assertDatabaseHas('transactions', [
             'account_id' => $account->id,

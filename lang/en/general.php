@@ -253,6 +253,8 @@ return [
     'ai_transaction_batch_item_failed' => ':n) failed: :error',
     'ai_transaction_batch_empty' => 'No transactions were sent to register.',
     'ai_transaction_account_not_found' => 'No existing account matched. Provide the existing account name or number.',
+    'ai_transaction_account_not_found_with_id' => 'No existing account matched identifier “:lookup”. Provide an existing account number/IBAN/card or name in this business (not the bank account holder name or a counterparty IBAN).',
+    'ai_transaction_batch_account_not_found' => ':count of :total rows were not registered; no account matched “:lookup”. Send the statement header account number/IBAN from the existing accounts list (not a beneficiary/payer IBAN).',
     'ai_transaction_missing_fields' => 'To register the transaction, provide: :fields.',
     'ai_transaction_invalid' => 'Transaction details are invalid: :errors',
     'ai_daily_expenses_empty' => 'No expenses were recorded on :date.',

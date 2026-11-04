@@ -253,6 +253,8 @@ return [
     'ai_transaction_batch_item_failed' => ':n) ناموفق: :error',
     'ai_transaction_batch_empty' => 'هیچ تراکنشی برای ثبت ارسال نشد.',
     'ai_transaction_account_not_found' => 'حساب موجودی با این مشخصات پیدا نشد. نام یا شماره حساب موجود را بفرمایید.',
+    'ai_transaction_account_not_found_with_id' => 'حساب موجودی با شناسه «:lookup» پیدا نشد. شماره/شبا/کارت یا نام حساب موجود در همین کسب‌وکار را بفرمایید (نه نام صاحب حساب بانکی و نه شبا ذینفع).',
+    'ai_transaction_batch_account_not_found' => ':count از :total ردیف ثبت نشد؛ حساب با شناسه «:lookup» پیدا نشد. شماره حساب یا شبا هدر گزارش (نه ذینفع/واریزکننده) را از لیست حساب‌های موجود بفرستید.',
     'ai_transaction_missing_fields' => 'برای ثبت تراکنش، :fields را وارد کنید.',
     'ai_transaction_invalid' => 'اطلاعات تراکنش نامعتبر است: :errors',
     'ai_daily_expenses_empty' => 'در تاریخ :date هیچ هزینه‌ای ثبت نشده است.',

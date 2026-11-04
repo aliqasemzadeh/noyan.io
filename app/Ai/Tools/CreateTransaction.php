@@ -31,7 +31,7 @@ class CreateTransaction implements Tool
      */
     public function description(): Stringable|string
     {
-        return 'ثبت یک یا چند تراکنش از پیامک بانکی یا گزارش گردش حساب روی حساب موجود. شناسه حساب را در account_number بفرست؛ ابزار خودش تشخیص می‌دهد شماره حساب است یا شبا (IR…) یا کارت ۱۶ رقمی. برای گردش حساب هر ردیف را با expected_balance (=مانده همان ردیف) در transactions بفرست؛ نوع را از تغییر مانده مشخص کن (کم شدن=expense، زیاد شدن=income). اگر مانده با زنجیره جور باشد همان لحظه ثبت کن (بدون تأیید). فقط وقتی مانده جور نیست یا مانده نیست پیش‌نمایش بده و confirmed=true بخواه. تراکنش‌هایی که مانده‌شان از قبل در دفتر هست را رد کن (skip). چند پیامک/ردیف را در یک فراخوانی با transactions بفرست؛ تاریخ را با ساعت بفرست. هرگز حساب بانکی جدید نساز.';
+        return 'ثبت یک یا چند تراکنش از پیامک بانکی یا گزارش گردش حساب روی حساب موجود. برای گردش حساب، شماره/شبا هدر گزارش را در account_number ریشه بفرست (نه ذینفع ردیف و نه نام صاحب حساب)؛ روی همه ردیف‌ها اعمال می‌شود. ابزار خودش تشخیص می‌دهد شماره حساب است یا شبا یا کارت. هر ردیف را با expected_balance در transactions بفرست؛ نوع را از تغییر مانده مشخص کن (کم شدن=expense، زیاد شدن=income). اگر مانده جور باشد بدون تأیید ثبت کن. فقط وقتی مانده جور نیست پیش‌نمایش بده. تکراری‌ها skip. هرگز حساب جدید نساز.';
     }
 
     /**
@@ -52,16 +52,25 @@ class CreateTransaction implements Tool
 
         $confirmed = $request->boolean('confirmed');
         $transactions = $request->array('transactions');
+        $defaultAccountNumber = (string) $request->string('account_number');
+        $defaultAccountName = (string) $request->string('account_name');
 
         if ($transactions !== []) {
-            return $this->handleBatch($user, (int) $businessId, $transactions, $confirmed);
+            return $this->handleBatch(
+                $user,
+                (int) $businessId,
+                $transactions,
+                $confirmed,
+                $defaultAccountNumber,
+                $defaultAccountName,
+            );
         }
 
         $result = $this->createOne($user, (int) $businessId, [
             'type' => (string) $request->string('type'),
             'amount' => (string) $request->string('amount'),
-            'account_number' => (string) $request->string('account_number'),
-            'account_name' => (string) $request->string('account_name'),
+            'account_number' => $defaultAccountNumber,
+            'account_name' => $defaultAccountName,
             'transaction_date' => (string) $request->string('transaction_date'),
             'note' => (string) $request->string('note'),
             'reference_number' => (string) $request->string('reference_number'),
@@ -112,9 +121,9 @@ class CreateTransaction implements Tool
             'amount' => $schema->string()
                 ->description('مبلغ تراکنش تک‌تایی'),
             'account_number' => $schema->string()
-                ->description('شناسه حساب موجود: شماره حساب یا شبا یا کارت'),
+                ->description('شناسه حساب موجود (شماره/شبا/کارت). برای گزارش گردش حساب حتماً شماره/شبا هدر گزارش را اینجا بگذار تا روی همه ردیف‌ها اعمال شود؛ هرگز شبا یا نام ذینفع/واریزکننده ردیف را اینجا نگذار'),
             'account_name' => $schema->string()
-                ->description('نام نمایشی حساب موجود'),
+                ->description('نام نمایشی حساب از لیست حساب‌های موجود (نه نام صاحب حساب بانکی). فقط اگر شناسه عددی نیست'),
             'transaction_date' => $schema->string()
                 ->description('تاریخ/ساعت پیامک یا میلادی؛ خالی = امروز'),
             'note' => $schema->string()
@@ -129,8 +138,14 @@ class CreateTransaction implements Tool
     /**
      * @param  list<mixed>  $transactions
      */
-    protected function handleBatch(User $user, int $businessId, array $transactions, bool $confirmed): string
-    {
+    protected function handleBatch(
+        User $user,
+        int $businessId,
+        array $transactions,
+        bool $confirmed,
+        string $defaultAccountNumber = '',
+        string $defaultAccountName = '',
+    ): string {
         $lines = [];
         $createdCount = 0;
         $skippedCount = 0;
@@ -138,6 +153,27 @@ class CreateTransaction implements Tool
         $failedCount = 0;
         /** @var array<int, string> $runningBalances */
         $runningBalances = [];
+        /** @var array<string, int> $accountNotFoundCounts */
+        $accountNotFoundCounts = [];
+
+        $transactions = array_map(function (mixed $item) use ($defaultAccountNumber, $defaultAccountName): mixed {
+            if (! is_array($item)) {
+                return $item;
+            }
+
+            $itemAccountNumber = trim((string) ($item['account_number'] ?? ''));
+            $itemAccountName = trim((string) ($item['account_name'] ?? ''));
+
+            if ($itemAccountNumber === '' && $defaultAccountNumber !== '') {
+                $item['account_number'] = $defaultAccountNumber;
+            }
+
+            if ($itemAccountName === '' && $defaultAccountName !== '') {
+                $item['account_name'] = $defaultAccountName;
+            }
+
+            return $item;
+        }, $transactions);
 
         [$ordered, $reordered] = $this->orderBatchChronologically($transactions);
 
@@ -209,14 +245,42 @@ class CreateTransaction implements Tool
                 ]);
             } else {
                 $failedCount++;
-                $lines[] = __('general.ai_transaction_batch_item_failed', [
-                    'n' => $index,
-                    'error' => $result['message'],
-                ]);
+
+                if (($result['code'] ?? null) === 'account_not_found') {
+                    $key = (string) ($result['lookup'] ?? '—');
+                    $accountNotFoundCounts[$key] = ($accountNotFoundCounts[$key] ?? 0) + 1;
+                } else {
+                    $lines[] = __('general.ai_transaction_batch_item_failed', [
+                        'n' => $index,
+                        'error' => $result['message'],
+                    ]);
+                }
             }
         }
 
         $total = count($ordered);
+
+        if ($accountNotFoundCounts !== [] && $createdCount === 0 && $skippedCount === 0 && $previewCount === 0) {
+            $parts = [];
+
+            foreach ($accountNotFoundCounts as $lookup => $count) {
+                $parts[] = __('general.ai_transaction_batch_account_not_found', [
+                    'lookup' => $lookup,
+                    'count' => $count,
+                    'total' => $total,
+                ]);
+            }
+
+            return implode("\n", $parts);
+        }
+
+        foreach ($accountNotFoundCounts as $lookup => $count) {
+            $lines[] = __('general.ai_transaction_batch_account_not_found', [
+                'lookup' => $lookup,
+                'count' => $count,
+                'total' => $total,
+            ]);
+        }
 
         if ($previewCount === 0 && ($createdCount > 0 || $skippedCount > 0)) {
             $summary = __('general.ai_transaction_batch_summary', [
@@ -354,7 +418,7 @@ class CreateTransaction implements Tool
      *     expected_balance: string
      * }  $data
      * @param  array<int, string>  $runningBalances
-     * @return array{ok: bool, action: 'created'|'skipped'|'preview'|'failed', message: string}
+     * @return array{ok: bool, action: 'created'|'skipped'|'preview'|'failed', message: string, code?: string|null, lookup?: string|null}
      */
     protected function createOne(
         User $user,
@@ -372,6 +436,9 @@ class CreateTransaction implements Tool
         $note = trim($data['note']);
         $referenceNumber = trim($data['reference_number']);
         $expectedBalance = $this->normalizeDigits($data['expected_balance']);
+        $lookupLabel = trim($data['account_number']) !== ''
+            ? trim($data['account_number'])
+            : ($accountName !== '' ? $accountName : '—');
 
         $type = TransactionType::tryFrom($typeValue);
 
@@ -390,7 +457,13 @@ class CreateTransaction implements Tool
         $account = $this->resolveAccount($businessId, $accountNumber, $accountName);
 
         if ($account === null) {
-            return $this->fail(__('general.ai_transaction_account_not_found'));
+            return $this->fail(
+                __('general.ai_transaction_account_not_found_with_id', [
+                    'lookup' => $lookupLabel,
+                ]),
+                'account_not_found',
+                $lookupLabel,
+            );
         }
 
         $storageDate = $transactionDateInput !== ''
@@ -590,7 +663,7 @@ class CreateTransaction implements Tool
     }
 
     /**
-     * @return array{ok: true, action: 'created'|'skipped'|'preview', message: string}
+     * @return array{ok: true, action: 'created'|'skipped'|'preview', message: string, code?: null, lookup?: null}
      */
     protected function result(bool $ok, string $action, string $message): array
     {
@@ -598,11 +671,17 @@ class CreateTransaction implements Tool
     }
 
     /**
-     * @return array{ok: false, action: 'failed', message: string}
+     * @return array{ok: false, action: 'failed', message: string, code: string|null, lookup: string|null}
      */
-    protected function fail(string $message): array
+    protected function fail(string $message, ?string $code = null, ?string $lookup = null): array
     {
-        return ['ok' => false, 'action' => 'failed', 'message' => $message];
+        return [
+            'ok' => false,
+            'action' => 'failed',
+            'message' => $message,
+            'code' => $code,
+            'lookup' => $lookup,
+        ];
     }
 
     protected function projectBalance(TransactionType $type, string $currentBalance, string $amount): string
