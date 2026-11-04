@@ -31,7 +31,7 @@ class CreateTransaction implements Tool
      */
     public function description(): Stringable|string
     {
-        return 'ثبت یک یا چند تراکنش از پیامک بانکی یا گزارش گردش حساب روی حساب موجود. برای گردش حساب هر ردیف جدول را با expected_balance (=مانده همان ردیف) در transactions بفرست؛ نوع را از تغییر مانده مشخص کن (کم شدن=expense، زیاد شدن=income). اگر مانده با زنجیره جور باشد همان لحظه ثبت کن (بدون تأیید). فقط وقتی مانده جور نیست یا مانده نیست پیش‌نمایش بده و confirmed=true بخواه. تراکنش‌هایی که مانده‌شان از قبل در دفتر هست را رد کن (skip). چند پیامک/ردیف را در یک فراخوانی با transactions بفرست؛ تاریخ را با ساعت بفرست. هرگز حساب بانکی جدید نساز.';
+        return 'ثبت یک یا چند تراکنش از پیامک بانکی یا گزارش گردش حساب روی حساب موجود. شناسه حساب را در account_number بفرست؛ ابزار خودش تشخیص می‌دهد شماره حساب است یا شبا (IR…) یا کارت ۱۶ رقمی. برای گردش حساب هر ردیف را با expected_balance (=مانده همان ردیف) در transactions بفرست؛ نوع را از تغییر مانده مشخص کن (کم شدن=expense، زیاد شدن=income). اگر مانده با زنجیره جور باشد همان لحظه ثبت کن (بدون تأیید). فقط وقتی مانده جور نیست یا مانده نیست پیش‌نمایش بده و confirmed=true بخواه. تراکنش‌هایی که مانده‌شان از قبل در دفتر هست را رد کن (skip). چند پیامک/ردیف را در یک فراخوانی با transactions بفرست؛ تاریخ را با ساعت بفرست. هرگز حساب بانکی جدید نساز.';
     }
 
     /**
@@ -88,7 +88,7 @@ class CreateTransaction implements Tool
                 ->description('مبلغ برداشت یا واریز؛ کاما و ارقام فارسی مجاز است')
                 ->required(),
             'account_number' => $schema->string()
-                ->description('شماره حساب بانکی موجود (ارقام بعد از کلمه حساب در پیامک)'),
+                ->description('شناسه حساب موجود: شماره حساب یا شبا (IR…) یا شماره کارت ۱۶ رقمی؛ ابزار خودش نوع را تشخیص می‌دهد'),
             'account_name' => $schema->string()
                 ->description('نام نمایشی حساب موجود اگر شماره مشخص نیست'),
             'transaction_date' => $schema->string()
@@ -112,7 +112,7 @@ class CreateTransaction implements Tool
             'amount' => $schema->string()
                 ->description('مبلغ تراکنش تک‌تایی'),
             'account_number' => $schema->string()
-                ->description('شماره حساب بانکی موجود'),
+                ->description('شناسه حساب موجود: شماره حساب یا شبا یا کارت'),
             'account_name' => $schema->string()
                 ->description('نام نمایشی حساب موجود'),
             'transaction_date' => $schema->string()
@@ -677,8 +677,10 @@ class CreateTransaction implements Tool
             ->where('business_id', $businessId)
             ->where('is_active', true);
 
-        if ($accountNumber !== '') {
-            $account = (clone $query)->where('account_number', $accountNumber)->first();
+        $identifier = $this->normalizeAccountIdentifier($accountNumber);
+
+        if ($identifier !== '') {
+            $account = $this->findAccountByIdentifier($query, $identifier);
 
             if ($account !== null) {
                 return $account;
@@ -696,6 +698,98 @@ class CreateTransaction implements Tool
         }
 
         return null;
+    }
+
+    /**
+     * Match account_number, IBAN (IR…), or 16-digit card — type is inferred from the value.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder<Account>  $query
+     */
+    protected function findAccountByIdentifier($query, string $identifier): ?Account
+    {
+        $iban = $this->normalizeIban($identifier);
+        $digits = $this->digitsOnly($identifier);
+        $accounts = (clone $query)->get();
+
+        if ($iban !== '') {
+            $account = $accounts->first(
+                fn (Account $account): bool => $this->normalizeIban((string) ($account->iban ?? '')) === $iban
+            );
+
+            if ($account !== null) {
+                return $account;
+            }
+        }
+
+        if (strlen($digits) === 16) {
+            $account = $accounts->first(
+                fn (Account $account): bool => $this->digitsOnly((string) ($account->card_number ?? '')) === $digits
+            );
+
+            if ($account !== null) {
+                return $account;
+            }
+        }
+
+        if ($digits !== '') {
+            $account = $accounts->first(
+                fn (Account $account): bool => $this->digitsOnly((string) ($account->account_number ?? '')) === $digits
+                    || $this->normalizeAccountIdentifier((string) ($account->account_number ?? '')) === $identifier
+            );
+
+            if ($account !== null) {
+                return $account;
+            }
+        }
+
+        return $accounts->first(function (Account $account) use ($identifier, $iban, $digits): bool {
+            $candidates = [
+                $this->normalizeAccountIdentifier((string) ($account->account_number ?? '')),
+                $this->digitsOnly((string) ($account->account_number ?? '')),
+                $this->normalizeIban((string) ($account->iban ?? '')),
+                $this->digitsOnly((string) ($account->card_number ?? '')),
+            ];
+
+            return in_array($identifier, $candidates, true)
+                || ($iban !== '' && in_array($iban, $candidates, true))
+                || ($digits !== '' && in_array($digits, $candidates, true));
+        });
+    }
+
+    protected function normalizeAccountIdentifier(string $value): string
+    {
+        $value = $this->normalizeDigits($value);
+        $value = strtoupper($value);
+
+        return preg_replace('/[^A-Z0-9]/u', '', $value) ?? '';
+    }
+
+    protected function normalizeIban(string $value): string
+    {
+        $normalized = $this->normalizeAccountIdentifier($value);
+
+        if ($normalized === '') {
+            return '';
+        }
+
+        if (str_starts_with($normalized, 'IR') && strlen($normalized) === 26) {
+            return $normalized;
+        }
+
+        if (! str_starts_with($normalized, 'IR') && strlen($normalized) === 24 && ctype_digit($normalized)) {
+            return 'IR'.$normalized;
+        }
+
+        if (str_starts_with($normalized, 'IR')) {
+            return $normalized;
+        }
+
+        return '';
+    }
+
+    protected function digitsOnly(string $value): string
+    {
+        return preg_replace('/\D+/', '', $this->normalizeDigits($value)) ?? '';
     }
 
     protected function normalizeDigits(string $value): string

@@ -110,6 +110,71 @@ class AccountingAiTransactionTest extends TestCase
         ]);
     }
 
+    public function test_tool_resolves_account_by_iban(): void
+    {
+        [$user, $business, $currency, $account] = $this->actingBusinessOwnerWithBankAccount();
+
+        $account->forceFill([
+            'iban' => 'IR300120020000001266272158',
+        ])->save();
+
+        $result = (string) (new CreateTransaction)->handle(new Request([
+            'confirmed' => true,
+            'type' => 'expense',
+            'amount' => '750',
+            'account_number' => 'IR30 0120 0200 0000 1266 2721 58',
+        ]));
+
+        $this->assertStringContainsString($account->name, $result);
+        $this->assertDatabaseHas('transactions', [
+            'account_id' => $account->id,
+            'amount' => '750',
+        ]);
+    }
+
+    public function test_tool_resolves_account_by_iban_digits_without_ir_prefix(): void
+    {
+        [$user, $business, $currency, $account] = $this->actingBusinessOwnerWithBankAccount();
+
+        $account->forceFill([
+            'iban' => 'IR300120020000001266272158',
+        ])->save();
+
+        $result = (string) (new CreateTransaction)->handle(new Request([
+            'confirmed' => true,
+            'type' => 'income',
+            'amount' => '900',
+            'account_number' => '300120020000001266272158',
+        ]));
+
+        $this->assertDatabaseHas('transactions', [
+            'account_id' => $account->id,
+            'amount' => '900',
+        ]);
+    }
+
+    public function test_tool_resolves_account_by_card_number(): void
+    {
+        [$user, $business, $currency, $account] = $this->actingBusinessOwnerWithBankAccount();
+
+        $account->forceFill([
+            'card_number' => '6037997599422129',
+        ])->save();
+
+        $result = (string) (new CreateTransaction)->handle(new Request([
+            'confirmed' => true,
+            'type' => 'expense',
+            'amount' => '1200',
+            'account_number' => '۶۰۳۷-۹۹۷۵-۹۹۴۲-۲۱۲۹',
+        ]));
+
+        $this->assertStringContainsString($account->name, $result);
+        $this->assertDatabaseHas('transactions', [
+            'account_id' => $account->id,
+            'amount' => '1200',
+        ]);
+    }
+
     public function test_composer_dispatches_transaction_table_event(): void
     {
         AccountingAssistant::fake([__('general.ai_transaction_created', [

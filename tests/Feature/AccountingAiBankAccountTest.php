@@ -297,6 +297,8 @@ class AccountingAiBankAccountTest extends TestCase
         $this->assertStringContainsString('حساب جاری ملت', $instructions);
         $this->assertStringContainsString('12,500,000', $instructions);
         $this->assertStringContainsString('مانده/موجودی', $instructions);
+        $this->assertStringContainsString('شبا:', $instructions);
+        $this->assertStringContainsString('کارت:', $instructions);
         $this->assertStringContainsString('create_transaction', $instructions);
         $this->assertStringContainsString('گردش حساب', $instructions);
     }
