@@ -410,8 +410,9 @@ class AccountingAiTransactionTest extends TestCase
         $this->assertStringContainsString('transactions', $instructions);
         $this->assertStringContainsString('expected_balance', $instructions);
         $this->assertStringContainsString('confirmed=true', $instructions);
-        $this->assertStringContainsString('02/08', $instructions);
+        $this->assertStringContainsString('05/08/02-16:18', $instructions);
         $this->assertStringContainsString('بدون تأیید', $instructions);
+        $this->assertStringContainsString('گردش حساب', $instructions);
     }
 
     public function test_tool_auto_creates_with_short_jalali_sms_date_near_today(): void
@@ -629,6 +630,67 @@ class AccountingAiTransactionTest extends TestCase
         $this->assertStringNotContainsString(__('general.ai_transaction_preview_ask_confirm'), $result);
         $this->assertDatabaseCount('transactions', 0);
         $this->assertSame(0, bccomp($after, (string) $account->fresh()->current_balance, 18));
+    }
+
+    public function test_tool_batch_registers_statement_rows_with_expense_and_income(): void
+    {
+        $this->travelTo(Jalalian::fromFormat('Y/m/d', '1405/08/02')->toCarbon()->setTime(12, 0));
+
+        $opening = '20000181000';
+        $fee = '120000';
+        $paya = '2000000000';
+        $deposit = '4200000000';
+        $afterFee = bcsub($opening, $fee, 0);
+        $afterPaya = bcsub($afterFee, $paya, 0);
+        $afterDeposit = bcadd($afterPaya, $deposit, 0);
+
+        [$user, $business, $currency, $account] = $this->actingBusinessOwnerWithBankAccount(
+            currentBalance: $opening,
+        );
+
+        $result = (string) (new CreateTransaction)->handle(new Request([
+            'confirmed' => false,
+            'transactions' => [
+                [
+                    'type' => 'expense',
+                    'amount' => $fee,
+                    'account_number' => '5199858647',
+                    'transaction_date' => '1405/08/02 08:30:06',
+                    'note' => 'کارمزد پایا',
+                    'reference_number' => '320030763',
+                    'expected_balance' => $afterFee,
+                ],
+                [
+                    'type' => 'expense',
+                    'amount' => $paya,
+                    'account_number' => '5199858647',
+                    'transaction_date' => '1405/08/02 08:30:06',
+                    'note' => 'پایا از همراه بانک',
+                    'reference_number' => '1620030763',
+                    'expected_balance' => $afterPaya,
+                ],
+                [
+                    'type' => 'income',
+                    'amount' => $deposit,
+                    'account_number' => '5199858647',
+                    'transaction_date' => '1405/08/07 18:41:00',
+                    'note' => 'حواله همراه بانک',
+                    'reference_number' => '1676997258',
+                    'expected_balance' => $afterDeposit,
+                ],
+            ],
+        ]));
+
+        $this->assertStringNotContainsString(__('general.ai_transaction_preview_ask_confirm'), $result);
+        $this->assertStringNotContainsString('ناموفق', $result);
+        $this->assertDatabaseCount('transactions', 3);
+        $this->assertDatabaseHas('transactions', [
+            'account_id' => $account->id,
+            'type' => TransactionType::Income->value,
+            'amount' => $deposit,
+            'note' => 'حواله همراه بانک',
+        ]);
+        $this->assertSame(0, bccomp($afterDeposit, (string) $account->fresh()->current_balance, 18));
     }
 
     /**

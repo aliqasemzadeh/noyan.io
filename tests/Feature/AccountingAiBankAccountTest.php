@@ -298,6 +298,7 @@ class AccountingAiBankAccountTest extends TestCase
         $this->assertStringContainsString('12,500,000', $instructions);
         $this->assertStringContainsString('مانده/موجودی', $instructions);
         $this->assertStringContainsString('create_transaction', $instructions);
+        $this->assertStringContainsString('گردش حساب', $instructions);
     }
 
     public function test_empty_prompt_rejected_for_accounting_context(): void
@@ -311,7 +312,7 @@ class AccountingAiBankAccountTest extends TestCase
             ->assertHasErrors(['prompt']);
     }
 
-    public function test_composer_accepts_prompt_up_to_2000_characters(): void
+    public function test_composer_accepts_long_prompts_and_rejects_over_50000_characters(): void
     {
         AccountingAssistant::fake(['پاسخ تست']);
 
@@ -319,14 +320,14 @@ class AccountingAiBankAccountTest extends TestCase
 
         Livewire::actingAs($user)
             ->test('ai.composer', ['context' => 'accounting'])
-            ->set('prompt', str_repeat('ا', 2000))
+            ->set('prompt', str_repeat('ا', 8000))
             ->call('sendPrompt')
             ->assertHasNoErrors()
             ->assertSet('assistantReply', 'پاسخ تست');
 
         Livewire::actingAs($user)
             ->test('ai.composer', ['context' => 'accounting'])
-            ->set('prompt', str_repeat('ا', 2001))
+            ->set('prompt', str_repeat('ا', 50001))
             ->call('sendPrompt')
             ->assertHasErrors(['prompt']);
     }

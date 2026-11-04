@@ -177,7 +177,7 @@ new class extends Component
         $hasDocument = $this->context === 'accounting' && $this->document !== null;
 
         $this->validate([
-            'prompt' => [$hasDocument ? 'nullable' : 'required', 'string', 'max:2000'],
+            'prompt' => [$hasDocument ? 'nullable' : 'required', 'string', 'max:50000'],
             'document' => [
                 'nullable',
                 'file',
