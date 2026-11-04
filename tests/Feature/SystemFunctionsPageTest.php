@@ -41,8 +41,31 @@ class SystemFunctionsPageTest extends TestCase
             ->assertSee(__('general.system_functions'))
             ->assertSee(__('general.quick_update'))
             ->assertSee(__('general.full_update'))
+            ->assertSee(__('general.rebuild_accounting_balances'))
             ->assertSee(__('general.command_run'))
             ->assertSee(__('general.cmd_cache_clear'));
+    }
+
+    public function test_rebuild_accounting_balances_runs_artisan_command(): void
+    {
+        Process::fake([
+            '*' => Process::result(output: 'Done. businesses=0 accounts=0'),
+        ]);
+
+        $user = $this->grantAdministratorAccess(User::factory()->create());
+
+        Livewire::actingAs($user)
+            ->test('pages::panel.administrator.system-management.function.index')
+            ->call('rebuildAccountingBalances')
+            ->assertSet('isRunning', false)
+            ->assertSee('accounting:rebuild-balances');
+
+        Process::assertRan(function ($process): bool {
+            $command = collect($process->command);
+
+            return $command->contains('accounting:rebuild-balances')
+                && $command->contains('--all');
+        });
     }
 
     public function test_run_command_rejects_disallowed_artisan_command(): void
@@ -125,6 +148,7 @@ class SystemFunctionsPageTest extends TestCase
             'accounting:sync-gl-details',
             'accounting:migrate-categories-to-gl',
             'accounting:backfill-gl',
+            'accounting:rebuild-balances',
             'optimize:clear',
             'queue:restart',
         ] as $artisan) {

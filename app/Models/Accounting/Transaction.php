@@ -34,6 +34,8 @@ use Spatie\Tags\Tag;
     'exchange_rate',
     'amount',
     'base_amount',
+    'balance_after',
+    'destination_balance_after',
     'reference_number',
     'note',
     'meta',
@@ -78,6 +80,8 @@ class Transaction extends Model
             'exchange_rate' => 'decimal:18',
             'amount' => 'decimal:18',
             'base_amount' => 'decimal:18',
+            'balance_after' => 'decimal:18',
+            'destination_balance_after' => 'decimal:18',
             'meta' => 'array',
         ];
     }

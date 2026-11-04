@@ -34,6 +34,25 @@ class AccountLedgerBalance
     }
 
     /**
+     * Stored running balance for an account after this transaction, if present.
+     */
+    public static function storedForAccount(Transaction $transaction, int $accountId): ?string
+    {
+        if ((int) $transaction->account_id === $accountId && $transaction->balance_after !== null) {
+            return AccountValidationRules::normalizeBalance((string) $transaction->balance_after);
+        }
+
+        if (
+            (int) $transaction->destination_account_id === $accountId
+            && $transaction->destination_balance_after !== null
+        ) {
+            return AccountValidationRules::normalizeBalance((string) $transaction->destination_balance_after);
+        }
+
+        return null;
+    }
+
+    /**
      * Attach absolute running balance_after for one account's ledger page rows.
      *
      * @param  Enumerable<int, Transaction>|iterable<int, Transaction>  $transactions
@@ -48,6 +67,19 @@ class AccountLedgerBalance
         }
 
         $accountId = (int) $account->id;
+
+        if ($rows->every(fn (Transaction $transaction): bool => self::storedForAccount($transaction, $accountId) !== null)) {
+            $balances = [];
+
+            foreach ($rows as $transaction) {
+                $normalized = self::storedForAccount($transaction, $accountId);
+                $balances[(int) $transaction->id] = $normalized;
+                $transaction->setAttribute('balance_after', $normalized);
+            }
+
+            return $balances;
+        }
+
         $chronological = $rows->sort(fn (Transaction $a, Transaction $b): int => self::compareChronological($a, $b))->values();
         $oldest = $chronological->first();
 
@@ -76,6 +108,18 @@ class AccountLedgerBalance
 
         if ($rows->isEmpty()) {
             return [];
+        }
+
+        if ($rows->every(fn (Transaction $transaction): bool => $transaction->balance_after !== null)) {
+            $balances = [];
+
+            foreach ($rows as $transaction) {
+                $normalized = AccountValidationRules::normalizeBalance((string) $transaction->balance_after);
+                $balances[(int) $transaction->id] = $normalized;
+                $transaction->setAttribute('balance_after', $normalized);
+            }
+
+            return $balances;
         }
 
         $balances = [];

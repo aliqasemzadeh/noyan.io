@@ -2,6 +2,7 @@
 
 namespace App\Actions\Transactions;
 
+use App\Actions\Accounting\RebuildAccountLedgerBalancesAction;
 use App\Actions\Transactions\Concerns\AppliesTransactionEffects;
 use App\Enums\Accounting\TransactionType;
 use App\Enums\CategoryType;
@@ -26,6 +27,7 @@ class ProcessTransactionAction
 
     public function __construct(
         protected AutoPostingEngine $autoPostingEngine,
+        protected RebuildAccountLedgerBalancesAction $rebuildAccountLedgerBalances,
     ) {}
 
     /**
@@ -299,6 +301,11 @@ class ProcessTransactionAction
                 $this->applyLoanPayment($loan, $amount);
             }
 
+            $this->rebuildAffectedAccountLedgers(array_filter([
+                $account,
+                $destinationAccount,
+            ]));
+
             $fresh = $transaction->fresh(['account', 'destinationAccount', 'party', 'invoice', 'category', 'loan', 'cheque']);
 
             if (! (bool) ($data['skip_auto_post'] ?? false)) {
@@ -316,5 +323,28 @@ class ProcessTransactionAction
 
             return $fresh ?? $transaction;
         });
+    }
+
+    /**
+     * @param  list<Account|null>  $accounts
+     */
+    protected function rebuildAffectedAccountLedgers(array $accounts): void
+    {
+        $seen = [];
+
+        foreach ($accounts as $account) {
+            if ($account === null) {
+                continue;
+            }
+
+            $id = (int) $account->id;
+
+            if (isset($seen[$id])) {
+                continue;
+            }
+
+            $seen[$id] = true;
+            $this->rebuildAccountLedgerBalances->handle($account);
+        }
     }
 }

@@ -2,6 +2,8 @@
 
 use App\Enums\System\UpdateMode;
 use App\Exceptions\System\DisallowedArtisanCommandException;
+use App\Jobs\Accounting\RebuildAccountingBalancesJob;
+use App\Models\Accounting\Transaction;
 use App\Services\System\ProjectUpdater;
 use App\Services\System\SystemCommandRunner;
 use App\Support\System\AppVersion;
@@ -16,6 +18,8 @@ new class extends Component
     public string $commandLine = '';
 
     public bool $isRunning = false;
+
+    public const REBUILD_QUEUE_THRESHOLD = 2000;
 
     /**
      * @return array<string, array{label: string, icon: string, color: string}>
@@ -81,6 +85,49 @@ new class extends Component
     public function fullUpdate(): void
     {
         $this->runUpdate(UpdateMode::Full);
+    }
+
+    public function rebuildAccountingBalances(): void
+    {
+        if ($this->isRunning) {
+            return;
+        }
+
+        $this->isRunning = true;
+        $this->output = '';
+
+        try {
+            $transactionCount = Transaction::query()->count();
+
+            if ($transactionCount >= self::REBUILD_QUEUE_THRESHOLD) {
+                RebuildAccountingBalancesJob::dispatch();
+
+                $this->appendOutput(
+                    '$ accounting:rebuild-balances --all --queue'.PHP_EOL
+                    .__('general.rebuild_accounting_balances_queued').PHP_EOL
+                    .'transactions='.$transactionCount.PHP_EOL
+                );
+
+                Flux::toast(__('general.rebuild_accounting_balances_queued'));
+
+                return;
+            }
+
+            $exitCode = app(SystemCommandRunner::class)->artisan(
+                ['accounting:rebuild-balances', '--all'],
+                function (string $chunk): void {
+                    $this->appendOutput($chunk);
+                },
+            );
+
+            if ($exitCode === 0) {
+                Flux::toast(__('general.rebuild_accounting_balances_finished'));
+            } else {
+                Flux::toast(__('general.rebuild_accounting_balances_failed'), variant: 'danger');
+            }
+        } finally {
+            $this->isRunning = false;
+        }
     }
 
     protected function runUpdate(UpdateMode $mode): void
@@ -188,6 +235,24 @@ new class extends Component
                 {{ __('general.full_update') }}
             </flux:button>
         </div>
+    </flux:card>
+
+    <flux:card>
+        <div class="mb-4 space-y-1">
+            <flux:heading size="lg">{{ __('general.rebuild_accounting_balances') }}</flux:heading>
+            <flux:text>{{ __('general.rebuild_accounting_balances_hint') }}</flux:text>
+        </div>
+
+        <flux:button
+            variant="primary"
+            color="teal"
+            icon="refresh-cw"
+            wire:click="rebuildAccountingBalances"
+            wire:confirm="{{ __('general.rebuild_accounting_balances_confirm') }}"
+            :disabled="$isRunning"
+        >
+            {{ __('general.rebuild_accounting_balances') }}
+        </flux:button>
     </flux:card>
 
     <flux:card>

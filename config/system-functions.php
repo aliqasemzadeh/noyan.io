@@ -90,6 +90,11 @@ return [
             'icon' => 'shield-check',
             'color' => 'emerald',
         ],
+        'accounting:rebuild-balances' => [
+            'label' => 'general.cmd_rebuild_accounting_balances',
+            'icon' => 'refresh-cw',
+            'color' => 'teal',
+        ],
     ],
 
 ];

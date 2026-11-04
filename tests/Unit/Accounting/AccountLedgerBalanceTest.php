@@ -47,4 +47,29 @@ class AccountLedgerBalanceTest extends TestCase
         $this->assertSame('25', AccountLedgerBalance::effectForAccount($transferIn, 1));
         $this->assertSame('-25', AccountLedgerBalance::effectForAccount($transferIn, 9));
     }
+
+    #[Test]
+    public function it_reads_stored_balances_for_source_and_destination(): void
+    {
+        $income = new Transaction([
+            'account_id' => 1,
+            'type' => TransactionType::Income,
+            'amount' => '200',
+            'balance_after' => '1200',
+        ]);
+
+        $transfer = new Transaction([
+            'account_id' => 1,
+            'destination_account_id' => 2,
+            'type' => TransactionType::Transfer,
+            'amount' => '10',
+            'balance_after' => '1190',
+            'destination_balance_after' => '510',
+        ]);
+
+        $this->assertSame('1200', AccountLedgerBalance::storedForAccount($income, 1));
+        $this->assertNull(AccountLedgerBalance::storedForAccount($income, 2));
+        $this->assertSame('1190', AccountLedgerBalance::storedForAccount($transfer, 1));
+        $this->assertSame('510', AccountLedgerBalance::storedForAccount($transfer, 2));
+    }
 }

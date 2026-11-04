@@ -2,6 +2,7 @@
 
 namespace App\Actions\Transactions;
 
+use App\Actions\Accounting\RebuildAccountLedgerBalancesAction;
 use App\Actions\Transactions\Concerns\AppliesTransactionEffects;
 use App\Models\Accounting\Account;
 use App\Models\Accounting\Invoice;
@@ -20,6 +21,7 @@ class DeleteTransactionAction
 
     public function __construct(
         protected AutoPostingEngine $autoPostingEngine,
+        protected RebuildAccountLedgerBalancesAction $rebuildAccountLedgerBalances,
     ) {}
 
     public function handle(User $user, Transaction $transaction): void
@@ -106,6 +108,34 @@ class DeleteTransactionAction
             $this->autoPostingEngine->voidTransaction($locked);
 
             $locked->delete();
+
+            $this->rebuildAffectedAccountLedgers(array_filter([
+                $account,
+                $destination,
+            ]));
         });
+    }
+
+    /**
+     * @param  list<Account|null>  $accounts
+     */
+    protected function rebuildAffectedAccountLedgers(array $accounts): void
+    {
+        $seen = [];
+
+        foreach ($accounts as $account) {
+            if ($account === null) {
+                continue;
+            }
+
+            $id = (int) $account->id;
+
+            if (isset($seen[$id])) {
+                continue;
+            }
+
+            $seen[$id] = true;
+            $this->rebuildAccountLedgerBalances->handle($account);
+        }
     }
 }
