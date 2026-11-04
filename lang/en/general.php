@@ -367,6 +367,8 @@ return [
     'ai_thinking' => 'Thinking...',
     'ai_reply_empty' => 'No reply was returned from the model.',
     'ai_prompt_sent' => 'Prompt processed.',
+    'ai_prompt_queued' => 'Long prompt was queued; the result will appear here shortly.',
+    'ai_prompt_processing' => 'Processing the report… this may take a few minutes.',
     'ai_error' => 'Could not reach the AI model.',
     'ai_invalid_mobile' => 'The mobile number is invalid.',
     'ai_voice' => 'Voice command',

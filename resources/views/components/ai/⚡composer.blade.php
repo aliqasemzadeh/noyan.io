@@ -3,9 +3,11 @@
 use App\Ai\Agents\AccountingAssistant;
 use App\Ai\Agents\UserAssistant;
 use App\Enums\Business\BusinessPanel;
+use App\Jobs\Ai\ProcessAiComposerPromptJob;
 use Flux\Flux;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Laravel\Ai\Enums\Lab;
@@ -30,9 +32,10 @@ new class extends Component
 
     public string $assistantReply = '';
 
-    /** @var list<array{role: string, content: string, attachment?: array{name: string}|null}> */
+    /** @var list<array{role: string, content: string, attachment?: array{name: string}|null, pending?: bool}> */
     public array $messages = [];
 
+    public ?string $pendingPromptToken = null;
 
     public bool $isTranscribing = false;
 
@@ -223,11 +226,59 @@ new class extends Component
             return;
         }
 
+        if ($this->pendingPromptToken !== null) {
+            Flux::toast(__('general.ai_prompt_processing'), variant: 'warning');
+
+            return;
+        }
+
         $this->messages[] = [
             'role' => 'user',
             'content' => $displayText,
             'attachment' => $attachment,
         ];
+
+        $shouldQueue = mb_strlen($agentPrompt) > ProcessAiComposerPromptJob::SYNC_MAX_CHARS;
+
+        if ($shouldQueue) {
+            $user = auth()->user();
+
+            if ($user === null) {
+                array_pop($this->messages);
+                Flux::toast(__('general.ai_error'), variant: 'danger');
+
+                return;
+            }
+
+            $token = (string) Str::uuid();
+            $this->pendingPromptToken = $token;
+            $this->messages[] = [
+                'role' => 'assistant',
+                'content' => __('general.ai_prompt_processing'),
+                'pending' => true,
+            ];
+
+            Cache::put(ProcessAiComposerPromptJob::cacheKey($token), [
+                'status' => 'pending',
+                'reply' => null,
+                'conversation_id' => $this->conversationId,
+            ], now()->addHour());
+
+            ProcessAiComposerPromptJob::dispatch(
+                $user->id,
+                $user->current_business_id ? (int) $user->current_business_id : null,
+                $this->context,
+                $agentPrompt,
+                $this->conversationId,
+                $token,
+            );
+
+            $this->reset(['prompt', 'audio', 'document']);
+            $this->isRecording = false;
+            Flux::toast(__('general.ai_prompt_queued'));
+
+            return;
+        }
 
         try {
             if ($this->context === 'users') {
@@ -246,7 +297,6 @@ new class extends Component
                     ->continueOrStart($this->conversationId, $user)
                     ->prompt($agentPrompt);
             }
-
         } catch (\Throwable $exception) {
             report($exception);
 
@@ -258,14 +308,53 @@ new class extends Component
         }
 
         $reply = $response->text ?: __('general.ai_reply_empty');
-        $this->assistantReply = $reply;
-        $this->messages[] = [
-            'role' => 'assistant',
-            'content' => $reply,
-        ];
-        $this->conversationId = $response->conversationId ?? $this->conversationId;
+        $this->applyAssistantReply($reply, $response->conversationId ?? $this->conversationId);
         $this->reset(['prompt', 'audio', 'document']);
         $this->isRecording = false;
+        Flux::toast(__('general.ai_prompt_sent'));
+    }
+
+    public function checkPendingPrompt(): void
+    {
+        if ($this->pendingPromptToken === null) {
+            return;
+        }
+
+        $payload = Cache::get(ProcessAiComposerPromptJob::cacheKey($this->pendingPromptToken));
+
+        if (! is_array($payload) || ! in_array($payload['status'] ?? null, ['done', 'failed'], true)) {
+            return;
+        }
+
+        Cache::forget(ProcessAiComposerPromptJob::cacheKey($this->pendingPromptToken));
+        $this->pendingPromptToken = null;
+
+        $reply = is_string($payload['reply'] ?? null) && $payload['reply'] !== ''
+            ? $payload['reply']
+            : __('general.ai_error');
+
+        $this->replacePendingAssistantMessage($reply);
+        $this->applyAssistantReply($reply, is_string($payload['conversation_id'] ?? null) ? $payload['conversation_id'] : $this->conversationId, appendMessage: false);
+
+        if (($payload['status'] ?? null) === 'done') {
+            Flux::toast(__('general.ai_prompt_sent'));
+        } else {
+            Flux::toast(__('general.ai_error'), variant: 'danger');
+        }
+    }
+
+    protected function applyAssistantReply(string $reply, ?string $conversationId, bool $appendMessage = true): void
+    {
+        $this->assistantReply = $reply;
+
+        if ($appendMessage) {
+            $this->messages[] = [
+                'role' => 'assistant',
+                'content' => $reply,
+            ];
+        }
+
+        $this->conversationId = $conversationId ?? $this->conversationId;
 
         if ($this->context === 'users') {
             $this->dispatch('panels.administrator.user.index.table');
@@ -277,8 +366,25 @@ new class extends Component
             $this->dispatch('panels.accounting.quote.index.table');
             $this->dispatch('panels.accounting.invoice.index.table');
         }
+    }
 
-        Flux::toast(__('general.ai_prompt_sent'));
+    protected function replacePendingAssistantMessage(string $reply): void
+    {
+        foreach (array_reverse($this->messages, true) as $index => $message) {
+            if (($message['role'] ?? null) === 'assistant' && ($message['pending'] ?? false) === true) {
+                $this->messages[$index] = [
+                    'role' => 'assistant',
+                    'content' => $reply,
+                ];
+
+                return;
+            }
+        }
+
+        $this->messages[] = [
+            'role' => 'assistant',
+            'content' => $reply,
+        ];
     }
 
     public function placeholderText(): string
@@ -323,6 +429,9 @@ new class extends Component
 ?>
 
 <div
+    @if ($pendingPromptToken)
+        wire:poll.3s="checkPendingPrompt"
+    @endif
     x-data="{
         uploading: false,
         progress: 0,
@@ -544,6 +653,7 @@ new class extends Component
                 </div>
             </div>
         </div>
+
     </div>
 
     <div
@@ -594,7 +704,7 @@ new class extends Component
                         variant="ghost"
                         icon="paperclip"
                         x-on:click="pickDocumentFile()"
-                        x-bind:disabled="uploading || recorderActive || isRecording || $wire.isTranscribing"
+                        x-bind:disabled="uploading || recorderActive || isRecording || $wire.isTranscribing || $wire.pendingPromptToken"
                         :aria-label="__('general.ai_document')"
                     />
                 @endif
@@ -605,7 +715,7 @@ new class extends Component
                     variant="ghost"
                     icon="plus"
                     x-on:click="pickAudioFile()"
-                    x-bind:disabled="uploading || recorderActive || isRecording || $wire.isTranscribing"
+                    x-bind:disabled="uploading || recorderActive || isRecording || $wire.isTranscribing || $wire.pendingPromptToken"
                 />
             </x-slot>
 
@@ -617,7 +727,7 @@ new class extends Component
                     icon="microphone"
                     x-bind:class="isRecording && 'text-rose-600!'"
                     x-on:click="isRecording = ! isRecording"
-                    x-bind:disabled="uploading || $wire.isTranscribing"
+                    x-bind:disabled="uploading || $wire.isTranscribing || $wire.pendingPromptToken"
                     :aria-label="__('general.ai_voice_record')"
                 />
 
@@ -629,7 +739,7 @@ new class extends Component
                     class="rtl:[&_[data-flux-icon]]:rotate-180"
                     wire:loading.attr="disabled"
                     wire:target="sendPrompt"
-                    x-bind:disabled="uploading || recorderActive || isRecording || $wire.isTranscribing"
+                    x-bind:disabled="uploading || recorderActive || isRecording || $wire.isTranscribing || $wire.pendingPromptToken"
                 />
             </x-slot>
         </flux:composer>

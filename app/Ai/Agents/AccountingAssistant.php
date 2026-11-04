@@ -29,7 +29,7 @@ use Stringable;
 
 #[Provider('gap')]
 #[MaxSteps(12)]
-#[Timeout(120)]
+#[Timeout(240)]
 class AccountingAssistant implements Agent, HasProviderOptions, HasTools, RemembersConversationsContract
 {
     use Promptable;

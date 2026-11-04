@@ -12,12 +12,14 @@ use App\Ai\Tools\ImportInvoice;
 use App\Ai\Tools\ImportQuote;
 use App\Enums\AccountSubType;
 use App\Enums\AccountType;
+use App\Jobs\Ai\ProcessAiComposerPromptJob;
 use App\Models\Accounting\Account;
 use App\Models\Business;
 use App\Models\Currency;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Queue;
 use Laravel\Ai\Middleware\RememberConversation;
 use Laravel\Ai\Tools\Request;
 use Livewire\Livewire;
@@ -316,7 +318,7 @@ class AccountingAiBankAccountTest extends TestCase
 
     public function test_composer_accepts_long_prompts_and_rejects_over_50000_characters(): void
     {
-        AccountingAssistant::fake(['پاسخ تست']);
+        Queue::fake();
 
         [$user] = $this->actingBusinessOwnerWithCurrency();
 
@@ -325,13 +327,52 @@ class AccountingAiBankAccountTest extends TestCase
             ->set('prompt', str_repeat('ا', 8000))
             ->call('sendPrompt')
             ->assertHasNoErrors()
-            ->assertSet('assistantReply', 'پاسخ تست');
+            ->assertNotSet('pendingPromptToken', null)
+            ->assertSee(__('general.ai_prompt_processing'));
+
+        Queue::assertPushed(ProcessAiComposerPromptJob::class, function (ProcessAiComposerPromptJob $job) use ($user): bool {
+            return $job->userId === $user->id
+                && $job->context === 'accounting'
+                && mb_strlen($job->prompt) === 8000;
+        });
 
         Livewire::actingAs($user)
             ->test('ai.composer', ['context' => 'accounting'])
             ->set('prompt', str_repeat('ا', 50001))
             ->call('sendPrompt')
             ->assertHasErrors(['prompt']);
+    }
+
+    public function test_composer_applies_queued_prompt_result_on_poll(): void
+    {
+        Queue::fake();
+        AccountingAssistant::fake(['پاسخ صف']);
+
+        [$user] = $this->actingBusinessOwnerWithCurrency();
+
+        $component = Livewire::actingAs($user)
+            ->test('ai.composer', ['context' => 'accounting'])
+            ->set('prompt', str_repeat('ب', 2001))
+            ->call('sendPrompt')
+            ->assertHasNoErrors();
+
+        $token = $component->get('pendingPromptToken');
+        $this->assertNotNull($token);
+
+        (new ProcessAiComposerPromptJob(
+            userId: $user->id,
+            businessId: $user->current_business_id ? (int) $user->current_business_id : null,
+            context: 'accounting',
+            prompt: str_repeat('ب', 2001),
+            conversationId: null,
+            resultToken: $token,
+        ))->handle();
+
+        $component
+            ->call('checkPendingPrompt')
+            ->assertSet('pendingPromptToken', null)
+            ->assertSet('assistantReply', 'پاسخ صف')
+            ->assertDispatched('panels.accounting.transaction.index.table');
     }
 
     public function test_accounting_prompt_dispatches_account_table_event(): void
