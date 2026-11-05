@@ -1040,10 +1040,17 @@ new class extends Component
                             {{ $transaction->category?->name ?? '—' }}
                         </flux:table.cell>
                         <flux:table.cell>
-                            <span dir="ltr">{{ $this->formatAmount((string) $transaction->amount) }} {{ $transaction->currency }}</span>
+                            <x-accounting.signed-amount
+                                :amount="$transaction->amount"
+                                :direction="\App\Support\Accounting\SignedAmount::directionForTransactionType($transaction->type)"
+                                :suffix="$transaction->currency"
+                            />
                         </flux:table.cell>
                         <flux:table.cell>
-                            <span dir="ltr">{{ $this->formatAmount((string) ($transaction->balance_after ?? '0')) }} {{ $transaction->currency }}</span>
+                            <x-accounting.signed-amount
+                                :amount="$transaction->balance_after ?? '0'"
+                                :suffix="$transaction->currency"
+                            />
                         </flux:table.cell>
                         <flux:table.cell>
                             @if ($linkedJournal)

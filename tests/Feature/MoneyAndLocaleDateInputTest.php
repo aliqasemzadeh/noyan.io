@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\Accounting\CreditDisplayStyle;
 use App\Enums\Accounting\TransactionType;
 use App\Models\Accounting\Account;
 use App\Models\Accounting\Party;
@@ -10,6 +11,7 @@ use App\Models\Business;
 use App\Models\Category;
 use App\Models\Currency;
 use App\Models\User;
+use App\Support\Accounting\SignedAmount;
 use App\Support\LocaleDate;
 use App\Support\Money;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -38,6 +40,35 @@ class MoneyAndLocaleDateInputTest extends TestCase
         $this->assertSame('-2,500.00', Money::format('-2500', 2));
         $this->assertSame('0', Money::format(null));
         $this->assertSame('0.00', Money::format('', 2));
+    }
+
+    public function test_money_format_signed_supports_parentheses_and_minus(): void
+    {
+        $this->assertSame('1,250', Money::formatSigned('1250', creditStyle: CreditDisplayStyle::Parentheses));
+        $this->assertSame('(1,250)', Money::formatSigned('-1250', creditStyle: CreditDisplayStyle::Parentheses));
+        $this->assertSame('-1,250.00', Money::formatSigned('-1250', 2, CreditDisplayStyle::Minus));
+        $this->assertSame(1, Money::sign('10'));
+        $this->assertSame(-1, Money::sign('-10'));
+        $this->assertSame(0, Money::sign('0'));
+        $this->assertStringContainsString('emerald', Money::colorClass('10'));
+        $this->assertStringContainsString('rose', Money::colorClass('-10'));
+    }
+
+    public function test_signed_amount_presents_transaction_directions(): void
+    {
+        $income = SignedAmount::present('1500', direction: 'in', creditStyle: CreditDisplayStyle::Parentheses);
+        $expense = SignedAmount::present('1500', direction: 'out', creditStyle: CreditDisplayStyle::Parentheses);
+        $transfer = SignedAmount::present('1500', direction: 'transfer', creditStyle: CreditDisplayStyle::Parentheses);
+        $creditBalance = SignedAmount::present('-1500', direction: 'none', creditStyle: CreditDisplayStyle::Parentheses);
+
+        $this->assertSame('1,500', $income['formatted']);
+        $this->assertSame('arrow-up', $income['icon']);
+        $this->assertSame('(1,500)', $expense['formatted']);
+        $this->assertSame('arrow-down', $expense['icon']);
+        $this->assertSame('arrow-left-right', $transfer['icon']);
+        $this->assertStringContainsString('sky', $transfer['color_class']);
+        $this->assertSame('(1,500)', $creditBalance['formatted']);
+        $this->assertNull($creditBalance['icon']);
     }
 
     public function test_locale_date_format_input_and_storage_roundtrip(): void

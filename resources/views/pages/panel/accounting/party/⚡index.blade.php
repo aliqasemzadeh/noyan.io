@@ -252,7 +252,7 @@ new class extends Component
                         </flux:table.cell>
                         @unless ($this->isSalePanel())
                             <flux:table.cell>
-                                <span dir="ltr">{{ $this->formatAmount((string) $party->balance) }}</span>
+                                <x-accounting.signed-amount :amount="$party->balance" />
                             </flux:table.cell>
                         @endunless
                         <flux:table.cell>

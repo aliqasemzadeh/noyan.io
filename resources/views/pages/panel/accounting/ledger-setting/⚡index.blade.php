@@ -6,6 +6,7 @@ use App\Actions\Ledger\BackfillBusinessGlAction;
 use App\Actions\Ledger\ConvertManualSettlementJournalsAction;
 use App\Actions\Ledger\SyncBusinessGlAction;
 use App\Enums\Accounting\AutoPostMode;
+use App\Enums\Accounting\CreditDisplayStyle;
 use App\Enums\Accounting\JournalEntryStatus;
 use App\Enums\Accounting\VoucherNumberingMode;
 use App\Livewire\Forms\BusinessLedgerSettingsForm;
@@ -213,7 +214,15 @@ new class extends Component
                         <flux:select.option :value="JournalEntryStatus::Draft->value">{{ JournalEntryStatus::Draft->label() }}</flux:select.option>
                         <flux:select.option :value="JournalEntryStatus::Posted->value">{{ JournalEntryStatus::Posted->label() }}</flux:select.option>
                     </flux:select>
+
+                    <flux:select wire:model="form.credit_display_style" :label="__('general.credit_display_style')" variant="listbox" class="sm:col-span-2">
+                        @foreach (CreditDisplayStyle::cases() as $style)
+                            <flux:select.option :value="$style->value">{{ $style->label() }}</flux:select.option>
+                        @endforeach
+                    </flux:select>
                 </div>
+
+                <flux:text class="text-sm text-zinc-500">{{ __('general.credit_display_style_hint') }}</flux:text>
             @endif
 
             @if ($tab === 'auto_post')

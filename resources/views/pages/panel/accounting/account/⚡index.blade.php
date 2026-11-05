@@ -173,9 +173,12 @@ new class extends Component
                         {{ __('general.total_accounts_balance') }}
                         <span dir="ltr">({{ $balance['currency']->code }})</span>
                     </flux:text>
-                    <flux:heading size="lg" class="font-semibold text-teal-700 dark:text-teal-400" dir="ltr">
-                        {{ $balance['formatted'] }}
-                    </flux:heading>
+                    <x-accounting.signed-amount
+                        class="text-lg font-semibold"
+                        :amount="$balance['total']"
+                        :currency="$balance['currency']"
+                        :suffix="$balance['currency']->code"
+                    />
                 </flux:card>
             @endforeach
         </div>
@@ -227,7 +230,10 @@ new class extends Component
                             <span dir="ltr">{{ $account->currency?->code }}</span>
                         </flux:table.cell>
                         <flux:table.cell>
-                            <span dir="ltr">{{ $this->formatBalance($account) }}</span>
+                            <x-accounting.signed-amount
+                                :amount="$account->current_balance"
+                                :currency="$account->currency"
+                            />
                         </flux:table.cell>
                         <flux:table.cell>
                             <flux:badge size="sm" :color="$account->is_active ? 'green' : 'zinc'">

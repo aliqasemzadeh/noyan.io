@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\Accounting\AccountLevel;
 use App\Enums\Accounting\AutoPostMode;
+use App\Enums\Accounting\CreditDisplayStyle;
 use App\Enums\Accounting\JournalEntryStatus;
 use App\Enums\Accounting\VoucherNumberingMode;
 use App\Models\Accounting\GlAccount;
@@ -18,6 +19,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'voucher_number_pad',
     'default_voucher_status',
     'auto_post_mode',
+    'credit_display_style',
     'group_code_length',
     'control_code_length',
     'subsidiary_code_length',
@@ -45,6 +47,7 @@ class BusinessLedgerSetting extends Model
             'voucher_number_pad' => 'integer',
             'default_voucher_status' => JournalEntryStatus::class,
             'auto_post_mode' => AutoPostMode::class,
+            'credit_display_style' => CreditDisplayStyle::class,
             'group_code_length' => 'integer',
             'control_code_length' => 'integer',
             'subsidiary_code_length' => 'integer',
@@ -122,6 +125,7 @@ class BusinessLedgerSetting extends Model
             'voucher_number_pad' => 4,
             'default_voucher_status' => JournalEntryStatus::Draft->value,
             'auto_post_mode' => AutoPostMode::Off->value,
+            'credit_display_style' => CreditDisplayStyle::Parentheses->value,
             'group_code_length' => 1,
             'control_code_length' => 1,
             'subsidiary_code_length' => 2,

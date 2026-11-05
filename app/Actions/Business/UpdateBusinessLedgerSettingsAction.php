@@ -3,6 +3,7 @@
 namespace App\Actions\Business;
 
 use App\Enums\Accounting\AutoPostMode;
+use App\Enums\Accounting\CreditDisplayStyle;
 use App\Enums\Accounting\JournalEntryStatus;
 use App\Enums\Accounting\VoucherNumberingMode;
 use App\Models\Accounting\GlAccount;
@@ -47,6 +48,12 @@ class UpdateBusinessLedgerSettingsAction
             'default_voucher_status' => $defaultStatus,
             'auto_post_mode' => $autoPostMode,
         ];
+
+        if (array_key_exists('credit_display_style', $data)) {
+            $payload['credit_display_style'] = $data['credit_display_style'] instanceof CreditDisplayStyle
+                ? $data['credit_display_style']
+                : CreditDisplayStyle::tryFrom((string) $data['credit_display_style']) ?? CreditDisplayStyle::Parentheses;
+        }
 
         $current = BusinessLedgerSetting::forBusiness($business);
         $this->applyCodeLengths($current, $data, $payload);

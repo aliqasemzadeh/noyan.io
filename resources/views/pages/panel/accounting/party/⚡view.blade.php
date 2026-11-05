@@ -425,7 +425,7 @@ new class extends Component
                 @unless ($this->isSalePanel())
                     <div class="flex items-center justify-between gap-4 border-b border-zinc-100 pb-3 dark:border-zinc-700">
                         <flux:text class="text-zinc-500">{{ __('general.balance') }}</flux:text>
-                        <flux:text class="font-medium" dir="ltr">{{ $this->formattedBalance }}</flux:text>
+                        <x-accounting.signed-amount :amount="$party->balance" />
                     </div>
 
                     <div class="flex items-center justify-between gap-4 border-b border-zinc-100 pb-3 dark:border-zinc-700">
@@ -652,7 +652,12 @@ new class extends Component
                                 </flux:badge>
                             </flux:table.cell>
                             <flux:table.cell>{{ $transaction->account?->name ?? '—' }}</flux:table.cell>
-                            <flux:table.cell dir="ltr">{{ $this->formatAmount((string) $transaction->amount) }}</flux:table.cell>
+                            <flux:table.cell>
+                                <x-accounting.signed-amount
+                                    :amount="$transaction->amount"
+                                    :direction="\App\Support\Accounting\SignedAmount::directionForTransactionType($transaction->type)"
+                                />
+                            </flux:table.cell>
                             <flux:table.cell>{{ $transaction->invoice?->invoice_number ?? '—' }}</flux:table.cell>
                             <flux:table.cell>
                                 @if ($transaction->loan)

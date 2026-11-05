@@ -5,6 +5,7 @@ namespace App\Livewire\Forms;
 use App\Actions\Business\UpdateBusinessLedgerSettingsAction;
 use App\Enums\Accounting\AccountLevel;
 use App\Enums\Accounting\AutoPostMode;
+use App\Enums\Accounting\CreditDisplayStyle;
 use App\Enums\Accounting\JournalEntryStatus;
 use App\Enums\Accounting\VoucherNumberingMode;
 use App\Models\Business;
@@ -25,6 +26,8 @@ class BusinessLedgerSettingsForm extends Form
     public string $default_voucher_status = 'draft';
 
     public string $auto_post_mode = 'off';
+
+    public string $credit_display_style = 'parentheses';
 
     public int $group_code_length = 1;
 
@@ -67,6 +70,8 @@ class BusinessLedgerSettingsForm extends Form
             ?? JournalEntryStatus::Draft->value;
         $this->auto_post_mode = $settings->auto_post_mode?->value
             ?? AutoPostMode::Off->value;
+        $this->credit_display_style = $settings->credit_display_style?->value
+            ?? CreditDisplayStyle::Parentheses->value;
         $this->group_code_length = $settings->codeLength(AccountLevel::Group);
         $this->control_code_length = $settings->codeLength(AccountLevel::Control);
         $this->subsidiary_code_length = $settings->codeLength(AccountLevel::Subsidiary);
@@ -103,6 +108,7 @@ class BusinessLedgerSettingsForm extends Form
                 JournalEntryStatus::Posted->value,
             ])],
             'auto_post_mode' => ['required', Rule::enum(AutoPostMode::class)],
+            'credit_display_style' => ['required', Rule::enum(CreditDisplayStyle::class)],
             'group_code_length' => ['required', 'integer', 'min:1', 'max:8'],
             'control_code_length' => ['required', 'integer', 'min:1', 'max:8'],
             'subsidiary_code_length' => ['required', 'integer', 'min:1', 'max:8'],
@@ -134,6 +140,7 @@ class BusinessLedgerSettingsForm extends Form
             'voucher_number_pad' => $this->voucher_number_pad,
             'default_voucher_status' => $this->default_voucher_status,
             'auto_post_mode' => $this->auto_post_mode,
+            'credit_display_style' => $this->credit_display_style,
             'group_code_length' => $this->group_code_length,
             'control_code_length' => $this->control_code_length,
             'subsidiary_code_length' => $this->subsidiary_code_length,

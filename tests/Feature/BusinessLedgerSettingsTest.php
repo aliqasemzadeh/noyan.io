@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Actions\Accounting\SeedBusinessChartOfAccountsAction;
 use App\Actions\Accounting\SyncBusinessLedgerDefaultAccountsAction;
 use App\Enums\Accounting\AutoPostMode;
+use App\Enums\Accounting\CreditDisplayStyle;
 use App\Enums\Accounting\JournalEntryStatus;
 use App\Enums\Accounting\VoucherNumberingMode;
 use App\Models\Business;
@@ -31,6 +32,7 @@ class BusinessLedgerSettingsTest extends TestCase
         $this->assertSame(VoucherNumberingMode::Yearly, $settings->voucher_numbering_mode);
         $this->assertSame(JournalEntryStatus::Draft, $settings->default_voucher_status);
         $this->assertSame(AutoPostMode::Off, $settings->auto_post_mode);
+        $this->assertSame(CreditDisplayStyle::Parentheses, $settings->credit_display_style);
         $this->assertSame(4, $settings->voucher_number_pad);
     }
 
@@ -107,6 +109,7 @@ class BusinessLedgerSettingsTest extends TestCase
             ->set('form.voucher_number_pad', 3)
             ->set('form.default_voucher_status', JournalEntryStatus::Posted->value)
             ->set('form.auto_post_mode', AutoPostMode::Realtime->value)
+            ->set('form.credit_display_style', CreditDisplayStyle::Minus->value)
             ->call('save')
             ->assertHasNoErrors();
 
@@ -118,6 +121,7 @@ class BusinessLedgerSettingsTest extends TestCase
         $this->assertSame(3, $settings->voucher_number_pad);
         $this->assertSame(JournalEntryStatus::Posted, $settings->default_voucher_status);
         $this->assertSame(AutoPostMode::Realtime, $settings->auto_post_mode);
+        $this->assertSame(CreditDisplayStyle::Minus, $settings->credit_display_style);
     }
 
     /**

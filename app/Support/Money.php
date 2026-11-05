@@ -2,6 +2,8 @@
 
 namespace App\Support;
 
+use App\Enums\Accounting\CreditDisplayStyle;
+
 class Money
 {
     public static function normalize(?string $amount): string
@@ -59,5 +61,79 @@ class Money
         }
 
         return ($negative ? '-' : '').$formatted;
+    }
+
+    /**
+     * Compare a normalized amount to zero.
+     *
+     * @return int -1 when negative, 0 when zero, 1 when positive
+     */
+    public static function sign(?string $amount): int
+    {
+        $normalized = self::normalize($amount);
+
+        if ($normalized === '' || ! is_numeric($normalized)) {
+            return 0;
+        }
+
+        if (function_exists('bccomp')) {
+            return bccomp($normalized, '0', 18);
+        }
+
+        $value = (float) $normalized;
+
+        return $value <=> 0.0;
+    }
+
+    public static function formatSigned(
+        ?string $amount,
+        int $decimalPlaces = 0,
+        CreditDisplayStyle|string|null $creditStyle = null,
+    ): string {
+        $style = self::resolveCreditStyle($creditStyle);
+        $sign = self::sign($amount);
+        $absolute = self::format(self::absolute($amount), $decimalPlaces);
+
+        if ($sign < 0) {
+            return match ($style) {
+                CreditDisplayStyle::Parentheses => '('.$absolute.')',
+                CreditDisplayStyle::Minus => '-'.$absolute,
+            };
+        }
+
+        return $absolute;
+    }
+
+    public static function colorClass(?string $amount): string
+    {
+        return match (self::sign($amount)) {
+            1 => 'text-emerald-600 dark:text-emerald-400',
+            -1 => 'text-rose-600 dark:text-rose-400',
+            default => 'text-zinc-700 dark:text-zinc-300',
+        };
+    }
+
+    public static function absolute(?string $amount): string
+    {
+        $normalized = self::normalize($amount);
+
+        if ($normalized === '' || ! is_numeric($normalized)) {
+            return '0';
+        }
+
+        return ltrim($normalized, '+-') ?: '0';
+    }
+
+    public static function resolveCreditStyle(CreditDisplayStyle|string|null $style = null): CreditDisplayStyle
+    {
+        if ($style instanceof CreditDisplayStyle) {
+            return $style;
+        }
+
+        if (is_string($style) && $style !== '') {
+            return CreditDisplayStyle::tryFrom($style) ?? CreditDisplayStyle::Parentheses;
+        }
+
+        return CreditDisplayStyle::Parentheses;
     }
 }

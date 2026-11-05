@@ -469,12 +469,12 @@ new class extends Component
 
                 <div class="flex items-center justify-between gap-4 border-b border-zinc-100 pb-3 dark:border-zinc-700">
                     <flux:text class="text-zinc-500">{{ __('general.opening_balance') }}</flux:text>
-                    <flux:text class="font-medium" dir="ltr">{{ $this->formattedOpeningBalance }}</flux:text>
+                    <x-accounting.signed-amount :amount="$account->opening_balance" :currency="$account->currency" />
                 </div>
 
                 <div class="flex items-center justify-between gap-4 border-b border-zinc-100 pb-3 dark:border-zinc-700">
                     <flux:text class="text-zinc-500">{{ __('general.current_balance') }}</flux:text>
-                    <flux:text class="font-medium" dir="ltr">{{ $this->formattedCurrentBalance }}</flux:text>
+                    <x-accounting.signed-amount :amount="$account->current_balance" :currency="$account->currency" />
                 </div>
 
                 <div class="flex items-center justify-between gap-4 border-b border-zinc-100 pb-3 dark:border-zinc-700">
@@ -652,8 +652,19 @@ new class extends Component
                             </flux:badge>
                         </flux:table.cell>
                         <flux:table.cell>{{ $transaction->party?->displayName() ?? '—' }}</flux:table.cell>
-                        <flux:table.cell dir="ltr">{{ $this->formatAmount((string) $transaction->amount) }}</flux:table.cell>
-                        <flux:table.cell dir="ltr">{{ $this->formatAmount((string) ($transaction->balance_after ?? '0')) }}</flux:table.cell>
+                        <flux:table.cell>
+                            <x-accounting.signed-amount
+                                :amount="$transaction->amount"
+                                :direction="$direction"
+                                :currency="$account->currency"
+                            />
+                        </flux:table.cell>
+                        <flux:table.cell>
+                            <x-accounting.signed-amount
+                                :amount="$transaction->balance_after ?? '0'"
+                                :currency="$account->currency"
+                            />
+                        </flux:table.cell>
                         <flux:table.cell>
                             @if ($linkedJournal)
                                 <a
