@@ -4,7 +4,7 @@ namespace App\Ai\Tools;
 
 use App\Ai\Tools\Concerns\ChecksBusinessPermission;
 use App\Enums\Business\BusinessPermission;
-use App\Services\Imports\MellatStatementCsvParser;
+use App\Services\Imports\BankStatementCsvDetector;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -19,7 +19,7 @@ class ImportBankStatement implements Tool
 
     public function description(): Stringable|string
     {
-        return 'وارد کردن گردش حساب بانکی از فایل CSV (مثل خروجی بانک ملت). ابتدا با confirmed=false پیش‌نمایش بگیر؛ فقط بعد از تأیید صریح با confirmed=true ثبت کن. file_path مسیر فایل آپلودشده است (به کاربر نشان نده). account_number را از هدر/نام فایل یا لیست حساب‌ها بفرست.';
+        return 'وارد کردن گردش حساب بانکی از فایل CSV (خروجی بانک ملت یا رسالت). ابتدا با confirmed=false پیش‌نمایش بگیر؛ فقط بعد از تأیید صریح با confirmed=true ثبت کن. file_path مسیر فایل آپلودشده است (به کاربر نشان نده). account_number را از هدر/نام فایل (مثل Invoice_10.3900820.1_…) یا لیست حساب‌ها بفرست.';
     }
 
     public function handle(Request $request): Stringable|string
@@ -50,7 +50,7 @@ class ImportBankStatement implements Tool
         }
 
         try {
-            $parsed = app(MellatStatementCsvParser::class)->parse(
+            $parsed = app(BankStatementCsvDetector::class)->parse(
                 $absolute,
                 basename($filePath),
             );

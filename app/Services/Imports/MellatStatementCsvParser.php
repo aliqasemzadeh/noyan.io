@@ -2,6 +2,7 @@
 
 namespace App\Services\Imports;
 
+use App\Services\Imports\Concerns\ParsesBankStatementCsv;
 use InvalidArgumentException;
 use RuntimeException;
 
@@ -14,6 +15,8 @@ use RuntimeException;
  */
 class MellatStatementCsvParser
 {
+    use ParsesBankStatementCsv;
+
     /**
      * @return array{
      *     account_number_hint: string|null,
@@ -122,7 +125,7 @@ class MellatStatementCsvParser
      */
     protected function mapColumns(array $header): array
     {
-        $aliases = [
+        return $this->mapHeaderColumns($header, [
             'balance' => ['مانده', 'balance'],
             'credit' => ['مبلغ گردش بستانکار', 'بستانکار', 'credit'],
             'debit' => ['مبلغ گردش بدهکار', 'بدهکار', 'debit'],
@@ -131,94 +134,6 @@ class MellatStatementCsvParser
             'serial' => ['شماره سریال', 'سریال', 'serial'],
             'time' => ['زمان', 'time'],
             'date' => ['تاریخ', 'date'],
-        ];
-
-        $map = [];
-
-        foreach ($aliases as $key => $names) {
-            foreach ($header as $index => $label) {
-                foreach ($names as $name) {
-                    if ($label === $this->normalizeHeader($name) || str_contains($label, $this->normalizeHeader($name))) {
-                        $map[$key] = $index;
-                        break 2;
-                    }
-                }
-            }
-        }
-
-        foreach (['balance', 'credit', 'debit', 'description', 'date'] as $required) {
-            if (! isset($map[$required])) {
-                throw new InvalidArgumentException("CSV missing required column: {$required}");
-            }
-        }
-
-        return $map;
-    }
-
-    protected function normalizeEncoding(string $raw): string
-    {
-        if (str_starts_with($raw, "\xEF\xBB\xBF")) {
-            $raw = substr($raw, 3);
-        }
-
-        if (! mb_check_encoding($raw, 'UTF-8')) {
-            $converted = @mb_convert_encoding($raw, 'UTF-8', 'Windows-1256');
-            if (is_string($converted) && $converted !== '') {
-                $raw = $converted;
-            }
-        }
-
-        return $raw;
-    }
-
-    protected function normalizeHeader(string $value): string
-    {
-        $value = $this->normalizeDigits($value);
-        $value = str_replace(["\u{200c}", "\u{00a0}"], ' ', $value);
-
-        return trim(mb_strtolower($value));
-    }
-
-    protected function normalizeAmount(string $value): string
-    {
-        $value = $this->normalizeDigits($value);
-        $value = str_replace([',', '٬', ' ', '،'], '', $value);
-
-        if ($value === '' || ! is_numeric($value)) {
-            return '0';
-        }
-
-        return bcadd($value, '0', 0);
-    }
-
-    protected function normalizeDigits(string $value): string
-    {
-        $persian = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹', '٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
-        $latin = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
-
-        return str_replace($persian, $latin, $value);
-    }
-
-    protected function looksLikeFee(string $description, string $party): bool
-    {
-        $haystack = mb_strtolower($description.' '.$party);
-
-        return str_contains($haystack, 'کارمزد') || str_contains($haystack, 'كارمزد');
-    }
-
-    protected function accountHintFromFilename(?string $filename): ?string
-    {
-        if ($filename === null || $filename === '') {
-            return null;
-        }
-
-        $base = pathinfo($filename, PATHINFO_FILENAME);
-        $base = $this->normalizeDigits($base);
-
-        if (preg_match('/^(\d{6,20})/', $base, $matches) === 1) {
-            return $matches[1];
-        }
-
-        return null;
+        ], ['balance', 'credit', 'debit', 'description', 'date']);
     }
 }

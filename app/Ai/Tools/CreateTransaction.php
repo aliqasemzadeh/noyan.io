@@ -413,6 +413,14 @@ class CreateTransaction implements Tool
                 return $dateCompare;
             }
 
+            // At the same timestamp, fee rows first (Resalat lists fee after main; Mellat usually before).
+            $aFee = is_array($a['item']) ? $this->noteLooksLikeFee((string) ($a['item']['note'] ?? '')) : false;
+            $bFee = is_array($b['item']) ? $this->noteLooksLikeFee((string) ($b['item']['note'] ?? '')) : false;
+
+            if ($aFee !== $bFee) {
+                return $aFee ? -1 : 1;
+            }
+
             return $a['original_index'] <=> $b['original_index'];
         });
 

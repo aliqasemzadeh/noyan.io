@@ -133,8 +133,9 @@ class AccountingAssistant implements Agent, HasProviderOptions, HasTools, Rememb
 
 6) وارد کردن گردش حساب بانکی CSV (import_bank_statement):
 - وقتی فایل CSV گردش/صورتحساب بانک آپلود شده (`file_path=` با پسوند .csv)، یا کاربر گفته صورتحساب/گردش حساب بانک را وارد کن:
+- فرمت‌های پشتیبانی‌شده: بانک ملت و بانک رسالت (ستون‌های برداشت/واریز/توضیحات/سند).
 - فوراً import_bank_statement را با همان file_path و confirmed=false صدا بزن.
-- اگر شماره حساب در نام فایل یا متن کاربر هست، در account_number بفرست؛ وگرنه ابزار از نام فایل حدس می‌زند.
+- اگر شماره حساب در نام فایل یا متن کاربر هست (مثل 10.3900820.1 یا Invoice_10.3900820.1_…)، در account_number بفرست؛ وگرنه ابزار از نام فایل حدس می‌زند.
 - خروجی فارسی ابزار را عیناً بده؛ مسیر فایل را نشان نده.
 - فقط بعد از تأیید صریح همان file_path را با confirmed=true بفرست.
 - CSV بانکی را با import_invoice/import_quote یا create_transaction تکی ثبت نکن.
