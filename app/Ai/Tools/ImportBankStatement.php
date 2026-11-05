@@ -19,7 +19,7 @@ class ImportBankStatement implements Tool
 
     public function description(): Stringable|string
     {
-        return 'وارد کردن گردش حساب بانکی از فایل CSV (خروجی بانک ملت یا رسالت). ابتدا با confirmed=false پیش‌نمایش بگیر؛ فقط بعد از تأیید صریح با confirmed=true ثبت کن. file_path مسیر فایل آپلودشده است (به کاربر نشان نده). account_number را از هدر/نام فایل (مثل Invoice_10.3900820.1_…) یا لیست حساب‌ها بفرست.';
+        return 'وارد کردن گردش حساب بانکی از فایل CSV یا اکسل (خروجی بانک ملت، رسالت، یا بلو بانک). ابتدا با confirmed=false پیش‌نمایش بگیر؛ فقط بعد از تأیید صریح با confirmed=true ثبت کن. file_path مسیر فایل آپلودشده است (به کاربر نشان نده). account_number را از شبا/هدر/نام فایل یا لیست حساب‌ها بفرست.';
     }
 
     public function handle(Request $request): Stringable|string
@@ -122,10 +122,10 @@ class ImportBankStatement implements Tool
     {
         return [
             'file_path' => $schema->string()
-                ->description('مسیر فایل CSV آپلودشده (مثلاً ai-imports/xxx.csv)')
+                ->description('مسیر فایل CSV/Excel آپلودشده (مثلاً ai-imports/xxx.csv یا ai-imports/xxx.xlsx)')
                 ->required(),
             'account_number' => $schema->string()
-                ->description('شماره حساب/شبا/کارت مالک صورتحساب؛ اگر خالی باشد از نام فایل حدس زده می‌شود'),
+                ->description('شماره حساب/شبا/کارت مالک صورتحساب؛ اگر خالی باشد از شبا داخل فایل یا نام فایل حدس زده می‌شود'),
             'confirmed' => $schema->boolean()
                 ->description('false = فقط پیش‌نمایش؛ true = ثبت بعد از تأیید کاربر'),
         ];

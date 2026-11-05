@@ -23,6 +23,16 @@ class BankStatementCsvDetector
      */
     public function parse(string $absolutePath, ?string $originalFilename = null): array
     {
+        if ($this->isExcelPath($absolutePath, $originalFilename)) {
+            $blubank = app(BlubankStatementExcelParser::class);
+
+            if ($blubank->looksLike($absolutePath)) {
+                return $blubank->parse($absolutePath, $originalFilename);
+            }
+
+            throw new InvalidArgumentException('Unrecognized bank statement Excel format.');
+        }
+
         $headers = $this->readNormalizedHeaders($absolutePath);
 
         if ($this->looksLikeResalat($headers)) {
@@ -34,6 +44,39 @@ class BankStatementCsvDetector
         }
 
         throw new InvalidArgumentException('Unrecognized bank statement CSV format.');
+    }
+
+    public function looksLikeBankStatement(string $absolutePath, ?string $originalFilename = null): bool
+    {
+        try {
+            if ($this->isExcelPath($absolutePath, $originalFilename)) {
+                return app(BlubankStatementExcelParser::class)->looksLike($absolutePath);
+            }
+
+            $headers = $this->readNormalizedHeaders($absolutePath);
+
+            return $this->looksLikeResalat($headers) || $this->looksLikeMellat($headers);
+        } catch (InvalidArgumentException) {
+            return false;
+        }
+    }
+
+    protected function isExcelPath(string $absolutePath, ?string $originalFilename = null): bool
+    {
+        $candidates = array_filter([
+            $originalFilename,
+            $absolutePath,
+        ]);
+
+        foreach ($candidates as $candidate) {
+            $extension = strtolower(pathinfo((string) $candidate, PATHINFO_EXTENSION));
+
+            if (in_array($extension, ['xlsx', 'xls', 'xlsm'], true)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
