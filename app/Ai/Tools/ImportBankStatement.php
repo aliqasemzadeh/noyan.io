@@ -212,6 +212,18 @@ class ImportBankStatement implements Tool
 
         $accountLabel = (string) $account->name;
 
+        // At period start, opening is often higher than statement end (net outflow).
+        if (bccomp($current, $requiredOpening, 0) === 0) {
+            return null;
+        }
+
+        if (bccomp($current, $newestBalance, 0) === 0) {
+            return __('general.ai_bank_statement_already_applied', [
+                'account' => $accountLabel,
+                'balance' => number_format((float) $newestBalance),
+            ]);
+        }
+
         if (bccomp($current, $newestBalance, 0) === 1) {
             return __('general.ai_bank_statement_ledger_ahead', [
                 'account' => $accountLabel,
@@ -220,16 +232,12 @@ class ImportBankStatement implements Tool
             ]);
         }
 
-        if (bccomp($current, $requiredOpening, 0) !== 0) {
-            return __('general.ai_bank_statement_opening_mismatch', [
-                'account' => $accountLabel,
-                'current' => number_format((float) $current),
-                'required' => number_format((float) $requiredOpening),
-                'statement_end' => number_format((float) $newestBalance),
-            ]);
-        }
-
-        return null;
+        return __('general.ai_bank_statement_opening_mismatch', [
+            'account' => $accountLabel,
+            'current' => number_format((float) $current),
+            'required' => number_format((float) $requiredOpening),
+            'statement_end' => number_format((float) $newestBalance),
+        ]);
     }
 
     /**

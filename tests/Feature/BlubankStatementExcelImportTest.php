@@ -44,6 +44,7 @@ class BlubankStatementExcelImportTest extends TestCase
 
     public function test_import_blocked_when_ledger_is_ahead_of_statement(): void
     {
+        // Ahead of statement end AND not equal to period opening (1,000,000,000).
         [$user, $account] = $this->prepareAccount('2000000000');
 
         $stored = 'ai-imports/blubank-ahead.xlsx';
@@ -64,6 +65,26 @@ class BlubankStatementExcelImportTest extends TestCase
             'statement_end' => number_format(1109971000),
         ]), $result);
         $this->assertSame(0, Transaction::query()->where('account_id', $account->id)->count());
+    }
+
+    public function test_import_allowed_when_balance_equals_statement_opening(): void
+    {
+        [$user, $account] = $this->prepareAccount('1000000000');
+
+        $stored = 'ai-imports/blubank-from-opening.xlsx';
+        Storage::disk('local')->put($stored, file_get_contents($this->fixturePath()));
+
+        $this->actingAs($user);
+
+        $result = (string) app(ImportBankStatement::class)->handle(new Request([
+            'file_path' => $stored,
+            'account_number' => $account->iban,
+            'confirmed' => true,
+        ]));
+
+        $this->assertSame(5, Transaction::query()->where('account_id', $account->id)->count());
+        $this->assertSame(0, bccomp((string) $account->fresh()->current_balance, '1109971000', 18));
+        $this->assertStringNotContainsString('جلوتر است', $result);
     }
 
     public function test_detector_routes_blubank_excel(): void

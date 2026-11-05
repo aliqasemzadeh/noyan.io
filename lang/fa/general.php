@@ -274,6 +274,7 @@ return [
     'ai_bank_statement_preview_line' => ':n) :type — :amount — مانده :balance — :date — :note',
     'ai_bank_statement_preview_more' => '… و :count ردیف دیگر',
     'ai_bank_statement_ledger_ahead' => 'مانده حساب «:account» (:current) از پایان این صورتحساب (:statement_end) جلوتر است؛ ردیف جدیدی از این فایل قابل ثبت نیست. اگر تراکنش‌های جدیدتری دارید، صورتحساب به‌روزتر بگیرید.',
+    'ai_bank_statement_already_applied' => 'مانده حساب «:account» با پایان این صورتحساب (:balance) یکی است؛ به‌نظر می‌رسد این فایل قبلاً اعمال شده است.',
     'ai_bank_statement_opening_mismatch' => 'مانده حساب «:account» (:current) با مانده شروع این صورتحساب (:required) جور نیست؛ ثبت ممکن نیست تا مانده شروع دوره یکی شود (پایان فایل: :statement_end).',
     'export' => 'خروجی',
     'export_transactions' => 'خروجی تراکنش‌ها',

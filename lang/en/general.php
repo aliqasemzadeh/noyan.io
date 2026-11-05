@@ -274,6 +274,7 @@ return [
     'ai_bank_statement_preview_line' => ':n) :type — :amount — balance :balance — :date — :note',
     'ai_bank_statement_preview_more' => '… and :count more rows',
     'ai_bank_statement_ledger_ahead' => 'Account “:account” balance (:current) is ahead of this statement’s ending balance (:statement_end); nothing new can be imported from this file. Download a newer statement if you have later transactions.',
+    'ai_bank_statement_already_applied' => 'Account “:account” balance already matches this statement’s ending balance (:balance); the file looks already applied.',
     'ai_bank_statement_opening_mismatch' => 'Account “:account” balance (:current) does not match this statement’s opening balance (:required); import is blocked until the period start matches (statement end: :statement_end).',
     'export' => 'Export',
     'export_transactions' => 'Export transactions',
