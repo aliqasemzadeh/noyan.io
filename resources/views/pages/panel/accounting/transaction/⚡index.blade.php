@@ -1,11 +1,13 @@
 <?php
 
+use App\Actions\Ledger\CreateJournalsFromSelectedTransactionsAction;
 use App\Actions\Transactions\DeleteTransactionAction;
 use App\Actions\Transactions\UpdateTransactionAction;
 use App\Enums\Accounting\TransactionType;
 use App\Enums\CategoryType;
 use App\Exports\TransactionsExport;
 use App\Models\Accounting\Account;
+use App\Models\Accounting\JournalEntry;
 use App\Models\Accounting\Party;
 use App\Models\Accounting\Transaction;
 use App\Models\Category;
@@ -17,6 +19,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Js;
+use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Url;
@@ -58,6 +61,9 @@ new class extends Component
     public array $bulkTagNames = [];
 
     public string $bulkTagSearch = '';
+
+    /** @var array{mode: string, transfer: array<string, mixed>|null, items: list<array<string, mixed>>}|null */
+    public ?array $bulkJournalPreview = null;
 
     public function mount(): void
     {
@@ -214,6 +220,84 @@ new class extends Component
         }
 
         Flux::modal('transaction.bulk-delete')->show();
+    }
+
+    public function openBulkCreateJournalModal(CreateJournalsFromSelectedTransactionsAction $action): void
+    {
+        if ($this->selected === []) {
+            Flux::toast(__('general.bulk_nothing_selected'));
+
+            return;
+        }
+
+        $user = Auth::user();
+
+        if ($user === null) {
+            Flux::toast(__('general.bulk_nothing_selected'));
+
+            return;
+        }
+
+        $this->bulkJournalPreview = $action->preview(
+            $user,
+            array_map(intval(...), $this->selected),
+        );
+        $this->resetValidation();
+
+        Flux::modal('transaction.bulk-create-journal')->show();
+    }
+
+    public function applyBulkCreateJournal(CreateJournalsFromSelectedTransactionsAction $action): void
+    {
+        $user = Auth::user();
+
+        if ($user === null || $this->selected === []) {
+            Flux::toast(__('general.bulk_nothing_selected'));
+
+            return;
+        }
+
+        try {
+            $result = $action->handle(
+                $user,
+                array_map(intval(...), $this->selected),
+            );
+        } catch (ValidationException $exception) {
+            $message = collect($exception->errors())->flatten()->first()
+                ?? __('general.bulk_create_journal_failed');
+            Flux::toast((string) $message);
+
+            return;
+        } catch (\Throwable $exception) {
+            Flux::toast($exception->getMessage() ?: __('general.bulk_create_journal_failed'));
+
+            return;
+        }
+
+        if ($result['mode'] === 'transfer' && is_array($result['transfer'])) {
+            $message = __('general.bulk_create_journal_transfer_created', [
+                'number' => $result['transfer']['voucher_number'],
+            ]);
+        } else {
+            $message = __('general.bulk_create_journal_created', [
+                'count' => $result['created'],
+            ]);
+        }
+
+        if ($result['failed'] > 0) {
+            $message .= ' '.__('general.bulk_create_journal_partial_failed', [
+                'count' => $result['failed'],
+            ]);
+        }
+
+        $this->bulkJournalPreview = null;
+        $this->finishBulkAction($message, $result['skipped']);
+    }
+
+    public function linkedJournal(Transaction $transaction): ?JournalEntry
+    {
+        return $transaction->journalEntries
+            ->first(fn (JournalEntry $entry): bool => ! str_contains((string) $entry->voucher_number, '__del_'));
     }
 
     public function addBulkTag(?string $name = null): void
@@ -497,6 +581,7 @@ new class extends Component
         $this->bulkPartyId = null;
         $this->bulkTagNames = [];
         $this->bulkTagSearch = '';
+        $this->bulkJournalPreview = null;
         $this->refreshTable();
 
         Flux::modals()->close();
@@ -663,7 +748,15 @@ new class extends Component
         $direction = $this->sortDirection === 'asc' ? 'asc' : 'desc';
 
         $paginator = $this->filteredTransactionsQuery()
-            ->with(['account', 'destinationAccount', 'party', 'category:id,name'])
+            ->with([
+                'account',
+                'destinationAccount',
+                'party',
+                'category:id,name',
+                'journalEntries' => fn ($query) => $query
+                    ->where('voucher_number', 'not like', '%__del_%')
+                    ->select(['id', 'business_id', 'voucher_number', 'referenceable_type', 'referenceable_id', 'status']),
+            ])
             ->orderBy('transaction_date', $direction)
             ->orderBy('created_at', $direction)
             ->paginate(config('general.per_page', 15));
@@ -872,6 +965,10 @@ new class extends Component
                     </flux:button>
 
                     <flux:menu>
+                        <flux:menu.item icon="book-plus" wire:click="openBulkCreateJournalModal">
+                            {{ __('general.bulk_create_journal') }}
+                        </flux:menu.item>
+                        <flux:menu.separator />
                         <flux:menu.item icon="folders" wire:click="openBulkCategoryModal">
                             {{ __('general.bulk_edit_category') }}
                         </flux:menu.item>
@@ -910,11 +1007,13 @@ new class extends Component
                 <flux:table.column>{{ __('general.category') }}</flux:table.column>
                 <flux:table.column>{{ __('general.amount') }}</flux:table.column>
                 <flux:table.column>{{ __('general.balance_after') }}</flux:table.column>
+                <flux:table.column>{{ __('general.linked_journal_entry') }}</flux:table.column>
                 <flux:table.column align="end">{{ __('general.actions') }}</flux:table.column>
             </flux:table.columns>
 
             <flux:table.rows>
                 @forelse ($this->transactions as $transaction)
+                    @php($linkedJournal = $this->linkedJournal($transaction))
                     <flux:table.row :key="$transaction->id">
                         <flux:table.cell>
                             <flux:checkbox wire:model.live="selected" value="{{ $transaction->id }}" />
@@ -946,6 +1045,20 @@ new class extends Component
                         <flux:table.cell>
                             <span dir="ltr">{{ $this->formatAmount((string) ($transaction->balance_after ?? '0')) }} {{ $transaction->currency }}</span>
                         </flux:table.cell>
+                        <flux:table.cell>
+                            @if ($linkedJournal)
+                                <a
+                                    href="{{ route('accounting.journal-entries.view', $linkedJournal) }}"
+                                    wire:navigate
+                                    class="text-teal-700 underline decoration-teal-300 underline-offset-2 dark:text-teal-300"
+                                    dir="ltr"
+                                >
+                                    {{ $linkedJournal->voucher_number }}
+                                </a>
+                            @else
+                                <flux:badge size="sm" color="zinc">{{ __('general.no_linked_journal_entry') }}</flux:badge>
+                            @endif
+                        </flux:table.cell>
                         <flux:table.cell align="end">
                             <div class="flex justify-end gap-2">
                                 <flux:tooltip content="{{ __('general.edit') }}">
@@ -972,7 +1085,7 @@ new class extends Component
                     </flux:table.row>
                 @empty
                     <flux:table.row>
-                        <flux:table.cell colspan="10">
+                        <flux:table.cell colspan="11">
                             {{ __('general.no_transactions') }}
                         </flux:table.cell>
                     </flux:table.row>
@@ -1115,6 +1228,62 @@ new class extends Component
             <div class="flex">
                 <flux:button type="submit" variant="primary" color="orange" class="w-full">
                     {{ __('general.save') }}
+                </flux:button>
+            </div>
+        </form>
+    </flux:modal>
+
+    <flux:modal name="transaction.bulk-create-journal" flyout position="right" class="min-w-full sm:min-w-lg">
+        <form wire:submit="applyBulkCreateJournal" class="space-y-6">
+            <div>
+                <flux:heading size="lg">{{ __('general.bulk_create_journal') }}</flux:heading>
+                <flux:text class="mt-2">{{ __('general.bulk_create_journal_hint') }}</flux:text>
+                <flux:text class="mt-1">{{ __('general.selected_count', ['count' => count($selected)]) }}</flux:text>
+            </div>
+
+            @if (is_array($bulkJournalPreview) && ($bulkJournalPreview['mode'] ?? null) === 'transfer' && is_array($bulkJournalPreview['transfer'] ?? null))
+                <flux:callout icon="arrow-left-right" variant="secondary">
+                    <flux:callout.heading>{{ __('general.bulk_create_journal_transfer_title') }}</flux:callout.heading>
+                    <flux:callout.text>
+                        {{ __('general.bulk_create_journal_transfer_summary', [
+                            'amount' => number_format((float) $bulkJournalPreview['transfer']['amount']),
+                            'from' => $bulkJournalPreview['transfer']['from_account'],
+                            'to' => $bulkJournalPreview['transfer']['to_account'],
+                        ]) }}
+                        <span class="ms-1" dir="ltr">{{ $bulkJournalPreview['transfer']['currency'] }}</span>
+                    </flux:callout.text>
+                </flux:callout>
+            @elseif (is_array($bulkJournalPreview))
+                <div class="space-y-3">
+                    <flux:heading size="sm">{{ __('general.bulk_create_journal_independent_title') }}</flux:heading>
+
+                    @foreach (($bulkJournalPreview['items'] ?? []) as $item)
+                        <div class="rounded-lg border border-zinc-200 p-3 dark:border-zinc-700" wire:key="bulk-journal-item-{{ $item['id'] }}">
+                            <div class="flex flex-wrap items-center justify-between gap-2">
+                                <div>
+                                    <div class="font-medium">#{{ $item['id'] }} — {{ $item['type'] }}</div>
+                                    <flux:text size="sm" class="mt-0.5">{{ $item['account'] }}</flux:text>
+                                </div>
+                                <div class="text-end">
+                                    <div dir="ltr" class="font-medium">{{ number_format((float) $item['amount']) }} {{ $item['currency'] }}</div>
+                                    <flux:badge size="sm" :color="$item['status'] === 'already_linked' ? 'zinc' : 'teal'" class="mt-1">
+                                        {{ $item['status'] === 'already_linked'
+                                            ? __('general.bulk_create_journal_already_linked')
+                                            : __('general.bulk_create_journal_will_create') }}
+                                    </flux:badge>
+                                </div>
+                            </div>
+                            @if (! empty($item['voucher_number']))
+                                <flux:text size="sm" class="mt-2" dir="ltr">{{ $item['voucher_number'] }}</flux:text>
+                            @endif
+                        </div>
+                    @endforeach
+                </div>
+            @endif
+
+            <div class="flex">
+                <flux:button type="submit" variant="primary" color="teal" class="w-full" icon="book-plus">
+                    {{ __('general.bulk_create_journal') }}
                 </flux:button>
             </div>
         </form>

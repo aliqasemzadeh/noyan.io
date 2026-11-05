@@ -1,13 +1,17 @@
 <?php
 
+use App\Actions\Ledger\CreateJournalsFromSelectedTransactionsAction;
 use App\Enums\Accounting\TransactionType;
 use App\Models\Accounting\Account;
+use App\Models\Accounting\JournalEntry;
 use App\Models\Accounting\Transaction;
 use App\Models\Currency;
 use App\Support\Accounting\AccountLedgerBalance;
 use App\Support\LocaleDate;
+use Flux\Flux;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
 use Livewire\Component;
@@ -29,6 +33,12 @@ new class extends Component
 
     public string $dateTo = '';
 
+    /** @var list<string> */
+    public array $selected = [];
+
+    /** @var array{mode: string, transfer: array<string, mixed>|null, items: list<array<string, mixed>>}|null */
+    public ?array $bulkJournalPreview = null;
+
     public function mount(Account $account): void
     {
         Auth::user()?->ensureCurrentBusiness();
@@ -43,27 +53,168 @@ new class extends Component
 
     public function updatedSearch(): void
     {
+        $this->clearSelection();
         $this->resetPage();
     }
 
     public function updatedTypeFilter(): void
     {
+        $this->clearSelection();
         $this->resetPage();
     }
 
     public function updatedDirectionFilter(): void
     {
+        $this->clearSelection();
         $this->resetPage();
     }
 
     public function updatedDateFrom(): void
     {
+        $this->clearSelection();
         $this->resetPage();
     }
 
     public function updatedDateTo(): void
     {
+        $this->clearSelection();
         $this->resetPage();
+    }
+
+    public function clearSelection(): void
+    {
+        $this->selected = [];
+        $this->bulkJournalPreview = null;
+    }
+
+    public function toggleSelectPage(): void
+    {
+        $pageIds = $this->ledgerTransactions
+            ->getCollection()
+            ->pluck('id')
+            ->map(fn (int|string $id): string => (string) $id)
+            ->all();
+
+        if ($pageIds === []) {
+            return;
+        }
+
+        $allSelected = collect($pageIds)->every(
+            fn (string $id): bool => in_array($id, $this->selected, true)
+        );
+
+        if ($allSelected) {
+            $this->selected = array_values(array_diff($this->selected, $pageIds));
+
+            return;
+        }
+
+        $this->selected = array_values(array_unique([...$this->selected, ...$pageIds]));
+    }
+
+    public function openBulkCreateJournalModal(CreateJournalsFromSelectedTransactionsAction $action): void
+    {
+        if ($this->selected === []) {
+            Flux::toast(__('general.bulk_nothing_selected'));
+
+            return;
+        }
+
+        $user = Auth::user();
+
+        if ($user === null) {
+            Flux::toast(__('general.bulk_nothing_selected'));
+
+            return;
+        }
+
+        $this->bulkJournalPreview = $action->preview(
+            $user,
+            array_map(intval(...), $this->selected),
+        );
+
+        Flux::modal('account.transaction.bulk-create-journal')->show();
+    }
+
+    public function applyBulkCreateJournal(CreateJournalsFromSelectedTransactionsAction $action): void
+    {
+        $user = Auth::user();
+
+        if ($user === null || $this->selected === []) {
+            Flux::toast(__('general.bulk_nothing_selected'));
+
+            return;
+        }
+
+        try {
+            $result = $action->handle(
+                $user,
+                array_map(intval(...), $this->selected),
+            );
+        } catch (ValidationException $exception) {
+            $message = collect($exception->errors())->flatten()->first()
+                ?? __('general.bulk_create_journal_failed');
+            Flux::toast((string) $message);
+
+            return;
+        } catch (\Throwable $exception) {
+            Flux::toast($exception->getMessage() ?: __('general.bulk_create_journal_failed'));
+
+            return;
+        }
+
+        if ($result['mode'] === 'transfer' && is_array($result['transfer'])) {
+            $message = __('general.bulk_create_journal_transfer_created', [
+                'number' => $result['transfer']['voucher_number'],
+            ]);
+        } else {
+            $message = __('general.bulk_create_journal_created', [
+                'count' => $result['created'],
+            ]);
+        }
+
+        if ($result['failed'] > 0) {
+            $message .= ' '.__('general.bulk_create_journal_partial_failed', [
+                'count' => $result['failed'],
+            ]);
+        }
+
+        if ($result['skipped'] > 0) {
+            $message .= ' '.__('general.bulk_skipped_incompatible', [
+                'count' => $result['skipped'],
+            ]);
+        }
+
+        $this->clearSelection();
+        unset($this->ledgerTransactions, $this->formattedCurrentBalance, $this->pageSelected);
+        $this->account->refresh()->loadMissing('currency');
+        Flux::modals()->close();
+        Flux::toast($message);
+        $this->dispatch('panels.accounting.transaction.index.table');
+    }
+
+    public function linkedJournal(Transaction $transaction): ?JournalEntry
+    {
+        return $transaction->journalEntries
+            ->first(fn (JournalEntry $entry): bool => ! str_contains((string) $entry->voucher_number, '__del_'));
+    }
+
+    #[Computed]
+    public function pageSelected(): bool
+    {
+        $pageIds = $this->ledgerTransactions
+            ->getCollection()
+            ->pluck('id')
+            ->map(fn (int|string $id): string => (string) $id)
+            ->all();
+
+        if ($pageIds === []) {
+            return false;
+        }
+
+        return collect($pageIds)->every(
+            fn (string $id): bool => in_array($id, $this->selected, true)
+        );
     }
 
     #[On('panels.accounting.account.view.refresh')]
@@ -100,7 +251,16 @@ new class extends Component
         $dateTo = LocaleDate::parseFilterDate($this->dateTo);
 
         $paginator = Transaction::query()
-            ->with(['party', 'invoice:id,invoice_number', 'loan:id,title', 'account', 'destinationAccount'])
+            ->with([
+                'party',
+                'invoice:id,invoice_number',
+                'loan:id,title',
+                'account',
+                'destinationAccount',
+                'journalEntries' => fn ($query) => $query
+                    ->where('voucher_number', 'not like', '%__del_%')
+                    ->select(['id', 'business_id', 'voucher_number', 'referenceable_type', 'referenceable_id', 'status']),
+            ])
             ->where(function ($query) use ($accountId): void {
                 $query->where('account_id', $accountId)
                     ->orWhere('destination_account_id', $accountId);
@@ -433,22 +593,53 @@ new class extends Component
             @endif
         </div>
 
+        @if (count($selected) > 0)
+            <div class="mb-4 flex flex-wrap items-center gap-3 rounded-lg border border-teal-200 bg-teal-50 px-3 py-2 dark:border-teal-900 dark:bg-teal-950/40">
+                <flux:text class="font-medium text-teal-800 dark:text-teal-200">
+                    {{ __('general.selected_count', ['count' => count($selected)]) }}
+                </flux:text>
+
+                <flux:spacer />
+
+                <flux:button size="sm" variant="primary" color="teal" icon="book-plus" wire:click="openBulkCreateJournalModal">
+                    {{ __('general.bulk_create_journal') }}
+                </flux:button>
+
+                <flux:button size="sm" variant="ghost" wire:click="clearSelection">
+                    {{ __('general.bulk_clear_selection') }}
+                </flux:button>
+            </div>
+        @endif
+
         <flux:table :paginate="$this->ledgerTransactions">
             <flux:table.columns>
+                <flux:table.column class="w-10">
+                    <flux:checkbox
+                        wire:click.prevent="toggleSelectPage"
+                        :checked="$this->pageSelected"
+                    />
+                </flux:table.column>
                 <flux:table.column>{{ __('general.transaction_date') }}</flux:table.column>
                 <flux:table.column>{{ __('general.transaction_type') }}</flux:table.column>
                 <flux:table.column>{{ __('general.direction') }}</flux:table.column>
                 <flux:table.column>{{ __('general.party') }}</flux:table.column>
                 <flux:table.column>{{ __('general.amount') }}</flux:table.column>
                 <flux:table.column>{{ __('general.balance_after') }}</flux:table.column>
+                <flux:table.column>{{ __('general.linked_journal_entry') }}</flux:table.column>
                 <flux:table.column>{{ __('general.reference_number') }}</flux:table.column>
                 <flux:table.column>{{ __('general.note') }}</flux:table.column>
             </flux:table.columns>
 
             <flux:table.rows>
                 @forelse ($this->ledgerTransactions as $transaction)
-                    @php($direction = $this->directionFor($transaction))
+                    @php
+                        $direction = $this->directionFor($transaction);
+                        $linkedJournal = $this->linkedJournal($transaction);
+                    @endphp
                     <flux:table.row :key="'account-tx-'.$transaction->id">
+                        <flux:table.cell>
+                            <flux:checkbox wire:model.live="selected" value="{{ $transaction->id }}" />
+                        </flux:table.cell>
                         <flux:table.cell>{{ $this->formatDate($transaction->transaction_date) }}</flux:table.cell>
                         <flux:table.cell>
                             <flux:badge size="sm" :color="$transaction->type->badgeColor()">
@@ -463,17 +654,84 @@ new class extends Component
                         <flux:table.cell>{{ $transaction->party?->displayName() ?? '—' }}</flux:table.cell>
                         <flux:table.cell dir="ltr">{{ $this->formatAmount((string) $transaction->amount) }}</flux:table.cell>
                         <flux:table.cell dir="ltr">{{ $this->formatAmount((string) ($transaction->balance_after ?? '0')) }}</flux:table.cell>
+                        <flux:table.cell>
+                            @if ($linkedJournal)
+                                <a
+                                    href="{{ route('accounting.journal-entries.view', $linkedJournal) }}"
+                                    wire:navigate
+                                    class="text-teal-700 underline decoration-teal-300 underline-offset-2 dark:text-teal-300"
+                                    dir="ltr"
+                                >
+                                    {{ $linkedJournal->voucher_number }}
+                                </a>
+                            @else
+                                <flux:badge size="sm" color="zinc">{{ __('general.no_linked_journal_entry') }}</flux:badge>
+                            @endif
+                        </flux:table.cell>
                         <flux:table.cell>{{ $transaction->reference_number ?: '—' }}</flux:table.cell>
                         <flux:table.cell>{{ $transaction->note ?: '—' }}</flux:table.cell>
                     </flux:table.row>
                 @empty
                     <flux:table.row>
-                        <flux:table.cell colspan="8">{{ __('general.no_transactions') }}</flux:table.cell>
+                        <flux:table.cell colspan="10">{{ __('general.no_transactions') }}</flux:table.cell>
                     </flux:table.row>
                 @endforelse
             </flux:table.rows>
         </flux:table>
     </flux:card>
+
+    <flux:modal name="account.transaction.bulk-create-journal" flyout position="right" class="min-w-full sm:min-w-lg">
+        <form wire:submit="applyBulkCreateJournal" class="space-y-6">
+            <div>
+                <flux:heading size="lg">{{ __('general.bulk_create_journal') }}</flux:heading>
+                <flux:text class="mt-2">{{ __('general.bulk_create_journal_hint') }}</flux:text>
+                <flux:text class="mt-1">{{ __('general.selected_count', ['count' => count($selected)]) }}</flux:text>
+            </div>
+
+            @if (is_array($bulkJournalPreview) && ($bulkJournalPreview['mode'] ?? null) === 'transfer' && is_array($bulkJournalPreview['transfer'] ?? null))
+                <flux:callout icon="arrow-left-right" variant="secondary">
+                    <flux:callout.heading>{{ __('general.bulk_create_journal_transfer_title') }}</flux:callout.heading>
+                    <flux:callout.text>
+                        {{ __('general.bulk_create_journal_transfer_summary', [
+                            'amount' => number_format((float) $bulkJournalPreview['transfer']['amount']),
+                            'from' => $bulkJournalPreview['transfer']['from_account'],
+                            'to' => $bulkJournalPreview['transfer']['to_account'],
+                        ]) }}
+                        <span class="ms-1" dir="ltr">{{ $bulkJournalPreview['transfer']['currency'] }}</span>
+                    </flux:callout.text>
+                </flux:callout>
+            @elseif (is_array($bulkJournalPreview))
+                <div class="space-y-3">
+                    <flux:heading size="sm">{{ __('general.bulk_create_journal_independent_title') }}</flux:heading>
+
+                    @foreach (($bulkJournalPreview['items'] ?? []) as $item)
+                        <div class="rounded-lg border border-zinc-200 p-3 dark:border-zinc-700" wire:key="account-bulk-journal-item-{{ $item['id'] }}">
+                            <div class="flex flex-wrap items-center justify-between gap-2">
+                                <div>
+                                    <div class="font-medium">#{{ $item['id'] }} — {{ $item['type'] }}</div>
+                                    <flux:text size="sm" class="mt-0.5">{{ $item['account'] }}</flux:text>
+                                </div>
+                                <div class="text-end">
+                                    <div dir="ltr" class="font-medium">{{ number_format((float) $item['amount']) }} {{ $item['currency'] }}</div>
+                                    <flux:badge size="sm" :color="$item['status'] === 'already_linked' ? 'zinc' : 'teal'" class="mt-1">
+                                        {{ $item['status'] === 'already_linked'
+                                            ? __('general.bulk_create_journal_already_linked')
+                                            : __('general.bulk_create_journal_will_create') }}
+                                    </flux:badge>
+                                </div>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            @endif
+
+            <div class="flex">
+                <flux:button type="submit" variant="primary" color="teal" class="w-full" icon="book-plus">
+                    {{ __('general.bulk_create_journal') }}
+                </flux:button>
+            </div>
+        </form>
+    </flux:modal>
 
     <livewire:accounting.account.edit :key="'account-edit-view-'.$account->id" />
     <livewire:accounting.account.rebalance :key="'account-rebalance-view-'.$account->id" />

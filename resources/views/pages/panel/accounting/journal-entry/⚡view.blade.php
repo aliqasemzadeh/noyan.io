@@ -350,8 +350,23 @@ new class extends Component
                 @endif
 
                 @if ($referenceable instanceof \App\Models\Accounting\Transaction)
+                    @php
+                        $mergedFromIds = data_get($referenceable->meta, 'merged_from_transaction_ids', []);
+                        $mergedFromIds = is_array($mergedFromIds)
+                            ? array_values(array_filter(array_map('intval', $mergedFromIds)))
+                            : [];
+                    @endphp
                     <div class="rounded-xl border border-zinc-200 p-4 dark:border-zinc-700">
-                        <flux:heading size="sm">{{ __('general.journal_linked_transaction') }}</flux:heading>
+                        <div class="flex flex-wrap items-center justify-between gap-2">
+                            <flux:heading size="sm">{{ __('general.journal_linked_transaction') }}</flux:heading>
+                            <a
+                                href="{{ route('accounting.transactions.index') }}"
+                                wire:navigate
+                                class="text-sm text-teal-700 underline decoration-teal-300 underline-offset-2 dark:text-teal-300"
+                            >
+                                {{ __('general.view_linked_transaction') }} #{{ $referenceable->id }}
+                            </a>
+                        </div>
                         <div class="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                             <div>
                                 <flux:text class="text-xs text-zinc-500">{{ __('general.type') }}</flux:text>
@@ -393,6 +408,11 @@ new class extends Component
                                 <flux:text class="text-xs text-zinc-500">{{ __('general.reference_number') }}</flux:text>
                                 <div class="mt-1 font-medium" dir="ltr">{{ $referenceable->reference_number ?: '—' }}</div>
                             </div>
+                            @if ($mergedFromIds !== [])
+                                <div class="sm:col-span-2 lg:col-span-3">
+                                    <flux:text class="text-xs text-zinc-500">{{ __('general.journal_merged_from_transactions', ['ids' => implode(', ', $mergedFromIds)]) }}</flux:text>
+                                </div>
+                            @endif
                             @if (filled($referenceable->note))
                                 <div class="sm:col-span-2 lg:col-span-3">
                                     <flux:text class="text-xs text-zinc-500">{{ __('general.note') }}</flux:text>
