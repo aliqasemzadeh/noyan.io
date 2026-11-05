@@ -28,6 +28,7 @@ class BlubankStatementExcelImportTest extends TestCase
         $parsed = app(BlubankStatementExcelParser::class)->parse($path, 'SDOC-sample.xlsx');
 
         $this->assertSame('IR370560611828005185652801', $parsed['account_number_hint']);
+        $this->assertSame('1000000000', $parsed['prior_balance']);
         $this->assertCount(5, $parsed['rows']);
         $this->assertSame('expense', $parsed['rows'][0]['type']);
         $this->assertSame('14500', $parsed['rows'][0]['amount']);
@@ -39,6 +40,30 @@ class BlubankStatementExcelImportTest extends TestCase
         $this->assertSame('income', $parsed['rows'][4]['type']);
         $this->assertSame('150000000', $parsed['rows'][4]['amount']);
         $this->assertSame('1109971000', $parsed['rows'][0]['expected_balance']);
+    }
+
+    public function test_import_blocked_when_ledger_is_ahead_of_statement(): void
+    {
+        [$user, $account] = $this->prepareAccount('2000000000');
+
+        $stored = 'ai-imports/blubank-ahead.xlsx';
+        Storage::disk('local')->put($stored, file_get_contents($this->fixturePath()));
+
+        $this->actingAs($user);
+
+        $result = (string) app(ImportBankStatement::class)->handle(new Request([
+            'file_path' => $stored,
+            'account_number' => $account->iban,
+            'original_filename' => 'SDOC-sample.xlsx',
+            'confirmed' => true,
+        ]));
+
+        $this->assertStringContainsString((string) __('general.ai_bank_statement_ledger_ahead', [
+            'account' => $account->name,
+            'current' => number_format(2000000000),
+            'statement_end' => number_format(1109971000),
+        ]), $result);
+        $this->assertSame(0, Transaction::query()->where('account_id', $account->id)->count());
     }
 
     public function test_detector_routes_blubank_excel(): void
@@ -129,7 +154,8 @@ class BlubankStatementExcelImportTest extends TestCase
         $sheet = $spreadsheet->getActiveSheet();
         $sheet->setTitle('transaction');
 
-        $sheet->setCellValue('B2', 'مانده از قبل: 1,217,726,362 (ریال)');
+        // Opening before chronological first (+150M → 1,150,000,000): 1,000,000,000
+        $sheet->setCellValue('B2', 'مانده از قبل: 1,000,000,000 (ریال)');
         $sheet->setCellValue('O7', 'شماره شبا: IR370560611828005185652801');
         $sheet->setCellValue('F8', 'صورتحساب از تاریخ 01/08/1405 00:00 تا تاریخ 14/08/1405 12:45');
 
