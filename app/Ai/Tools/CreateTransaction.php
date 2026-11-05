@@ -156,8 +156,12 @@ class CreateTransaction implements Tool
         $runningBalances = [];
         /** @var array<string, int> $accountNotFoundCounts */
         $accountNotFoundCounts = [];
-        /** @var list<int> fee txn ids waiting for the following main paya/transfer row (Mellat: fee then amount) */
+        /** @var list<int> fee txn ids waiting for the following main paya/transfer row (Mellat/Resalat: fee then amount) */
         $pendingFeeTransactionIds = [];
+        /** @var int|null last non-fee txn id (Blu Bank: main then fee at same timestamp) */
+        $lastMainTransactionId = null;
+        /** @var array<string, mixed>|null */
+        $lastMainItem = null;
 
         $transactions = array_map(function (mixed $item) use ($defaultAccountNumber, $defaultAccountName): mixed {
             if (! is_array($item)) {
@@ -238,10 +242,20 @@ class CreateTransaction implements Tool
 
                 if ($createdId !== null) {
                     if ($isFeeRow) {
-                        $pendingFeeTransactionIds[] = $createdId;
+                        if (
+                            $lastMainTransactionId !== null
+                            && is_array($lastMainItem)
+                            && $this->feeBelongsToMain($item, $lastMainItem)
+                        ) {
+                            $this->attachPendingFeesToMain([$createdId], $lastMainTransactionId);
+                        } else {
+                            $pendingFeeTransactionIds[] = $createdId;
+                        }
                     } else {
                         $this->attachPendingFeesToMain($pendingFeeTransactionIds, $createdId);
                         $pendingFeeTransactionIds = [];
+                        $lastMainTransactionId = $createdId;
+                        $lastMainItem = $item;
                     }
                 }
 
@@ -413,7 +427,19 @@ class CreateTransaction implements Tool
                 return $dateCompare;
             }
 
-            // At the same timestamp, fee rows first (Resalat lists fee after main; Mellat usually before).
+            // Same timestamp: higher expected_balance first (earlier chronologically).
+            // Covers Mellat/Resalat (fee balance higher) and Blu Bank (main balance higher).
+            $aBalance = is_array($a['item']) ? $this->normalizeDigits((string) ($a['item']['expected_balance'] ?? '')) : '';
+            $bBalance = is_array($b['item']) ? $this->normalizeDigits((string) ($b['item']['expected_balance'] ?? '')) : '';
+
+            if ($aBalance !== '' && $bBalance !== '' && is_numeric($aBalance) && is_numeric($bBalance)) {
+                $balanceCompare = bccomp($bBalance, $aBalance, 18);
+
+                if ($balanceCompare !== 0) {
+                    return $balanceCompare;
+                }
+            }
+
             $aFee = is_array($a['item']) ? $this->noteLooksLikeFee((string) ($a['item']['note'] ?? '')) : false;
             $bFee = is_array($b['item']) ? $this->noteLooksLikeFee((string) ($b['item']['note'] ?? '')) : false;
 
@@ -751,6 +777,25 @@ class CreateTransaction implements Tool
             $meta['fee_of_transaction_id'] = $mainTransactionId;
             $fee->forceFill(['meta' => $meta])->save();
         }
+    }
+
+    /**
+     * @param  array<string, mixed>  $feeItem
+     * @param  array<string, mixed>  $mainItem
+     */
+    protected function feeBelongsToMain(array $feeItem, array $mainItem): bool
+    {
+        $feeRef = $this->normalizeDigits((string) ($feeItem['reference_number'] ?? ''));
+        $mainRef = $this->normalizeDigits((string) ($mainItem['reference_number'] ?? ''));
+
+        if ($feeRef !== '' && $mainRef !== '' && $feeRef === $mainRef) {
+            return true;
+        }
+
+        $feeDate = trim((string) ($feeItem['transaction_date'] ?? ''));
+        $mainDate = trim((string) ($mainItem['transaction_date'] ?? ''));
+
+        return $feeDate !== '' && $mainDate !== '' && $feeDate === $mainDate;
     }
 
     /**

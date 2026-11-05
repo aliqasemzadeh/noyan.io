@@ -156,14 +156,15 @@ class BlubankStatementExcelParser
         $highestColumnIndex = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::columnIndexFromString($highestColumn);
 
         for ($row = 1; $row <= $highestRow; $row++) {
-            $header = [];
+            /** @var array<int, string> $headerByColumn 1-based spreadsheet column => label */
+            $headerByColumn = [];
 
             for ($col = 1; $col <= $highestColumnIndex; $col++) {
-                $header[] = $this->normalizeHeader($this->cellString($sheet, $row, $col));
+                $headerByColumn[$col] = $this->normalizeHeader($this->cellString($sheet, $row, $col));
             }
 
-            if ($this->headersLookLikeBlubank($header)) {
-                return [$row, $header];
+            if ($this->headersLookLikeBlubank(array_values($headerByColumn))) {
+                return [$row, $headerByColumn];
             }
         }
 
@@ -171,7 +172,7 @@ class BlubankStatementExcelParser
     }
 
     /**
-     * @param  list<string>  $header
+     * @param  array<int, string>  $header 1-based spreadsheet column => label
      * @return array<string, int>
      */
     protected function mapColumns(array $header): array

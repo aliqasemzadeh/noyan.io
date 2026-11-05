@@ -4,10 +4,12 @@ use App\Ai\Agents\AccountingAssistant;
 use App\Ai\Agents\UserAssistant;
 use App\Enums\Business\BusinessPanel;
 use App\Jobs\Ai\ProcessAiComposerPromptJob;
+use App\Services\Imports\BankStatementCsvDetector;
 use Flux\Flux;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Laravel\Ai\Enums\Lab;
@@ -208,13 +210,17 @@ new class extends Component
             $originalName = $this->document->getClientOriginalName();
             $attachment = ['name' => $originalName];
             $isCsv = in_array($extension, ['csv', 'txt'], true);
+            $isBankStatement = $isCsv || app(BankStatementCsvDetector::class)->looksLikeBankStatement(
+                Storage::disk('local')->path($storedDocumentPath),
+                $originalName,
+            );
 
             $displaySuffix = __(
-                $isCsv ? 'general.ai_bank_statement_prompt_display' : 'general.ai_document_prompt_display',
+                $isBankStatement ? 'general.ai_bank_statement_prompt_display' : 'general.ai_document_prompt_display',
                 ['file' => $originalName],
             );
             $agentSuffix = __(
-                $isCsv ? 'general.ai_bank_statement_prompt_suffix' : 'general.ai_document_prompt_suffix',
+                $isBankStatement ? 'general.ai_bank_statement_prompt_suffix' : 'general.ai_document_prompt_suffix',
                 [
                     'file' => $originalName,
                     'path' => $storedDocumentPath,
