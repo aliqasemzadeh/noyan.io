@@ -78,8 +78,8 @@ class BlubankStatementExcelImportTest extends TestCase
             'confirmed' => true,
         ]));
 
-        $this->assertNotSame('', $result);
-        $this->assertSame(5, Transaction::query()->where('account_id', $account->id)->count());
+        $this->assertNotSame('', $result, $result);
+        $this->assertSame(5, Transaction::query()->where('account_id', $account->id)->count(), $result);
 
         $main = Transaction::query()
             ->where('account_id', $account->id)
