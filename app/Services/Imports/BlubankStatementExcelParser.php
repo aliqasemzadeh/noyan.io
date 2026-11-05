@@ -183,7 +183,8 @@ class BlubankStatementExcelParser
             'debit' => ['برداشت', 'debit'],
             'txn_type' => ['نوع تراکنش', 'نوع'],
             'description' => ['شرح سند', 'شرح', 'description', 'desc'],
-            'serial' => ['شماره سند', 'سند', 'serial'],
+            // Prefer «شماره سند» only — bare «سند» also matches «شرح سند».
+            'serial' => ['شماره سند', 'serial'],
             'date' => ['تاریخ', 'date'],
         ], ['balance', 'credit', 'debit', 'description', 'date']);
     }
