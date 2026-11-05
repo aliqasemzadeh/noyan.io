@@ -23,6 +23,7 @@ class BlubankStatementExcelParser
     /**
      * @return array{
      *     account_number_hint: string|null,
+     *     prior_balance: string|null,
      *     rows: list<array{
      *         type: string,
      *         amount: string,
@@ -106,6 +107,7 @@ class BlubankStatementExcelParser
         return [
             'account_number_hint' => $this->accountHintFromSheet($sheet)
                 ?? $this->accountHintFromFilename($originalFilename),
+            'prior_balance' => $this->priorBalanceFromSheet($sheet),
             'rows' => $rows,
         ];
     }
@@ -209,6 +211,33 @@ class BlubankStatementExcelParser
 
                 if (preg_match('/شماره\s*سپرده\s*:?\s*(\d{10,20})/u', $value, $matches) === 1) {
                     return $matches[1];
+                }
+            }
+        }
+
+        return null;
+    }
+
+    protected function priorBalanceFromSheet(Worksheet $sheet): ?string
+    {
+        $highestRow = min((int) $sheet->getHighestDataRow(), 20);
+        $highestColumn = $sheet->getHighestDataColumn();
+        $highestColumnIndex = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::columnIndexFromString($highestColumn);
+
+        for ($row = 1; $row <= $highestRow; $row++) {
+            for ($col = 1; $col <= $highestColumnIndex; $col++) {
+                $raw = $this->cellString($sheet, $row, $col);
+
+                if ($raw === '' || ! str_contains($raw, 'مانده از قبل')) {
+                    continue;
+                }
+
+                $normalized = $this->normalizeDigits($raw);
+
+                if (preg_match('/مانده از قبل\s*:?\s*([0-9٬,]+)/u', $normalized, $matches) === 1) {
+                    $amount = $this->normalizeAmount($matches[1]);
+
+                    return $amount !== '0' ? $amount : null;
                 }
             }
         }
