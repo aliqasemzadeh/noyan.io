@@ -38,7 +38,7 @@ class BlubankStatementExcelImportTest extends TestCase
         $this->assertFalse($parsed['rows'][1]['is_fee']);
         $this->assertSame('income', $parsed['rows'][4]['type']);
         $this->assertSame('150000000', $parsed['rows'][4]['amount']);
-        $this->assertSame('1109840500', $parsed['rows'][0]['expected_balance']);
+        $this->assertSame('1109971000', $parsed['rows'][0]['expected_balance']);
     }
 
     public function test_detector_routes_blubank_excel(): void
@@ -78,8 +78,8 @@ class BlubankStatementExcelImportTest extends TestCase
             'confirmed' => true,
         ]));
 
-        $this->assertNotSame('', $result, $result);
-        $this->assertSame(5, Transaction::query()->where('account_id', $account->id)->count(), $result);
+        $this->assertNotSame('', $result);
+        $this->assertSame(5, Transaction::query()->where('account_id', $account->id)->count());
 
         $main = Transaction::query()
             ->where('account_id', $account->id)
@@ -95,8 +95,8 @@ class BlubankStatementExcelImportTest extends TestCase
         $this->assertNotNull($fee);
         $this->assertSame($main->id, (int) (($fee->meta['fee_of_transaction_id'] ?? 0)));
 
-        // Newest row balance after fee: 1,109,840,500
-        $this->assertSame(0, bccomp((string) $account->fresh()->current_balance, '1109840500', 18));
+        // Newest row balance after fee: 1,109,971,000
+        $this->assertSame(0, bccomp((string) $account->fresh()->current_balance, '1109971000', 18));
     }
 
     public function test_import_uses_iban_hint_when_account_number_omitted(): void
@@ -151,9 +151,9 @@ class BlubankStatementExcelImportTest extends TestCase
         // Newest-first Blu export with consistent balances (main then fee at same second).
         // Chronology: +150M → -20M → -14,500 → -20M → -14,500
         $rows = [
-            [1109840500, 14500, 0, 'کارمزد', 'برداشت از سپرده بابت کارمزد انتقال کارت به کارت-تراکنش اصلی ش م 379935782374 ش پ 522505', '14056801193482', '1405/08/13 17:05:58', 1],
-            [1109855000, 20000000, 0, 'انتقال به کارت', 'انتقال به کارت شماره: 5047061676003698 بنام: علی قاسم زاده از درگاه اینترنتی 10000005 بانک سامان - ش م: 379935782374 ش پ: 522505', '14056801193482', '1405/08/13 17:05:58', 2],
-            [1129855000, 14500, 0, 'کارمزد', 'برداشت از سپرده بابت کارمزد انتقال کارت به کارت-تراکنش اصلی ش م 359179490777 ش پ 994929', '14056711502948', '1405/08/11 07:26:35', 3],
+            [1109971000, 14500, 0, 'کارمزد', 'برداشت از سپرده بابت کارمزد انتقال کارت به کارت-تراکنش اصلی ش م 379935782374 ش پ 522505', '14056801193482', '1405/08/13 17:05:58', 1],
+            [1109985500, 20000000, 0, 'انتقال به کارت', 'انتقال به کارت شماره: 5047061676003698 بنام: علی قاسم زاده از درگاه اینترنتی 10000005 بانک سامان - ش م: 379935782374 ش پ: 522505', '14056801193482', '1405/08/13 17:05:58', 2],
+            [1129985500, 14500, 0, 'کارمزد', 'برداشت از سپرده بابت کارمزد انتقال کارت به کارت-تراکنش اصلی ش م 359179490777 ش پ 994929', '14056711502948', '1405/08/11 07:26:35', 3],
             [1130000000, 20000000, 0, 'انتقال به کارت', 'انتقال به کارت شماره: 5047061676003698 بنام: علی قاسم زاده از درگاه اینترنتی 10000005 بانک سامان - ش م: 359179490777 ش پ: 994929', '14056711502948', '1405/08/11 07:26:35', 4],
             [1150000000, 0, 150000000, 'دریافت از کارت', 'انتقال از کارت شماره: 6037697490625503 بنام: محبوبه قاسم زاده از خودپرداز 00011307 بانک سینا - ش م: 630017011755 ش پ: 011755', '14056517569873', '1405/08/05 17:21:44', 5],
         ];

@@ -13,6 +13,7 @@ use App\Console\Commands\Updates\Update_0_1_0_beta_16;
 use App\Console\Commands\Updates\Update_0_1_0_beta_17;
 use App\Console\Commands\Updates\Update_0_1_0_beta_18;
 use App\Console\Commands\Updates\Update_0_1_0_beta_19;
+use App\Console\Commands\Updates\Update_0_1_0_beta_20;
 use App\Console\Commands\Updates\Update_0_1_0_beta_2;
 use App\Console\Commands\Updates\Update_0_1_0_beta_3;
 use App\Console\Commands\Updates\Update_0_1_0_beta_4;
@@ -53,6 +54,7 @@ class VersionUpdateRegistry
             Update_0_1_0_beta_17::class,
             Update_0_1_0_beta_18::class,
             Update_0_1_0_beta_19::class,
+            Update_0_1_0_beta_20::class,
         ];
     }
 
