@@ -80,6 +80,69 @@ class PartyManagementTest extends TestCase
             ->assertHasErrors(['form.is_customer']);
     }
 
+    public function test_party_phone_requires_area_code(): void
+    {
+        [$user, $business] = $this->actingBusinessUser();
+
+        Livewire::actingAs($user)
+            ->test('accounting.party.create')
+            ->set('form.type', PartyType::Individual->value)
+            ->set('form.name', 'Phone Area Party')
+            ->set('form.phone', '12345678')
+            ->set('form.is_customer', true)
+            ->set('form.credit_limit', '0')
+            ->call('save')
+            ->assertHasErrors(['form.phone']);
+
+        Livewire::actingAs($user)
+            ->test('accounting.party.create')
+            ->set('form.type', PartyType::Individual->value)
+            ->set('form.name', 'Phone Area Party')
+            ->set('form.phone', '02112345678')
+            ->set('form.is_customer', true)
+            ->set('form.credit_limit', '0')
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('parties', [
+            'business_id' => $business->id,
+            'name' => 'Phone Area Party',
+            'phone' => '02112345678',
+        ]);
+    }
+
+    public function test_party_contact_phone_requires_area_code(): void
+    {
+        [$user, $business] = $this->actingBusinessUser();
+
+        $party = Party::factory()->company()->create([
+            'business_id' => $business->id,
+            'name' => 'Contact Phone Co',
+        ]);
+
+        Livewire::actingAs($user)
+            ->test('accounting.party.contact.create')
+            ->call('assignData', $party->id)
+            ->set('form.name', 'Office Desk')
+            ->set('form.phone', '87654321')
+            ->call('save')
+            ->assertHasErrors(['form.phone']);
+
+        Livewire::actingAs($user)
+            ->test('accounting.party.contact.create')
+            ->call('assignData', $party->id)
+            ->set('form.name', 'Office Desk')
+            ->set('form.phone', '03112345678')
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('party_contacts', [
+            'party_id' => $party->id,
+            'name' => 'Office Desk',
+            'phone' => '03112345678',
+        ]);
+    }
+
     public function test_parties_are_scoped_to_current_business(): void
     {
         $user = User::factory()->create();

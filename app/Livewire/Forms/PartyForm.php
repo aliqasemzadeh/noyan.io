@@ -81,7 +81,7 @@ class PartyForm extends Form
 
         $phoneRules = ['nullable', 'string', 'max:32'];
         if ($this->phone !== '') {
-            $phoneRules[] = new IranianPhone;
+            $phoneRules[] = new IranianPhone(withAreaCode: true);
         }
 
         $mobileRules = ['nullable', 'string', 'max:32'];

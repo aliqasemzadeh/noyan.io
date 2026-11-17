@@ -171,7 +171,7 @@ class PartyRegistrar
 
         $phoneRules = ['nullable', 'string', 'max:32'];
         if ($phone !== '') {
-            $phoneRules[] = new IranianPhone;
+            $phoneRules[] = new IranianPhone(withAreaCode: true);
         }
 
         $mobileRules = ['nullable', 'string', 'max:32'];
