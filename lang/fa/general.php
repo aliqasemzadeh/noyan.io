@@ -1411,11 +1411,12 @@ return [
 
     // Ledgers
     'party_ledger' => 'گردش حساب',
-    'party_ledger_hint' => 'تراکنش‌ها، فاکتورها و بدهی/طلب‌های این طرف‌حساب.',
+    'party_ledger_hint' => 'تراکنش‌ها، فاکتورها، پیش‌فاکتورها و بدهی/طلب‌های این طرف‌حساب.',
     'account_ledger' => 'تراکنش‌های حساب',
     'account_ledger_hint' => 'ورود و خروج پول این حساب.',
     'ledger_tab_transactions' => 'تراکنش‌ها',
     'ledger_tab_invoices' => 'فاکتورها',
+    'ledger_tab_quotes' => 'پیش‌فاکتورها',
     'ledger_tab_loans' => 'بدهی‌ها و طلب‌ها',
     'date_from' => 'از تاریخ',
     'date_to' => 'تا تاریخ',

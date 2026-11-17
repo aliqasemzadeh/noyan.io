@@ -1411,11 +1411,12 @@ return [
 
     // Ledgers
     'party_ledger' => 'Statement',
-    'party_ledger_hint' => 'Transactions, invoices, and debts/loans for this party.',
+    'party_ledger_hint' => 'Transactions, invoices, quotes, and debts/loans for this party.',
     'account_ledger' => 'Account transactions',
     'account_ledger_hint' => 'Incoming and outgoing movements for this account.',
     'ledger_tab_transactions' => 'Transactions',
     'ledger_tab_invoices' => 'Invoices',
+    'ledger_tab_quotes' => 'Quotes',
     'ledger_tab_loans' => 'Debts & loans',
     'date_from' => 'From date',
     'date_to' => 'To date',

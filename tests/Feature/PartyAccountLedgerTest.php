@@ -9,6 +9,7 @@ use App\Enums\Accounting\TransactionType;
 use App\Models\Accounting\Account;
 use App\Models\Accounting\Invoice;
 use App\Models\Accounting\Party;
+use App\Models\Accounting\Quote;
 use App\Models\Business;
 use App\Models\Currency;
 use App\Models\User;
@@ -24,7 +25,7 @@ class PartyAccountLedgerTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_party_view_shows_transactions_invoices_and_loans(): void
+    public function test_party_view_shows_transactions_invoices_quotes_and_loans(): void
     {
         [$user, $account, $party] = $this->prepareContext();
 
@@ -46,6 +47,15 @@ class PartyAccountLedgerTest extends TestCase
             'total_amount' => '2500',
         ]);
 
+        $quote = Quote::factory()->create([
+            'business_id' => $account->business_id,
+            'created_by' => $user->id,
+            'party_id' => $party->id,
+            'party_name' => $party->name,
+            'quote_number' => 'QT-LEDGER-1',
+            'total_amount' => '1800',
+        ]);
+
         $loan = app(CreateLoanAction::class)->handle($user, [
             'type' => LoanType::Received,
             'party_id' => $party->id,
@@ -61,6 +71,8 @@ class PartyAccountLedgerTest extends TestCase
             ->assertSee('Party payment')
             ->set('ledgerTab', 'invoices')
             ->assertSee($invoice->invoice_number)
+            ->set('ledgerTab', 'quotes')
+            ->assertSee($quote->quote_number)
             ->set('ledgerTab', 'loans')
             ->assertSee($loan->title);
     }

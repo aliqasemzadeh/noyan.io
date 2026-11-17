@@ -4,12 +4,14 @@ use App\Enums\Accounting\InvoicePaymentStatus;
 use App\Enums\Accounting\InvoiceType;
 use App\Enums\Accounting\LoanStatus;
 use App\Enums\Accounting\LoanType;
+use App\Enums\Accounting\QuoteStatus;
 use App\Enums\Accounting\TransactionType;
 use App\Enums\Business\BusinessPermission;
 use App\Models\Accounting\Invoice;
 use App\Models\Accounting\Loan;
 use App\Models\Accounting\Party;
 use App\Models\Accounting\PartyContact;
+use App\Models\Accounting\Quote;
 use App\Models\Accounting\Transaction;
 use App\Support\Business\BusinessPanelContext;
 use App\Support\LocaleDate;
@@ -53,6 +55,14 @@ new class extends Component
 
     public string $loanStatusFilter = '';
 
+    public string $quoteSearch = '';
+
+    public string $quoteStatusFilter = '';
+
+    public string $quoteDateFrom = '';
+
+    public string $quoteDateTo = '';
+
     public function mount(Party $party): void
     {
         Auth::user()?->ensureCurrentBusiness();
@@ -89,6 +99,7 @@ new class extends Component
         $this->resetPage('txPage');
         $this->resetPage('invoicePage');
         $this->resetPage('loanPage');
+        $this->resetPage('quotePage');
     }
 
     public function updatedTransactionSearch(): void
@@ -151,6 +162,26 @@ new class extends Component
         $this->resetPage('loanPage');
     }
 
+    public function updatedQuoteSearch(): void
+    {
+        $this->resetPage('quotePage');
+    }
+
+    public function updatedQuoteStatusFilter(): void
+    {
+        $this->resetPage('quotePage');
+    }
+
+    public function updatedQuoteDateFrom(): void
+    {
+        $this->resetPage('quotePage');
+    }
+
+    public function updatedQuoteDateTo(): void
+    {
+        $this->resetPage('quotePage');
+    }
+
     #[On('panels.accounting.party.view.refresh')]
     public function refreshParty(): void
     {
@@ -169,6 +200,7 @@ new class extends Component
             $this->ledgerTransactions,
             $this->ledgerInvoices,
             $this->ledgerLoans,
+            $this->ledgerQuotes,
         );
     }
 
@@ -190,10 +222,11 @@ new class extends Component
     #[On('panels.accounting.transaction.index.table')]
     #[On('panels.accounting.invoice.index.table')]
     #[On('panels.accounting.loan.index.table')]
+    #[On('panels.accounting.quote.index.table')]
     public function refreshLedgers(): void
     {
         $this->party->refresh();
-        unset($this->ledgerTransactions, $this->ledgerInvoices, $this->ledgerLoans, $this->formattedBalance);
+        unset($this->ledgerTransactions, $this->ledgerInvoices, $this->ledgerLoans, $this->ledgerQuotes, $this->formattedBalance);
     }
 
     /**
@@ -285,6 +318,45 @@ new class extends Component
             ->latest('issue_date')
             ->latest('id')
             ->paginate(config('general.per_page', 15), pageName: 'loanPage');
+    }
+
+    /**
+     * @return LengthAwarePaginator<int, Quote>
+     */
+    #[Computed]
+    public function ledgerQuotes(): LengthAwarePaginator
+    {
+        $dateFrom = LocaleDate::parseFilterDate($this->quoteDateFrom);
+        $dateTo = LocaleDate::parseFilterDate($this->quoteDateTo);
+
+        return $this->party->quotes()
+            ->with('invoice:id,invoice_number')
+            ->when($this->quoteSearch !== '', function ($query): void {
+                $search = '%'.$this->quoteSearch.'%';
+
+                $query->where(function ($query) use ($search): void {
+                    $query->where('quote_number', 'like', $search)
+                        ->orWhere('note', 'like', $search)
+                        ->orWhere('party_name', 'like', $search);
+                });
+            })
+            ->when($this->quoteStatusFilter === QuoteStatus::Draft->value, fn ($query) => $query->whereNull('finalized_at'))
+            ->when($this->quoteStatusFilter === QuoteStatus::Finalized->value, function ($query): void {
+                $query->whereNotNull('finalized_at')
+                    ->whereNull('converted_at')
+                    ->whereDate('valid_until', '>=', now()->toDateString());
+            })
+            ->when($this->quoteStatusFilter === QuoteStatus::Expired->value, function ($query): void {
+                $query->whereNotNull('finalized_at')
+                    ->whereNull('converted_at')
+                    ->whereDate('valid_until', '<', now()->toDateString());
+            })
+            ->when($this->quoteStatusFilter === QuoteStatus::Converted->value, fn ($query) => $query->whereNotNull('converted_at'))
+            ->when($dateFrom !== null, fn ($query) => $query->whereDate('issue_date', '>=', $dateFrom))
+            ->when($dateTo !== null, fn ($query) => $query->whereDate('issue_date', '<=', $dateTo))
+            ->latest('issue_date')
+            ->latest('id')
+            ->paginate(config('general.per_page', 15), pageName: 'quotePage');
     }
 
     #[Computed]
@@ -579,6 +651,14 @@ new class extends Component
             </flux:button>
             <flux:button
                 size="sm"
+                :variant="$ledgerTab === 'quotes' ? 'primary' : 'ghost'"
+                :color="$ledgerTab === 'quotes' ? 'teal' : 'zinc'"
+                wire:click="$set('ledgerTab', 'quotes')"
+            >
+                {{ __('general.ledger_tab_quotes') }}
+            </flux:button>
+            <flux:button
+                size="sm"
                 :variant="$ledgerTab === 'loans' ? 'primary' : 'ghost'"
                 :color="$ledgerTab === 'loans' ? 'teal' : 'zinc'"
                 wire:click="$set('ledgerTab', 'loans')"
@@ -774,7 +854,108 @@ new class extends Component
                     @endforelse
                 </flux:table.rows>
             </flux:table>
-        @else
+        @elseif ($ledgerTab === 'quotes')
+            <div class="grid gap-3 md:grid-cols-4">
+                <flux:input
+                    wire:model.live.debounce.300ms="quoteSearch"
+                    icon="search"
+                    placeholder="{{ __('general.search') }}..."
+                    clearable
+                    class="md:col-span-2"
+                />
+                <flux:select wire:model.live="quoteStatusFilter" searchable variant="listbox" placeholder="{{ __('general.all_quote_statuses') }}">
+                    <flux:select.option value="">{{ __('general.all_quote_statuses') }}</flux:select.option>
+                    @foreach (QuoteStatus::cases() as $status)
+                        <flux:select.option value="{{ $status->value }}" wire:key="party-quote-status-{{ $status->value }}">
+                            {{ $status->label() }}
+                        </flux:select.option>
+                    @endforeach
+                </flux:select>
+                @if (\App\Support\LocaleDate::usesJalali())
+                    <x-jalali-date-range
+                        wire:model.start="quoteDateFrom"
+                        wire:model.end="quoteDateTo"
+                        :label="false"
+                        :placeholder="__('general.date_range_placeholder')"
+                        class="md:col-span-2"
+                    />
+                @else
+                    <flux:input
+                        type="date"
+                        wire:model.live="quoteDateFrom"
+                        placeholder="{{ __('general.date_from') }}"
+                        clearable
+                    />
+                    <flux:input
+                        type="date"
+                        wire:model.live="quoteDateTo"
+                        placeholder="{{ __('general.date_to') }}"
+                        clearable
+                    />
+                @endif
+            </div>
+
+            <flux:table :paginate="$this->ledgerQuotes">
+                <flux:table.columns>
+                    <flux:table.column>{{ __('general.quote_number') }}</flux:table.column>
+                    <flux:table.column>{{ __('general.issue_date') }}</flux:table.column>
+                    <flux:table.column>{{ __('general.valid_until') }}</flux:table.column>
+                    <flux:table.column>{{ __('general.total_amount') }}</flux:table.column>
+                    <flux:table.column>{{ __('general.status') }}</flux:table.column>
+                    <flux:table.column>{{ __('general.converted_invoice') }}</flux:table.column>
+                    <flux:table.column align="end">{{ __('general.actions') }}</flux:table.column>
+                </flux:table.columns>
+                <flux:table.rows>
+                    @forelse ($this->ledgerQuotes as $quote)
+                        @php($status = $quote->status())
+                        <flux:table.row :key="'party-quote-'.$quote->id">
+                            <flux:table.cell class="font-medium">{{ $quote->quote_number }}</flux:table.cell>
+                            <flux:table.cell>{{ $this->formatDate($quote->issue_date) }}</flux:table.cell>
+                            <flux:table.cell>
+                                <div class="flex items-center gap-1">
+                                    @if ($quote->isExpired())
+                                        <flux:icon.clock-alert class="size-4 text-rose-500" />
+                                    @endif
+                                    <span>{{ $this->formatDate($quote->valid_until) }}</span>
+                                </div>
+                            </flux:table.cell>
+                            <flux:table.cell dir="ltr">{{ $this->formatAmount((string) $quote->total_amount) }}</flux:table.cell>
+                            <flux:table.cell>
+                                <flux:badge size="sm" :color="$status->badgeColor()">
+                                    {{ $status->label() }}
+                                </flux:badge>
+                            </flux:table.cell>
+                            <flux:table.cell>
+                                @if ($quote->invoice)
+                                    <flux:link :href="route('accounting.invoices.edit', $quote->invoice)" wire:navigate>
+                                        {{ $quote->invoice->invoice_number }}
+                                    </flux:link>
+                                @else
+                                    —
+                                @endif
+                            </flux:table.cell>
+                            <flux:table.cell align="end">
+                                <flux:tooltip content="{{ __('general.view') }}">
+                                    <flux:button
+                                        size="xs"
+                                        variant="primary"
+                                        color="zinc"
+                                        icon="eye"
+                                        icon:variant="outline"
+                                        :href="route('accounting.quotes.edit', $quote)"
+                                        wire:navigate
+                                    />
+                                </flux:tooltip>
+                            </flux:table.cell>
+                        </flux:table.row>
+                    @empty
+                        <flux:table.row>
+                            <flux:table.cell colspan="7">{{ __('general.no_quotes') }}</flux:table.cell>
+                        </flux:table.row>
+                    @endforelse
+                </flux:table.rows>
+            </flux:table>
+        @elseif ($ledgerTab === 'loans')
             <div class="grid gap-3 md:grid-cols-3">
                 <flux:input
                     wire:model.live.debounce.300ms="loanSearch"
