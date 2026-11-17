@@ -23,17 +23,16 @@
     --color-zinc-900: #071F43;
     --color-zinc-950: #041228;
 
-    /* Brand accent (#16719D) */
-    --color-accent: #16719D;
-    --color-accent-content: #125d82;
-    --color-accent-foreground: #ffffff;
+    --color-accent: var(--color-pink-600);
+    --color-accent-content: var(--color-pink-600);
+    --color-accent-foreground: var(--color-white);
 }
 
 @layer theme {
     .dark {
-        --color-accent: #16719D;
-        --color-accent-content: #2DE1C2;
-        --color-accent-foreground: #ffffff;
+        --color-accent: var(--color-pink-600);
+        --color-accent-content: var(--color-pink-400);
+        --color-accent-foreground: var(--color-white);
     }
 }
 
